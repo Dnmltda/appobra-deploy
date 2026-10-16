@@ -1,0 +1,13 @@
+{
+  "name": "appobra-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "APP OBRA self-hosted on Hostinger: PocketBase backend + React frontend (pb_public), supervised by a minimal Node.js wrapper.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
