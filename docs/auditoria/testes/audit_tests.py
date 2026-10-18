@@ -223,21 +223,78 @@ if s == 200:
     check("telas", "Solicitações: Funcionário cancela a própria", s == 200, err(r) if s >= 400 else "")
 
 # ------------------------------------------------------------------ estoque (Etapa 2)
-if mat:
-    q0 = mat.get("quantity_in_stock") or 0
-    s, mv = call("POST", "/api/collections/movimentacoes/records", tA, {
-        "material_id": mat["id"], "obra_id": obra.get("id"), "company_id": cA, "tipo": "Entrada",
-        "quantidade": 10, "status": "Aprovado", "data": "2026-10-18 12:00:00.000Z"})
-    check("telas", "Estoque: registrar Entrada", s == 200, err(mv) if s >= 400 else "")
-    s, m2 = call("GET", f"/api/collections/materiais/records/{mat['id']}", tA)
-    check("estoque", "Saldo muda pelo servidor após Entrada (+10)", (m2.get("quantity_in_stock") or 0) == q0 + 10,
-          f"antes {q0} depois {m2.get('quantity_in_stock')}")
-    s, mv2 = call("POST", "/api/collections/movimentacoes/records", tA, {
-        "material_id": mat["id"], "company_id": cA, "tipo": "Saída", "quantidade": 999999, "status": "Aprovado"})
-    check("estoque", "Servidor recusa Saída maior que o saldo", s >= 400, f"status {s}")
-    if mv.get("id"):
-        s, r = call("PATCH", f"/api/collections/movimentacoes/records/{mv['id']}", tA, {"quantidade": 1})
-        check("estoque", "Movimentação registrada não pode ser editada", s >= 400, f"status {s}")
+def saldo(mid):
+    return call("GET", f"/api/collections/materiais/records/{mid}", tA)[1].get("quantity_in_stock")
+
+
+def mov(tipo, qtd, status="Aprovado", **extra):
+    body = {"material_id": mid, "company_id": cA, "tipo": tipo, "quantidade": qtd, "status": status,
+            "data": "2026-10-18", "obra_id": obra.get("id"), "criado_por": uA["id"]}
+    body.update(extra)
+    return call("POST", "/api/collections/movimentacoes/records", tA, body)
+
+
+s, m = call("POST", "/api/collections/materiais/records", tA, {"name": "Areia média m3", "code": "TST-AREIA", "unit": "m3",
+            "quantity_in_stock": 50, "min_quantity": 5, "unit_cost": 120, "status": "active", "company_id": cA})
+check("estoque", "Material novo com saldo inicial 50", s == 200 and saldo(m.get("id")) == 50, err(m) if s >= 400 else f"saldo {saldo(m.get('id'))}")
+mid = m.get("id")
+s, r = call("GET", "/api/collections/movimentacoes/records?filter=" + q(f'material_id="{mid}"'), tA)
+check("estoque", "Saldo inicial fica registrado como movimentação", r.get("totalItems") == 1)
+
+s, e1 = mov("Entrada", 10)
+check("estoque", "Entrada +10 muda o saldo pelo servidor (50 -> 60)", s == 200 and saldo(mid) == 60, err(e1) if s >= 400 else f"saldo {saldo(mid)}")
+check("estoque", "Movimentação guarda saldo anterior e posterior", e1.get("saldo_anterior") == 50 and e1.get("saldo_posterior") == 60)
+
+s, r = call("PATCH", f"/api/collections/materiais/records/{mid}", tA, {"quantity_in_stock": 60})
+check("telas", "Tela Estoque sincronizando o saldo após a movimentação continua funcionando", s == 200 and saldo(mid) == 60)
+s, r = call("PATCH", f"/api/collections/materiais/records/{mid}", tA, {"quantity_in_stock": 999, "name": "Areia média (m3)"})
+check("estoque", "Editar o saldo direto no cadastro do material não muda o estoque", s == 200 and saldo(mid) == 60 and r.get("name") == "Areia média (m3)",
+      f"saldo {saldo(mid)}")
+
+s, r = mov("Saída", 999999)
+check("estoque", "Servidor recusa Saída maior que o saldo", s >= 400 and saldo(mid) == 60, f"status {s} {r.get('message', '')[:80]}")
+s, s20 = mov("Saída", 20, destino="Obra")
+check("estoque", "Saída -20 (60 -> 40)", s == 200 and saldo(mid) == 40, err(s20) if s >= 400 else "")
+s, r = mov("Retirada por Funcionário", 3, destino="Funcionário")
+check("estoque", "Retirada por funcionário -3 (40 -> 37)", s == 200 and saldo(mid) == 37, err(r) if s >= 400 else "")
+s, r = mov("Devolução de Funcionário", 3, origem="Funcionário")
+check("estoque", "Devolução de funcionário +3 (37 -> 40)", s == 200 and saldo(mid) == 40, err(r) if s >= 400 else "")
+
+s, p5 = mov("Consumo de Obra", 5, status="Pendente")
+check("estoque", "Movimentação Pendente não mexe no saldo", s == 200 and saldo(mid) == 40)
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{p5.get('id')}", tA, {"quantidade": 4})
+check("telas", "Movimentação Pendente ainda pode ser corrigida", s == 200, err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{p5.get('id')}", tA, {"status": "Aprovado"})
+check("estoque", "Aprovar a Pendente lança no saldo (40 -> 36)", s == 200 and saldo(mid) == 36, err(r) if s >= 400 else f"saldo {saldo(mid)}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{p5.get('id')}", tA, {"status": "Finalizado"})
+check("estoque", "Finalizar não lança de novo (continua 36)", s == 200 and saldo(mid) == 36, err(r) if s >= 400 else "")
+
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{e1.get('id')}", tA, {"quantidade": 1})
+check("estoque", "Movimentação lançada não pode ser editada", s >= 400, f"status {s}")
+s, r = call("DELETE", f"/api/collections/movimentacoes/records/{e1.get('id')}", tA)
+check("estoque", "Movimentação lançada não pode ser excluída", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{s20.get('id')}", tA, {"status": "Cancelado", "motivo_cancelamento": "lançada errada"})
+check("estoque", "Cancelar a saída de 20 estorna o saldo (36 -> 56)", s == 200 and saldo(mid) == 56, err(r) if s >= 400 else f"saldo {saldo(mid)}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{s20.get('id')}", tA, {"status": "Aprovado"})
+check("estoque", "Cancelada não pode ser reaprovada", s >= 400 and saldo(mid) == 56, f"status {s}")
+
+s, r = mov("Transferência", 10, origem="Almoxarifado", destino="Obra 2")
+check("estoque", "Transferência não muda o saldo", s == 200 and saldo(mid) == 56, err(r) if s >= 400 else "")
+s, inv = mov("Inventário", 30, observacoes="Contagem do mês")
+check("estoque", "Inventário: saldo passa a ser o contado (56 -> 30)", s == 200 and saldo(mid) == 30 and inv.get("quantidade_aplicada") == -26,
+      err(inv) if s >= 400 else f"saldo {saldo(mid)} diferença {inv.get('quantidade_aplicada')}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{e1.get('id')}", tA, {"status": "Cancelado", "motivo_cancelamento": "teste"})
+check("estoque", "Cancelar a entrada de 10 com saldo 30 estorna (30 -> 20)", s == 200 and saldo(mid) == 20, err(r) if s >= 400 else "")
+
+s, comp = call("POST", "/api/collections/compras/records", tA, {"numero_compra": "CMP-EST-1", "company_id": cA, "fornecedor_id": forn.get("id"),
+               "descricao": "Areia para a obra", "status": "Aprovado", "valor_previsto": 840, "criado_por": uA["id"]})
+s, it = call("POST", "/api/collections/compras_itens/records", tA, {"company_id": cA, "compra_id": comp.get("id"), "material_id": mid,
+             "descricao": "Areia média", "unidade": "m3", "quantidade": 7, "preco_unitario": 120, "valor_total": 840, "criado_por": uA["id"]})
+check("telas", "Compras: adicionar item", s == 200, err(it) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/compras/records/{comp.get('id')}", tA, {"status": "Recebido", "data_entrega_real": "2026-10-18"})
+check("estoque", "Compra recebida entra no estoque (+7: 20 -> 27)", s == 200 and saldo(mid) == 27, err(r) if s >= 400 else f"saldo {saldo(mid)}")
+s, r = call("PATCH", f"/api/collections/compras/records/{comp.get('id')}", tA, {"observacoes": "conferido"})
+check("estoque", "Editar a compra recebida não lança de novo (continua 27)", s == 200 and saldo(mid) == 27)
 
 # ------------------------------------------------------------------ auditoria
 s, r = call("POST", "/api/collections/audit_logs/records", tF, {"acao": "teste", "modulo": "x", "usuario_id": uF["id"]})

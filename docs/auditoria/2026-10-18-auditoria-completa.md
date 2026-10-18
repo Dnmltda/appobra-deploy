@@ -18,7 +18,10 @@ segurança/integridade → comparação com o documento mestre → plano de corr
     (gerador de código sempre devolvia `PREFIXO-000001`).
   - **D12.** Campos "únicos" valiam para o sistema todo (duas empresas não podiam ter o mesmo
     fornecedor; só um veículo sem chassi/RENAVAM no sistema).
-- Etapa 2 (estoque) — próxima.
+- **Etapa 2 — feita e testada localmente, aguardando publicação (junto com a 1):** ver
+  `etapa2-estoque.md` (script completo: 108/0). Saldo pelo servidor, saída maior que o saldo recusada,
+  movimentação lançada imutável (cancelar estorna), compra recebida entra no estoque.
+- Etapa 3 (telas) — precisa do código-fonte das telas no GitHub.
 
 ---
 

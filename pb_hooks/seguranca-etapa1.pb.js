@@ -214,14 +214,15 @@ onBootstrap((e) => {
     // solicitante_id é criado pelo fix-solicitacoes-schema; num banco novo ele
     // pode só existir a partir do segundo início.
     if (!col.fields.getByName("solicitante_id")) {
-      throw new Error("campo solicitante_id ainda não existe; aplica no próximo boot");
+      console.log("[seguranca-etapa1] Aviso: solicitacoes ainda sem solicitante_id (banco novo); regras aplicadas no próximo início.");
+    } else {
+      // Gestão altera qualquer solicitação da empresa. Quem pediu pode editar
+      // a própria, mas não aprovar: o status só pode ficar igual ou ir para
+      // "Cancelada".
+      col.updateRule = `${SEG_SAME} && (${SEG_GESTAO} || (solicitante_id = @request.auth.id && ` +
+        `(@request.body.status:isset = false || @request.body.status = status || @request.body.status = "Cancelada")))`;
+      app.save(col);
     }
-    // Gestão altera qualquer solicitação da empresa. Quem pediu pode editar
-    // a própria, mas não aprovar: o status só pode ficar igual ou ir para
-    // "Cancelada".
-    col.updateRule = `${SEG_SAME} && (${SEG_GESTAO} || (solicitante_id = @request.auth.id && ` +
-      `(@request.body.status:isset = false || @request.body.status = status || @request.body.status = "Cancelada")))`;
-    app.save(col);
   } catch (err) {
     console.log("[seguranca-etapa1] Erro em solicitacoes:", err);
   }

@@ -31,5 +31,6 @@ python3 -I /caminho/do/repo/docs/auditoria/testes/audit_tests.py resultado.json
 
 Cada linha sai como `OK` ou `FALHA`. Resultados guardados:
 - `resultado-2026-10-18.json` — primeira versão do script, na auditoria (10 OK / 21 FALHA);
-- `resultado-antes-etapa1.json` / `resultado-depois-etapa1.json` — script atual (36/50 → 85/3). O teste cria registros e altera o funcionário de teste, então rode sempre num
+- `resultado-antes-etapa1.json` / `resultado-depois-etapa1.json` — Etapa 1 (36/50 → 85/3);
+- `resultado-depois-etapa2.json` — Etapas 1 e 2 (108/0). O teste cria registros e altera o funcionário de teste, então rode sempre num
 `pb_data` novo.
