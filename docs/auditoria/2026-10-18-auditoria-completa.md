@@ -28,8 +28,9 @@ segurança/integridade → comparação com o documento mestre → plano de corr
 - **Etapa 4 — em andamento:** ver `etapa4-fluxos.md`. 4.1 feita e testada localmente (pedido de material
   com itens → aprovar → separar → entregar com baixa no estoque → confirmar recebimento); 4.2 feita e
   testada (emprestar equipamento → receber de volta conferindo o estado). E-mails com botão e link certo
-  (o convite de funcionário apontava para o endereço antigo). Servidor 162/0; navegador 100/100.
-  Próximo: divergência de estoque com motivo e autorização.
+  (o convite de funcionário apontava para o endereço antigo); 4.3 feita e testada (conferir estoque:
+  diferença com motivo e autorização; o servidor passou a decidir quem aprova movimentação).
+  Servidor 174/0; navegador 99/99. Próximo: Ocorrências.
 
 ---
 

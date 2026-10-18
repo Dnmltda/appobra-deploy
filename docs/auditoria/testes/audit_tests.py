@@ -294,7 +294,11 @@ check("estoque", "Cancelada não pode ser reaprovada", s >= 400 and saldo(mid) =
 
 s, r = mov("Transferência", 10, origem="Almoxarifado", destino="Obra 2")
 check("estoque", "Transferência não muda o saldo", s == 200 and saldo(mid) == 56, err(r) if s >= 400 else "")
-s, inv = mov("Inventário", 30, observacoes="Contagem do mês")
+s, r = mov("Inventário", 30, observacoes="Contagem do mês")
+check("divergencia", "Inventário com diferença sem motivo é recusado", s >= 400 and "motivo" in r.get("message", "") and saldo(mid) == 56, r.get("message", "")[:80])
+s, inv = mov("Inventário", 30, observacoes="Contagem do mês", motivo_divergencia="Contagem diferente do sistema")
+check("divergencia", "Ajuste autorizado grava saldo do sistema, diferença e quem autorizou", inv.get("saldo_sistema") == 56
+      and inv.get("diferenca_contagem") == -26 and inv.get("autorizado_por") == uA["id"] and bool(inv.get("data_autorizacao")))
 check("estoque", "Inventário: saldo passa a ser o contado (56 -> 30)", s == 200 and saldo(mid) == 30 and inv.get("quantidade_aplicada") == -26,
       err(inv) if s >= 400 else f"saldo {saldo(mid)} diferença {inv.get('quantidade_aplicada')}")
 s, r = call("PATCH", f"/api/collections/movimentacoes/records/{e1.get('id')}", tA, {"status": "Cancelado", "motivo_cancelamento": "teste"})
@@ -309,6 +313,46 @@ s, r = call("PATCH", f"/api/collections/compras/records/{comp.get('id')}", tA, {
 check("estoque", "Compra recebida entra no estoque (+7: 20 -> 27)", s == 200 and saldo(mid) == 27, err(r) if s >= 400 else f"saldo {saldo(mid)}")
 s, r = call("PATCH", f"/api/collections/compras/records/{comp.get('id')}", tA, {"observacoes": "conferido"})
 check("estoque", "Editar a compra recebida não lança de novo (continua 27)", s == 200 and saldo(mid) == 27)
+
+# ------------------------------------------------------------------ divergência e quem aprova (Etapa 4.3)
+def usuario(email, cargo_):
+    call("POST", "/api/collections/users/records", tA, {"email": email, "username": email.split("@")[0].replace(".", ""), "password": "Senha12345",
+         "passwordConfirm": "Senha12345", "company_id": cA, "cargo": cargo_, "role": cargo_, "status": "Ativo"})
+    return login(email)[0]
+tAlm = usuario("almox@teste.local", "Almoxarife")
+tPed = usuario("pedreiro.div@teste.local", "Pedreiro")
+tEng = usuario("eng.div@teste.local", "Engenheiro")
+s0 = saldo(mid)
+def movc(tok, tipo, qtd, status="Aprovado", **extra):
+    body = {"material_id": mid, "company_id": cA, "tipo": tipo, "quantidade": qtd, "status": status, "data": "2026-10-18"}
+    body.update(extra)
+    return call("POST", "/api/collections/movimentacoes/records", tok, body)
+s, r = movc(tPed, "Saída", 1)
+check("divergencia", "Pedreiro lança saída 'Aprovado': fica Pendente e o saldo não muda", s == 200 and r.get("status") == "Pendente" and saldo(mid) == s0,
+      err(r) if s >= 400 else f"{r.get('status')} saldo {saldo(mid)}")
+s, r2 = call("PATCH", f"/api/collections/movimentacoes/records/{r.get('id')}", tPed, {"status": "Aprovado"})
+check("divergencia", "Pedreiro não aprova movimentação (servidor)", s == 403 and saldo(mid) == s0, f"status {s}")
+s, r2 = call("PATCH", f"/api/collections/movimentacoes/records/{r.get('id')}", tAlm, {"status": "Aprovado"})
+check("divergencia", "Almoxarife aprova a saída normal", s == 200 and saldo(mid) == s0 - 1, err(r2) if s >= 400 else f"saldo {saldo(mid)}")
+s0 = saldo(mid)
+s, pz = movc(tAlm, "Inventário", s0 - 4, motivo_divergencia="Sumiço ou furto", observacoes="faltaram 4")
+check("divergencia", "Contagem do almoxarife com diferença fica esperando autorização", s == 200 and pz.get("status") == "Pendente"
+      and pz.get("diferenca_contagem") == -4 and saldo(mid) == s0, err(pz) if s >= 400 else f"{pz.get('status')} {pz.get('diferenca_contagem')}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{pz.get('id')}", tAlm, {"status": "Aprovado"})
+check("divergencia", "Almoxarife não autoriza a própria diferença", s == 403 and saldo(mid) == s0, f"status {s}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{pz.get('id')}", tEng, {"status": "Aprovado"})
+check("divergencia", "Engenheiro autoriza: saldo passa a ser o contado e fica quem autorizou", s == 200 and saldo(mid) == s0 - 4
+      and r.get("autorizado_por") and r.get("motivo_divergencia") == "Sumiço ou furto", err(r) if s >= 400 else f"saldo {saldo(mid)}")
+s0 = saldo(mid)
+s, r = movc(tAlm, "Inventário", s0)
+check("divergencia", "Contagem que bate com o sistema não precisa de motivo nem autorização", s == 200 and r.get("status") == "Aprovado"
+      and r.get("diferenca_contagem") == 0, err(r) if s >= 400 else r.get("status"))
+s, r = movc(tAlm, "Perda", 1)
+check("divergencia", "Perda sem motivo é recusada", s >= 400, f"status {s}")
+s, r = movc(tAlm, "Perda", 1, motivo_divergencia="Quebra ou dano")
+check("divergencia", "Perda do almoxarife espera autorização", s == 200 and r.get("status") == "Pendente" and saldo(mid) == s0, f"{r.get('status')}")
+s, r = movc(tAlm, "Entrada", 2, autorizado_por=uA["id"])
+check("divergencia", "Ninguém escreve 'autorizado por' pela tela", s == 200 and not r.get("autorizado_por"), str(r.get("autorizado_por")))
 
 # ------------------------------------------------------------------ auditoria
 s, r = call("POST", "/api/collections/audit_logs/records", tF, {"acao": "teste", "modulo": "x", "usuario_id": uF["id"]})

@@ -40,6 +40,7 @@ import {
 } from 'recharts';
 import { mensagemErro } from '@/lib/erros.js';
 import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
+import { MOTIVOS_DIVERGENCIA, TIPOS_DIVERGENCIA, QUEM_AUTORIZA } from '@/lib/divergencia.js';
 
 const AUDIT_MODULE = 'Movimentações';
 const PER_PAGE = 10;
@@ -136,6 +137,7 @@ const emptyForm = {
   solicitante_id: '',
   responsavel_id: '',
   funcionario_id: '',
+  motivo_divergencia: '',
   observacoes: '',
   status: 'Pendente',
 };
@@ -430,6 +432,15 @@ const MovimentacoesPage = () => {
   };
 
   // ---------- Validação ----------
+  // Inventário/ajuste que muda o saldo, ou perda: o servidor exige o motivo.
+  const precisaMotivo = (() => {
+    if (!TIPOS_DIVERGENCIA.includes(formData.tipo)) return false;
+    if (formData.tipo === 'Perda') return true;
+    const mat = materiais.find((m) => m.id === formData.material_id);
+    if (!mat || formData.quantidade === '') return true;
+    return Number(formData.quantidade) !== Number(mat.quantity_in_stock || 0);
+  })();
+
   const validateForm = () => {
     const errs = {};
     if (!formData.data) errs.data = 'Data é obrigatória';
@@ -440,6 +451,7 @@ const MovimentacoesPage = () => {
     if (!formData.unidade) errs.unidade = 'Unidade é obrigatória';
     if (formData.valor_unitario === '' || Number(formData.valor_unitario) < 0) errs.valor_unitario = 'Valor unitário inválido';
     if (!formData.responsavel_id) errs.responsavel_id = 'Responsável é obrigatório';
+    if (precisaMotivo && !formData.motivo_divergencia) errs.motivo_divergencia = 'Escolha o motivo da diferença';
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -473,6 +485,7 @@ const MovimentacoesPage = () => {
         responsavel_id: formData.responsavel_id,
         funcionario_id: formData.funcionario_id || null,
         observacoes: formData.observacoes || null,
+        motivo_divergencia: TIPOS_DIVERGENCIA.includes(formData.tipo) ? (formData.motivo_divergencia || '') : '',
         status: formData.status || 'Pendente',
         company_id: companyId,
         atualizado_por: currentUser.id,
@@ -493,7 +506,9 @@ const MovimentacoesPage = () => {
           { ...payload, numero_movimentacao: numero, criado_por: currentUser.id },
           { $autoCancel: false },
         );
-        toast.success(`Movimentação ${numero} cadastrada com sucesso`);
+        toast.success(created.status === 'Pendente' && payload.status !== 'Pendente'
+          ? `Movimentação ${numero} cadastrada. Ela espera aprovação (diferença de estoque: ${QUEM_AUTORIZA}).`
+          : `Movimentação ${numero} cadastrada com sucesso`, { duration: 7000 });
         await auditLog(AUDIT_ACTIONS.RECORD_CREATED, AUDIT_MODULE, `Movimentação criada: ${created.numero_movimentacao}`);
       }
 
@@ -540,6 +555,7 @@ const MovimentacoesPage = () => {
       responsavel_id: mov.responsavel_id || '',
       funcionario_id: mov.funcionario_id || '',
       observacoes: mov.observacoes || '',
+      motivo_divergencia: mov.motivo_divergencia || '',
       status: mov.status || 'Pendente',
     });
     setFormErrors({});
@@ -1235,6 +1251,20 @@ const MovimentacoesPage = () => {
                 <Input id="mov_qtd" type="number" step="0.01" min="0" value={formData.quantidade} onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })} className={formErrors.quantidade ? 'border-destructive' : ''} />
                 {['Inventário', 'Ajuste de Estoque'].includes(formData.tipo) && (
                   <p className="text-xs text-muted-foreground">Ao aprovar, o estoque passa a ser este número.</p>
+                )}
+                {precisaMotivo && (
+                  <div className="space-y-1 pt-1">
+                    <Label htmlFor="mov_motivo">Motivo da diferença *</Label>
+                    <Select value={formData.motivo_divergencia || 'none'} onValueChange={(v) => setFormData({ ...formData, motivo_divergencia: v === 'none' ? '' : v })}>
+                      <SelectTrigger id="mov_motivo" className={formErrors.motivo_divergencia ? 'border-destructive' : ''}><SelectValue placeholder="Escolha" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Escolha...</SelectItem>
+                        {MOTIVOS_DIVERGENCIA.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    {formErrors.motivo_divergencia && <p className="text-xs text-destructive">{formErrors.motivo_divergencia}</p>}
+                    <p className="text-xs text-muted-foreground">Diferença no estoque precisa da autorização de {QUEM_AUTORIZA}.</p>
+                  </div>
                 )}
                 {formErrors.quantidade && <p className="text-xs text-destructive">{formErrors.quantidade}</p>}
               </div>

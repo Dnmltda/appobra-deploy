@@ -111,8 +111,7 @@ Junto com as Etapas 1 e 2 (ver `etapa1-seguranca.md`, passos de backup e confer�
 - Fluxos que faltam do documento mestre (Etapa 4): solicitação com itens → separação → entrega →
   confirmação; empréstimo e devolução de equipamento; divergência de estoque; Ocorrências; alerta de
   estoque mínimo.
-- Restringir no servidor quem aprova movimentação (hoje a tela já restringe; o servidor aceita qualquer
-  usuário da empresa).
+- ~~Restringir no servidor quem aprova movimentação~~ — feito na Etapa 4.3.
 - Estoque de EPI ainda é calculado na tela.
 - Limite de tentativas de login no servidor (o da tela nunca funcionou e foi removido).
 - Limpeza (Etapa 5): tabelas duplicadas e campos inglês/português.

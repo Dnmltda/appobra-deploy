@@ -1,7 +1,7 @@
 # Etapa 4 — Fluxos do documento mestre
 
 Data: 18/10/2026 · Feita pelo Claude Code · Sobre as Etapas 1 a 3
-Status: **4.1 e 4.2 testadas localmente (servidor + navegador), ainda NÃO publicadas**.
+Status: **4.1, 4.2 e 4.3 testadas localmente (servidor + navegador), ainda NÃO publicadas**.
 
 ## 4.1 — Material de consumo: pedir → aprovar → separar → entregar → confirmar
 
@@ -91,9 +91,35 @@ e-mails pode cair no spam ou nem chegar. O profissional é enviar de um endereç
 
 **Testes**: servidor `audit_tests.py` → **162/0** (15 verificações novas de equipamento e isolamento),
 rodado a partir do `.zip`. Navegador `testes/navegador/equipamento.mjs` → 9/9; os outros 10 roteiros
-continuam OK (100 verificações no total).
+continuam OK (91 verificações no total).
+
+## 4.3 — Diferença de estoque com motivo e autorização (ver `conferir-estoque.png`)
+
+**Como fica para quem usa (tela Estoque)**
+- Cada material tem o botão **Conferir**. A pessoa digita **quanto contou** e o app responde na hora:
+  "Bate certinho", "Faltam 3 sc" ou "Sobram 2 sc".
+- Se deu diferença, o app pergunta **por quê** (lista: contagem diferente do sistema, quebra ou dano, sumiço
+  ou furto, vencido ou estragado, uso sem registro, erro de lançamento, outro) e aceita uma observação.
+- **Administrador, Diretoria, Gerência ou Engenheiro**: o estoque passa a ser o que foi contado na hora.
+- **Almoxarife, Mestre de Obras, Comprador**: a diferença fica num quadro amarelo **"Diferenças aguardando
+  autorização"** (mostra sistema × contado, motivo e quem contou); quem autoriza aperta **Autorizar** ou
+  **Recusar**. Só depois de autorizada o estoque muda.
+- **Perda** (no "Registrar Saída") também pede o motivo e passa pela mesma autorização.
+- Fica gravado: saldo do sistema na hora da contagem, diferença, motivo, quem autorizou e quando.
+
+**Também resolvido (pendente da Etapa 3):** o **servidor** agora decide quem aprova movimentação. Antes só a
+tela escondia o botão; qualquer pessoa da empresa conseguia aprovar por fora. Agora, movimentação lançada como
+"Aprovado" por quem não é da gestão do estoque (ex.: pedreiro, faxina) fica "Pendente", e essas pessoas não
+conseguem aprovar.
+
+**Arquivos**: `pb_hooks/divergencia-estoque.pb.js` + `divergencia-lib.js` (novos);
+`frontend/src/pages/EstoqueAlmoxarifadoPage.jsx`, `MovimentacoesPage.jsx` (motivo no formulário),
+`lib/divergencia.js`, `lib/permissoes.js` (`podeAutorizarAjuste`).
+
+**Testes**: servidor **174/0** (12 verificações novas); navegador `divergencia.mjs` → 8/8 (almoxarife conta
+17 de 20, fica aguardando, administrador autoriza, estoque vai a 17; contagem igual não pede motivo).
+Todos os 12 roteiros OK (99 verificações). `estoque.mjs` passou a mandar o motivo no inventário de teste.
 
 ## Próximos passos da Etapa 4
-- Divergência de estoque com motivo e autorização.
 - Ocorrências.
 - Alerta de estoque mínimo.

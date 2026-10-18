@@ -33,4 +33,5 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `ids-materiais.mjs` | estoque começa vazio, sugestão de material, ID por ordem de chegada (só leitura) |
 | `convite.mjs` | convite de funcionário: e-mail com botão, link certo, cria a senha e entra |
 | `equipamento.mjs` | emprestar equipamento, atraso, receber de volta com o estado (manutenção) |
+| `divergencia.mjs` | conferir estoque: diferença com motivo, aguarda autorização, administrador autoriza |
 | `fluxo-material.mjs` | pedido de material com itens: pedir → aprovar → separar → entregar (baixa) → confirmar |

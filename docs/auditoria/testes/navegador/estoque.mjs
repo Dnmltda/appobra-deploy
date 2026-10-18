@@ -38,7 +38,7 @@ await page.screenshot({ path: OUT + "estoque.png" });
 
 // ---- Movimentações: inventário pendente aprovado pela tela
 const inv = await api("POST", "/api/collections/movimentacoes/records", token, {
-  material_id: mat.id, company_id: cid, tipo: "Inventário", quantidade: 25, unidade: "un", status: "Pendente", numero_movimentacao: "MOV-INV-1",
+  material_id: mat.id, company_id: cid, tipo: "Inventário", quantidade: 25, unidade: "un", status: "Pendente", motivo_divergencia: "Contagem diferente do sistema", numero_movimentacao: "MOV-INV-1",
 });
 const big = await api("POST", "/api/collections/movimentacoes/records", token, {
   material_id: mat.id, company_id: cid, tipo: "Saída", quantidade: 999, unidade: "un", status: "Pendente", numero_movimentacao: "MOV-BIG-1",

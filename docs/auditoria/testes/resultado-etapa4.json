@@ -570,6 +570,18 @@
   "detalhe": ""
  },
  {
+  "grupo": "divergencia",
+  "teste": "Inventário com diferença sem motivo é recusado",
+  "ok": true,
+  "detalhe": "Diga o motivo da diferença no estoque (ex.: quebra, sumiço, erro de lançamento)."
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Ajuste autorizado grava saldo do sistema, diferença e quem autorizou",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
   "grupo": "estoque",
   "teste": "Inventário: saldo passa a ser o contado (56 -> 30)",
   "ok": true,
@@ -600,6 +612,66 @@
   "detalhe": ""
  },
  {
+  "grupo": "divergencia",
+  "teste": "Pedreiro lança saída 'Aprovado': fica Pendente e o saldo não muda",
+  "ok": true,
+  "detalhe": "Pendente saldo 27"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Pedreiro não aprova movimentação (servidor)",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Almoxarife aprova a saída normal",
+  "ok": true,
+  "detalhe": "saldo 26"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Contagem do almoxarife com diferença fica esperando autorização",
+  "ok": true,
+  "detalhe": "Pendente -4"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Almoxarife não autoriza a própria diferença",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Engenheiro autoriza: saldo passa a ser o contado e fica quem autorizou",
+  "ok": true,
+  "detalhe": "saldo 22"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Contagem que bate com o sistema não precisa de motivo nem autorização",
+  "ok": true,
+  "detalhe": "Aprovado"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Perda sem motivo é recusada",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Perda do almoxarife espera autorização",
+  "ok": true,
+  "detalhe": "Pendente"
+ },
+ {
+  "grupo": "divergencia",
+  "teste": "Ninguém escreve 'autorizado por' pela tela",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
   "grupo": "telas",
   "teste": "Usuário logado grava log de auditoria",
   "ok": true,
@@ -615,7 +687,7 @@
   "grupo": "auditoria",
   "teste": "Admin vê os logs da própria empresa",
   "ok": true,
-  "detalhe": "3 logs"
+  "detalhe": "6 logs"
  },
  {
   "grupo": "auditoria",
@@ -909,25 +981,25 @@
   "grupo": "ids",
   "teste": "Funcionário novo recebe o próximo número, ignorando o que a tela mandou",
   "ok": true,
-  "detalhe": "06"
+  "detalhe": "09"
  },
  {
   "grupo": "ids",
   "teste": "Acesso ao sistema do mesmo funcionário usa o mesmo número",
   "ok": true,
-  "detalhe": "06 = 06"
+  "detalhe": "09 = 09"
  },
  {
   "grupo": "ids",
   "teste": "Ninguém troca o número depois (nem o administrador)",
   "ok": true,
-  "detalhe": "status 200 id 06"
+  "detalhe": "status 200 id 09"
  },
  {
   "grupo": "ids",
   "teste": "Número do funcionário também não muda",
   "ok": true,
-  "detalhe": "status 200 id 06"
+  "detalhe": "status 200 id 09"
  },
  {
   "grupo": "ids",
@@ -939,7 +1011,7 @@
   "grupo": "ids",
   "teste": "Número de quem saiu não é reaproveitado",
   "ok": true,
-  "detalhe": "6 -> 07"
+  "detalhe": "9 -> 10"
  },
  {
   "grupo": "telas",

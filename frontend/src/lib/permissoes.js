@@ -57,3 +57,7 @@ export const podeGerirEstoque = (user) =>
 // Aprovar, separar e entregar solicitações (mesma lista "gestão" do servidor).
 export const podeGerirSolicitacoes = (user) =>
   ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador'].includes(cargoDe(user));
+
+// Autorizar diferença de estoque (inventário/ajuste/perda que muda o saldo).
+export const podeAutorizarAjuste = (user) =>
+  ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro'].includes(cargoDe(user));

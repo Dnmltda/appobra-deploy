@@ -23,11 +23,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Search, AlertCircle, Package, Boxes, TrendingDown, Wallet,
   ArrowDownCircle, ArrowUpCircle, History, Plus, Minus,
-  ChevronLeft, ChevronRight, X,
+  ChevronLeft, ChevronRight, X, ClipboardCheck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
-import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
+import { ehAdmin, cargoDe, podeAutorizarAjuste } from '@/lib/permissoes.js';
+import { MOTIVOS_DIVERGENCIA, TIPOS_DIVERGENCIA, QUEM_AUTORIZA } from '@/lib/divergencia.js';
 
 const AUDIT_MODULE = 'Estoque';
 const PER_PAGE = 10;
@@ -109,6 +110,7 @@ const emptySaidaForm = {
   tipo: 'Saída',
   obra_id: '',
   funcionario_id: '',
+  motivo_divergencia: '',
   observacoes: '',
 };
 
@@ -153,6 +155,12 @@ const EstoqueAlmoxarifadoPage = () => {
   const [saidaForm, setSaidaForm] = useState(emptySaidaForm);
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Conferir estoque (contagem) e diferenças aguardando autorização
+  const [conferir, setConferir] = useState(null);
+  const [contagem, setContagem] = useState({ quantidade: '', motivo_divergencia: '', observacoes: '' });
+  const [pendentes, setPendentes] = useState([]);
+  const autorizador = podeAutorizarAjuste(currentUser);
 
   // Histórico por material
   const [histModalOpen, setHistModalOpen] = useState(false);
@@ -238,10 +246,24 @@ const EstoqueAlmoxarifadoPage = () => {
     }
   }, [companyId, buildHistFilter]);
 
+  const fetchPendentes = useCallback(async () => {
+    if (!companyId) return;
+    try {
+      const tipos = TIPOS_DIVERGENCIA.map((t) => `tipo = "${t}"`).join(' || ');
+      setPendentes(await pb.collection('movimentacoes').getFullList({
+        filter: `company_id = "${companyId}" && status = "Pendente" && (${tipos})`,
+        sort: 'created', expand: 'material_id,criado_por', $autoCancel: false,
+      }));
+    } catch {
+      setPendentes([]);
+    }
+  }, [companyId]);
+
   useEffect(() => {
     if (companyId) {
       fetchMateriais();
       fetchAux();
+      fetchPendentes();
       fetchMovimentacoes(1);
     } else {
       setLoading(false);
@@ -260,6 +282,7 @@ const EstoqueAlmoxarifadoPage = () => {
           if (e.record?.company_id !== companyId) return;
           // Atualiza histórico
           fetchMovimentacoes(histPage);
+          fetchPendentes();
         }, { $autoCancel: false });
       } catch (err) {
         console.error('Realtime subscription failed', err);
@@ -447,6 +470,7 @@ const EstoqueAlmoxarifadoPage = () => {
     const qtd = Number(saidaForm.quantidade);
     if (!saidaForm.quantidade || Number.isNaN(qtd) || qtd <= 0) errs.quantidade = 'Quantidade deve ser maior que zero';
     if (saidaForm.tipo === TIPO_RETIRADA_FUNC && !saidaForm.funcionario_id) errs.funcionario_id = 'Selecione o funcionário';
+    if (saidaForm.tipo === 'Perda' && !saidaForm.motivo_divergencia) errs.motivo_divergencia = 'Escolha o motivo da perda';
     setFormErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -487,6 +511,7 @@ const EstoqueAlmoxarifadoPage = () => {
         company_id: companyId,
         criado_por: currentUser.id,
       };
+      if (saidaForm.tipo === 'Perda') movData.motivo_divergencia = saidaForm.motivo_divergencia;
       if (saidaForm.tipo === TIPO_RETIRADA_FUNC) {
         movData.funcionario_id = saidaForm.funcionario_id;
       }
@@ -510,9 +535,12 @@ const EstoqueAlmoxarifadoPage = () => {
           criado_por: currentUser.id,
         }, { $autoCancel: false, requestKey: 'create-saldo-retirada' });
         toast.success(`Retirada registrada: ${numero} (-${formatNumber(qtd)} ${material.unit || ''}) para ${func?.nome || 'funcionário'}`);
+      } else if (movRec.status === 'Pendente') {
+        toast.success(`${saidaForm.tipo} registrada (${numero}). O estoque só baixa depois da autorização de ${QUEM_AUTORIZA}.`, { duration: 8000 });
       } else {
         toast.success(`Saída registrada: ${numero} (-${formatNumber(qtd)} ${material.unit || ''})`);
       }
+      fetchPendentes();
 
       // 2. O servidor já descontou a saída do saldo; relê o material.
       const updated = await pb.collection('materiais').getOne(material.id, { $autoCancel: false });
@@ -530,6 +558,68 @@ const EstoqueAlmoxarifadoPage = () => {
       console.error('Erro ao registrar saída:', err);
       const msg = mensagemErro(err, 'Erro ao registrar saída');
       toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ---------- Conferir estoque (contagem física) ----------
+  const openConferir = (material) => {
+    setConferir(material);
+    setContagem({ quantidade: '', motivo_divergencia: '', observacoes: '' });
+  };
+
+  const diferencaContagem = conferir && contagem.quantidade !== ''
+    ? Number(contagem.quantidade) - Number(conferir.quantity_in_stock || 0) : null;
+
+  const handleConferir = async () => {
+    const qtd = Number(contagem.quantidade);
+    if (contagem.quantidade === '' || Number.isNaN(qtd) || qtd < 0) { toast.error('Digite quanto você contou'); return; }
+    if (diferencaContagem !== 0 && !contagem.motivo_divergencia) { toast.error('Escolha o motivo da diferença'); return; }
+    setSaving(true);
+    try {
+      const numero = await generateNumero();
+      const rec = await pb.collection('movimentacoes').create({
+        numero_movimentacao: numero, data: todayISO(), hora: nowTime(), tipo: 'Inventário',
+        material_id: conferir.id, categoria: conferir.category || '', codigo: conferir.code || '',
+        quantidade: qtd, unidade: conferir.unit || '', origem: 'Almoxarifado',
+        motivo_divergencia: diferencaContagem !== 0 ? contagem.motivo_divergencia : '',
+        observacoes: contagem.observacoes || null, responsavel_id: currentUser.id,
+        status: 'Aprovado', company_id: companyId, criado_por: currentUser.id,
+      }, { $autoCancel: false });
+      const un = conferir.unit || '';
+      if (rec.status === 'Pendente') {
+        toast.success(`Contagem registrada. A diferença de ${formatNumber(rec.diferenca_contagem)} ${un} espera a autorização de ${QUEM_AUTORIZA}.`, { duration: 8000 });
+      } else if (Number(rec.diferenca_contagem) === 0) {
+        toast.success('Contagem confere com o sistema. Tudo certo!');
+      } else {
+        toast.success(`Estoque ajustado para ${formatNumber(qtd)} ${un}.`);
+      }
+      await auditLog(AUDIT_ACTIONS.RECORD_CREATED, AUDIT_MODULE, `Contagem ${numero}: ${conferir.name} contado ${formatNumber(qtd)} ${un}`);
+      setConferir(null);
+      fetchMateriais();
+      fetchPendentes();
+      fetchMovimentacoes(1);
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Não foi possível registrar a contagem'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const decidirAjuste = async (mov, autorizar) => {
+    setSaving(true);
+    try {
+      await pb.collection('movimentacoes').update(mov.id, autorizar
+        ? { status: 'Aprovado', atualizado_por: currentUser.id }
+        : { status: 'Cancelado', motivo_cancelamento: `Ajuste recusado por ${currentUser.name || currentUser.email}`, atualizado_por: currentUser.id },
+      { $autoCancel: false });
+      toast.success(autorizar ? 'Ajuste autorizado. O estoque foi atualizado.' : 'Ajuste recusado. O estoque não mudou.');
+      fetchMateriais();
+      fetchPendentes();
+      fetchMovimentacoes(1);
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Não foi possível salvar'));
     } finally {
       setSaving(false);
     }
@@ -661,6 +751,38 @@ const EstoqueAlmoxarifadoPage = () => {
           <KpiCard icon={TrendingDown} label="Alertas" value={dashboard.baixoEstoque + dashboard.semEstoque} sub={`${dashboard.baixoEstoque} baixo · ${dashboard.semEstoque} sem`} color="text-amber-600" />
         </div>
 
+        {pendentes.length > 0 && (
+          <Card className="mb-6 border-amber-500/40">
+            <CardContent className="p-4 space-y-2">
+              <p className="font-semibold">Diferenças de estoque aguardando autorização ({pendentes.length})</p>
+              {!autorizador && <p className="text-xs text-muted-foreground">Quem autoriza: {QUEM_AUTORIZA}.</p>}
+              {pendentes.map((p) => {
+                const un = p.unidade || p.expand?.material_id?.unit || '';
+                const dif = Number(p.diferenca_contagem || 0);
+                return (
+                  <div key={p.id} data-testid="ajuste-pendente" className="flex flex-wrap items-center justify-between gap-2 border rounded-md p-2 text-sm">
+                    <div>
+                      <strong>{p.expand?.material_id?.name || 'Material'}</strong>
+                      {p.tipo === 'Perda'
+                        ? <> · perda de {formatNumber(p.quantidade)} {un}</>
+                        : <> · sistema {formatNumber(p.saldo_sistema)} {un}, contado {formatNumber(p.quantidade)} {un}</>}
+                      <span className={dif < 0 ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold'}> ({dif > 0 ? '+' : ''}{formatNumber(dif)} {un})</span>
+                      <span className="text-muted-foreground"> · {p.motivo_divergencia || 'sem motivo'}{p.observacoes ? ` — ${p.observacoes}` : ''}</span>
+                      <span className="text-muted-foreground"> · por {p.expand?.criado_por?.name || '-'}</span>
+                    </div>
+                    {autorizador && (
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="outline" disabled={saving} onClick={() => decidirAjuste(p, false)}>Recusar</Button>
+                        <Button size="sm" disabled={saving} onClick={() => decidirAjuste(p, true)}>Autorizar</Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs defaultValue="estoque" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="estoque">Estoque</TabsTrigger>
@@ -768,6 +890,9 @@ const EstoqueAlmoxarifadoPage = () => {
                                     </Button>
                                     <Button size="sm" variant="ghost" title="Registrar saída" onClick={() => openSaida(m)} className="text-red-600 hover:bg-red-500/10" disabled={Number(m.quantity_in_stock || 0) <= 0}>
                                       <Minus className="w-4 h-4" />
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={() => openConferir(m)}>
+                                      <ClipboardCheck className="w-4 h-4 mr-1" />Conferir
                                     </Button>
                                   </>
                                 )}
@@ -1020,6 +1145,21 @@ const EstoqueAlmoxarifadoPage = () => {
               </Select>
             </div>
 
+            {saidaForm.tipo === 'Perda' && (
+              <div className="space-y-2">
+                <Label htmlFor="sai_motivo">Motivo da perda *</Label>
+                <Select value={saidaForm.motivo_divergencia || 'none'} onValueChange={(v) => setSaidaForm({ ...saidaForm, motivo_divergencia: v === 'none' ? '' : v })}>
+                  <SelectTrigger id="sai_motivo" className={formErrors.motivo_divergencia ? 'border-destructive' : ''}><SelectValue placeholder="Escolha o motivo" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Escolha o motivo...</SelectItem>
+                    {MOTIVOS_DIVERGENCIA.filter((m) => m !== 'Contagem diferente do sistema').map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {formErrors.motivo_divergencia && <p className="text-xs text-destructive">{formErrors.motivo_divergencia}</p>}
+                {!autorizador && <p className="text-xs text-muted-foreground">A perda só sai do estoque depois da autorização de {QUEM_AUTORIZA}.</p>}
+              </div>
+            )}
+
             {saidaForm.tipo === TIPO_RETIRADA_FUNC && (
               <div className="space-y-2">
                 <Label htmlFor="sai_func">Funcionário *</Label>
@@ -1048,6 +1188,60 @@ const EstoqueAlmoxarifadoPage = () => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- Modal Conferir estoque ---------- */}
+      <Dialog open={!!conferir} onOpenChange={(open) => { if (!open) setConferir(null); }}>
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader><DialogTitle>Conferir estoque</DialogTitle></DialogHeader>
+          {conferir && (
+            <div className="space-y-3">
+              <p className="text-sm">
+                <strong>{conferir.name}</strong><br />
+                No sistema: <strong>{formatNumber(conferir.quantity_in_stock || 0)} {conferir.unit || ''}</strong>
+              </p>
+              <div className="space-y-1">
+                <Label htmlFor="conf_qtd">Quanto você contou? *</Label>
+                <Input id="conf_qtd" type="number" step="0.01" min="0" inputMode="decimal" value={contagem.quantidade}
+                  onChange={(e) => setContagem({ ...contagem, quantidade: e.target.value })} />
+              </div>
+              {diferencaContagem !== null && (
+                <p data-testid="resultado-contagem" className={`text-sm font-semibold ${diferencaContagem === 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  {diferencaContagem === 0
+                    ? 'Bate certinho com o sistema.'
+                    : diferencaContagem < 0
+                      ? `Faltam ${formatNumber(-diferencaContagem)} ${conferir.unit || ''}.`
+                      : `Sobram ${formatNumber(diferencaContagem)} ${conferir.unit || ''}.`}
+                </p>
+              )}
+              {diferencaContagem !== null && diferencaContagem !== 0 && (
+                <>
+                  <div className="space-y-1">
+                    <Label htmlFor="conf_motivo">Por que deu diferença? *</Label>
+                    <Select value={contagem.motivo_divergencia || 'none'} onValueChange={(v) => setContagem({ ...contagem, motivo_divergencia: v === 'none' ? '' : v })}>
+                      <SelectTrigger id="conf_motivo"><SelectValue placeholder="Escolha o motivo" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Escolha o motivo...</SelectItem>
+                        {MOTIVOS_DIVERGENCIA.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="conf_obs">Observação (opcional)</Label>
+                    <Textarea id="conf_obs" rows={2} value={contagem.observacoes} onChange={(e) => setContagem({ ...contagem, observacoes: e.target.value })} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {autorizador ? 'Ao confirmar, o estoque passa a ser o que você contou.' : `O estoque só muda depois da autorização de ${QUEM_AUTORIZA}.`}
+                  </p>
+                </>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setConferir(null)}>Cancelar</Button>
+                <Button onClick={handleConferir} disabled={saving || contagem.quantidade === ''}>Registrar contagem</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
