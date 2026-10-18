@@ -510,7 +510,7 @@ const EmployeeManagement = () => {
       setTrainingDialogOpen(true);
     } catch (error) {
       console.error('Error fetching trainings:', error);
-      toast.error('Failed to load training history');
+      toast.error('Não foi possível carregar o histórico de treinamentos');
     }
   };
 

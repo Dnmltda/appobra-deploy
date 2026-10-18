@@ -59,7 +59,7 @@ const TrainingTracker = () => {
       setEmployees(employeesData);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load trainings');
+      toast.error('Não foi possível carregar os treinamentos');
     } finally {
       setLoading(false);
     }
@@ -81,10 +81,10 @@ const TrainingTracker = () => {
 
       if (editingTraining) {
         await pb.collection('treinamentos').update(editingTraining.id, payload, { $autoCancel: false });
-        toast.success('Training updated successfully');
+        toast.success('Treinamento atualizado');
       } else {
         await pb.collection('treinamentos').create(payload, { $autoCancel: false });
-        toast.success('Training added successfully');
+        toast.success('Treinamento cadastrado');
       }
       
       setDialogOpen(false);
@@ -92,7 +92,7 @@ const TrainingTracker = () => {
       fetchData();
     } catch (error) {
       console.error('Error saving training:', error);
-      toast.error('Failed to save training');
+      toast.error('Não foi possível salvar o treinamento');
     }
   };
 

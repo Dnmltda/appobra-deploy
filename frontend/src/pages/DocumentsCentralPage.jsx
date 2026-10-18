@@ -128,13 +128,36 @@ const DocumentsCentralPage = () => {
                 
                 <div className="mt-8 pt-4 border-t">
                   <h4 className="text-sm font-semibold text-muted-foreground px-4 mb-2 uppercase tracking-wider">Alertas</h4>
-                  <div className="px-4 py-3 bg-amber-50 rounded-lg text-amber-800 border border-amber-200 flex items-start gap-3">
-                    <FileWarning className="w-5 h-5 shrink-0 mt-0.5" />
-                    <div className="text-sm">
-                      <span className="font-bold block">1 Documento a vencer</span>
-                      Licença Ambiental - Obra Centro (Vence em 12 dias)
-                    </div>
-                  </div>
+                  {/* Antes era um texto fixo ("Licença Ambiental - Obra Centro").
+                      Agora lista os documentos reais que vencem em até 30 dias. */}
+                  {(() => {
+                    const hoje = new Date();
+                    const limite = new Date(hoje.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    const aVencer = documentos
+                      .filter((d) => d.data_vencimento && new Date(d.data_vencimento) <= limite)
+                      .sort((a, b) => new Date(a.data_vencimento) - new Date(b.data_vencimento));
+                    if (!aVencer.length) {
+                      return <p className="px-4 text-sm text-muted-foreground">Nenhum documento vencendo nos próximos 30 dias.</p>;
+                    }
+                    return (
+                      <div className="px-4 py-3 bg-amber-50 rounded-lg text-amber-800 border border-amber-200 flex items-start gap-3">
+                        <FileWarning className="w-5 h-5 shrink-0 mt-0.5" />
+                        <div className="text-sm space-y-1">
+                          <span className="font-bold block">
+                            {aVencer.length} {aVencer.length === 1 ? 'documento vence' : 'documentos vencem'} em até 30 dias
+                          </span>
+                          {aVencer.slice(0, 5).map((d) => {
+                            const dias = Math.ceil((new Date(d.data_vencimento) - hoje) / 86400000);
+                            return (
+                              <span key={d.id} className="block">
+                                {d.nome} ({dias < 0 ? `venceu há ${-dias} dia(s)` : dias === 0 ? 'vence hoje' : `vence em ${dias} dia(s)`})
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>

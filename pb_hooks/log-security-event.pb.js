@@ -124,10 +124,14 @@ onBootstrap((e) => {
 
   try {
     const materiais = $app.findCollectionByNameOrId("materiais");
-    materiais.listRule = "@request.auth.company_id = company_id";
-    materiais.viewRule = "@request.auth.company_id = company_id";
-    materiais.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
-    materiais.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    // 18/10/2026: só corrige se ainda não houver isolamento por empresa —
+    // senão desfazia o filtro de arquivados (seguranca-etapa1.pb.js).
+    if (!String(materiais.listRule || "").includes("company_id")) {
+      materiais.listRule = "@request.auth.company_id = company_id";
+      materiais.viewRule = "@request.auth.company_id = company_id";
+      materiais.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+      materiais.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    }
     $app.save(materiais);
     console.log("[fix-tenant-to-company] materiais: regras atualizadas.");
   } catch (err) {
@@ -136,10 +140,14 @@ onBootstrap((e) => {
 
   try {
     const equipamentos = $app.findCollectionByNameOrId("equipamentos");
-    equipamentos.listRule = "@request.auth.company_id = company_id";
-    equipamentos.viewRule = "@request.auth.company_id = company_id";
-    equipamentos.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
-    equipamentos.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    // 18/10/2026: só corrige se ainda não houver isolamento por empresa —
+    // senão desfazia o filtro de arquivados (seguranca-etapa1.pb.js).
+    if (!String(equipamentos.listRule || "").includes("company_id")) {
+      equipamentos.listRule = "@request.auth.company_id = company_id";
+      equipamentos.viewRule = "@request.auth.company_id = company_id";
+      equipamentos.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+      equipamentos.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    }
     if (equipamentos.fields.getByName("company_id_new")) {
       equipamentos.fields.removeByName("company_id_new");
     }

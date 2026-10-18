@@ -39,7 +39,6 @@ const ContasPagar = () => {
               <h1 className="text-3xl font-bold mb-2 text-primary">{t('accountsPayable', language)}</h1>
               <p className="text-muted-foreground">Gestão de obrigações financeiras</p>
             </div>
-            <Button className="bg-accent text-accent-foreground font-bold">Registrar Título</Button>
           </div>
 
           <Card className="bg-card border-border shadow-sm">

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, Phone, MapPin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import pb from '@/lib/pocketbaseClient.js';
 import { validateContactForm } from '@/utils/loginValidations.js';
 
 // Modal "Contato" — formulário de contato institucional.
@@ -46,11 +47,16 @@ const ContactModal = ({ open, onClose }) => {
     }
 
     setLoading(true);
-    // Simula envio (estrutura pronta para integração com mailer PocketBase).
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    toast.success('Mensagem enviada com sucesso! Em breve entraremos em contato.');
-    setLoading(false);
-    handleClose();
+    try {
+      // Envio real: pb_hooks/contato.pb.js manda para a caixa da DNM&LTDA.
+      await pb.send('/api/custom/contato', { method: 'POST', body: formData, $autoCancel: false });
+      toast.success('Mensagem enviada! Em breve entraremos em contato.');
+      handleClose();
+    } catch (err) {
+      toast.error(err?.response?.message || 'Não foi possível enviar agora. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

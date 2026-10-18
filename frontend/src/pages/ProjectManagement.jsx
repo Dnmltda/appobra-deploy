@@ -68,7 +68,7 @@ const ProjectManagement = () => {
       setEmployees(employeesData);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load projects');
+      toast.error('Não foi possível carregar as obras');
     } finally {
       setLoading(false);
     }
@@ -93,10 +93,10 @@ const ProjectManagement = () => {
 
       if (editingProject) {
         await pb.collection('obras').update(editingProject.id, data, { $autoCancel: false });
-        toast.success('Project updated successfully');
+        toast.success('Obra atualizada');
       } else {
         await pb.collection('obras').create(data, { $autoCancel: false });
-        toast.success('Project created successfully');
+        toast.success('Obra cadastrada');
       }
       
       setDialogOpen(false);
@@ -104,7 +104,7 @@ const ProjectManagement = () => {
       fetchData();
     } catch (error) {
       console.error('Error saving project:', error);
-      toast.error('Failed to save project');
+      toast.error('Não foi possível salvar a obra');
     }
   };
 
@@ -132,7 +132,7 @@ const ProjectManagement = () => {
       setTeamDialogOpen(true);
     } catch (error) {
       console.error('Error fetching team:', error);
-      toast.error('Failed to load team');
+      toast.error('Não foi possível carregar a equipe');
     }
   };
 
@@ -148,13 +148,13 @@ const ProjectManagement = () => {
         obraId: selectedProject.id
       }, { $autoCancel: false });
       
-      toast.success('Employee allocated successfully');
+      toast.success('Funcionário alocado na obra');
       setAllocateDialogOpen(false);
       setAllocateData({ employeeId: '' });
       fetchData();
     } catch (error) {
       console.error('Error allocating employee:', error);
-      toast.error('Failed to allocate employee');
+      toast.error('Não foi possível alocar o funcionário');
     }
   };
 

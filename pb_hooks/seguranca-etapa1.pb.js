@@ -344,6 +344,39 @@ onBootstrap((e) => {
     }
   });
 
+  // ---- Excluir vira ARQUIVAR (regra do documento mestre: nunca apagar o
+  // que tem histórico). O pedido de exclusão das telas é convertido pelo
+  // hook onRecordDeleteRequest no fim deste arquivo; aqui: campo
+  // deleted_at, arquivados fora das listas e fora dos campos únicos.
+  const SEG_ARQUIVAVEIS = [
+    "materiais", "funcionarios", "empresas", "epis", "equipamentos", "fornecedores", "clientes", "veiculos",
+    "solicitacoes", "compras", "propostas", "contas_receber", "treinamentos",
+  ];
+  SEG_ARQUIVAVEIS.forEach((name) => {
+    try {
+      let col = app.findCollectionByNameOrId(name);
+      if (!col.fields.getByName("deleted_at")) {
+        col.fields.add(new DateField({ name: "deleted_at" }));
+        app.save(col);
+        col = app.findCollectionByNameOrId(name);
+      }
+      const lr = col.listRule === null ? null : String(col.listRule);
+      if (lr !== null && !lr.includes("deleted_at")) {
+        col.listRule = `(${lr}) && deleted_at = ""`;
+      }
+      // Únicos (CNPJ, placa, código...) não contam os arquivados.
+      const idx = [];
+      for (let i = 0; i < col.indexes.length; i++) idx.push(String(col.indexes[i]));
+      col.indexes = idx.map((ix) =>
+        /^CREATE UNIQUE INDEX/i.test(ix) && !ix.includes("deleted_at")
+          ? (/ WHERE /i.test(ix) ? `${ix} AND deleted_at = ''` : `${ix} WHERE deleted_at = ''`)
+          : ix);
+      app.save(col);
+    } catch (err) {
+      console.log(`[seguranca-etapa1] Erro ao preparar arquivamento de ${name}:`, err);
+    }
+  });
+
   console.log("[seguranca-etapa1] Regras de segurança e separação por empresa aplicadas.");
 });
 
@@ -395,3 +428,30 @@ onRecordsListRequest((e) => {
   }
   e.next();
 }, "users");
+
+// Excluir vira ARQUIVAR: o registro some das listas mas fica no banco (com
+// a data em deleted_at), e o histórico (movimentações, compras antigas)
+// continua mostrando o nome. Quem pode "excluir" continua sendo decidido
+// pela regra de exclusão da coleção. Usuários são só inativados (a Gestão
+// de Acessos mostra e permite reativar). Superusuário apaga de verdade.
+onRecordDeleteRequest((e) => {
+  if (e.auth && e.auth.isSuperuser()) return e.next();
+
+  const r = e.record;
+  const col = r.collection();
+  const regra = col.deleteRule === null ? null : String(col.deleteRule);
+  if (regra === null || !$app.canAccessRecord(r, e.requestInfo(), regra)) {
+    throw new ForbiddenError("Você não tem permissão para excluir este registro.");
+  }
+
+  const INATIVO = {
+    materiais: "inactive", funcionarios: "Inativo", empresas: "Inativo", epis: "Inativo",
+    equipamentos: "inactive", clientes: "Inativo", veiculos: "Inativo", users: "Inativo",
+  };
+  if (col.name !== "users") r.set("deleted_at", new Date().toISOString().replace("T", " "));
+  if (INATIVO[col.name]) r.set("status", INATIVO[col.name]);
+  if (col.name === "users") r.set("is_active", false);
+  $app.saveNoValidate(r);
+  return e.noContent(204);
+}, "materiais", "funcionarios", "empresas", "epis", "equipamentos", "fornecedores", "clientes", "veiculos",
+   "solicitacoes", "compras", "propostas", "contas_receber", "treinamentos", "users");

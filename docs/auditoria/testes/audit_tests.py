@@ -353,6 +353,32 @@ if tSU:
         s, r = call("GET", "/api/collections/companies/records?perPage=50", tM)
         check("telas", "Conta mestre (dnmltda) continua vendo todas as empresas", r.get("totalItems", 0) >= 2, f"{r.get('totalItems')}")
 
+# ------------------------------------------------------------------ excluir vira arquivar
+s, fx = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor a arquivar", "cnpj": "99999999000199", "company_id": cA})
+s, r = call("DELETE", f"/api/collections/fornecedores/records/{fx.get('id')}", tF)
+check("permissao", "Funcionário comum não exclui fornecedor", s >= 400, f"status {s}")
+s, r = call("DELETE", f"/api/collections/fornecedores/records/{fx.get('id')}", tA)
+check("telas", "Admin exclui fornecedor (tela recebe sucesso)", s == 204, f"status {s}")
+s, r = call("GET", "/api/collections/fornecedores/records?perPage=200", tA)
+check("telas", "Fornecedor excluído some da lista", s == 200 and fx.get("id") not in json.dumps(r))
+if tSU:
+    s, r = call("GET", f"/api/collections/fornecedores/records/{fx.get('id')}", tSU)
+    check("arquivo", "Fornecedor excluído continua no banco, arquivado com data", s == 200 and bool(r.get("deleted_at")), f"status {s}")
+s, r = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor recadastrado", "cnpj": "99999999000199", "company_id": cA})
+check("telas", "Dá para cadastrar de novo o mesmo CNPJ depois de excluir", s == 200, err(r) if s >= 400 else "")
+if mat:
+    s, m = call("POST", "/api/collections/materiais/records", tA, {"name": "Material que vai sair de linha", "code": "TST-ARQ", "unit": "un",
+                "quantity_in_stock": 3, "status": "active", "company_id": cA})
+    call("DELETE", f"/api/collections/materiais/records/{m.get('id')}", tA)
+    s, r = call("GET", "/api/collections/movimentacoes/records?expand=material_id&filter=" + q(f'material_id="{m.get("id")}"'), tA)
+    nome = ((r.get("items") or [{}])[0].get("expand") or {}).get("material_id", {}).get("name")
+    check("arquivo", "Histórico continua mostrando o nome do material excluído", nome == "Material que vai sair de linha", f"{nome}")
+s, uX = call("POST", "/api/collections/users/records", tA, {"email": "sai@teste.local", "username": "sai", "password": "Senha12345",
+             "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Funcionário", "role": "Funcionário", "status": "Ativo", "id_unico": "09"})
+s, r = call("DELETE", f"/api/collections/users/records/{uX.get('id')}", tA)
+s2, r2 = call("GET", f"/api/collections/users/records/{uX.get('id')}", tA)
+check("telas", "Excluir usuário inativa (continua na Gestão de Acessos para reativar)", s == 204 and r2.get("status") == "Inativo", f"status {s}/{r2.get('status')}")
+
 # ------------------------------------------------------------------ login e recuperação de senha
 s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "adminb", "password": "Senha12345"})
 check("telas", "Login pelo nome de usuário", s == 200 and r.get("record", {}).get("company_id") == cB, f"status {s}")

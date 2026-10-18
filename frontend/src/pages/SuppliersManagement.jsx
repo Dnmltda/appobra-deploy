@@ -56,7 +56,7 @@ const SuppliersManagement = () => {
     } catch (err) {
       console.error('Error fetching suppliers:', err);
       setError(true);
-      toast.error('Failed to load suppliers');
+      toast.error('Não foi possível carregar os fornecedores');
     } finally {
       setLoading(false);
     }
@@ -78,10 +78,10 @@ const SuppliersManagement = () => {
 
       if (editingSupplier) {
         await pb.collection('fornecedores').update(editingSupplier.id, payload, { $autoCancel: false });
-        toast.success('Supplier updated successfully');
+        toast.success('Fornecedor atualizado');
       } else {
         await pb.collection('fornecedores').create(payload, { $autoCancel: false });
-        toast.success('Supplier added successfully');
+        toast.success('Fornecedor cadastrado');
       }
       
       setDialogOpen(false);
@@ -90,7 +90,7 @@ const SuppliersManagement = () => {
     } catch (err) {
       console.error('Error saving supplier:', err);
       if (err.status === 400) {
-        toast.error('Failed to save supplier. Please check if the CNPJ is already in use.');
+        toast.error('Não foi possível salvar o fornecedor. Confira se o CNPJ já está cadastrado.');
       } else {
         toast.error(err.message || 'Failed to save supplier');
       }
@@ -112,11 +112,11 @@ const SuppliersManagement = () => {
   const handleDelete = async (id) => {
     try {
       await pb.collection('fornecedores').delete(id, { $autoCancel: false });
-      toast.success('Supplier deleted successfully');
+      toast.success('Fornecedor excluído');
       fetchSuppliers();
     } catch (err) {
       console.error('Error deleting supplier:', err);
-      toast.error('Failed to delete supplier');
+      toast.error('Não foi possível excluir o fornecedor');
     }
   };
 
