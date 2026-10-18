@@ -30,8 +30,9 @@ segurança/integridade → comparação com o documento mestre → plano de corr
   testada (emprestar equipamento → receber de volta conferindo o estado). E-mails com botão e link certo
   (o convite de funcionário apontava para o endereço antigo); 4.3 feita e testada (conferir estoque:
   diferença com motivo e autorização; o servidor passou a decidir quem aprova movimentação).
-  4.4 feita e testada (módulo Ocorrências, que não existia). Servidor 189/0; navegador 109/109.
-  Próximo: alerta de estoque mínimo.
+  4.4 feita e testada (módulo Ocorrências, que não existia); 4.5 feita e testada (alerta de estoque mínimo
+  no sininho e por e-mail, "Pedir compra"). **Etapa 4 concluída.** Servidor 199/0; navegador 118/118.
+  Próxima: Etapa 5 (limpeza).
 
 ---
 

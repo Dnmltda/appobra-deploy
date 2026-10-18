@@ -1,7 +1,7 @@
 # Etapa 4 — Fluxos do documento mestre
 
 Data: 18/10/2026 · Feita pelo Claude Code · Sobre as Etapas 1 a 3
-Status: **4.1 a 4.4 testadas localmente (servidor + navegador), ainda NÃO publicadas**.
+Status: **Etapa 4 completa (4.1 a 4.5), testada localmente (servidor + navegador), ainda NÃO publicada**.
 
 ## 4.1 — Material de consumo: pedir → aprovar → separar → entregar → confirmar
 
@@ -146,5 +146,36 @@ entre empresas, sem login), rodado a partir do `.zip`. Navegador `ocorrencias.mj
 com foto e gravidade Alta, e-mail chega ao administrador, administrador resolve). Todos os 13 roteiros OK
 (109 verificações). `permissoes.mjs` passou a conferir "Ocorrências" no menu do pedreiro.
 
-## Próximos passos da Etapa 4
-- Alerta de estoque mínimo.
+## 4.5 — Alerta de estoque mínimo (ver `estoque-minimo.png`)
+
+**Como fica para quem usa**
+- Vale para material com **estoque mínimo** cadastrado (campo que já existia no cadastro de Materiais).
+- Quando o saldo **chega no mínimo** (por saída, entrega de pedido, perda, cancelamento de entrada ou porque o
+  mínimo foi aumentado), o servidor avisa **uma vez**:
+  - no **sininho** de Administrador, Diretoria, Gerência, Engenheiro, Mestre de Obras, Almoxarife e Comprador
+    ("Estoque baixo: Cal hidratada 20kg — restam 4 sc (mínimo 5 sc)" ou "Acabou: …");
+  - por **e-mail** para Administrador, Almoxarife e Comprador (botão "Ver o estoque").
+  Enquanto continuar baixo não repete; depois de repor acima do mínimo, volta a avisar na próxima descida.
+- Na tela **Estoque**, quadro vermelho **"Materiais acabando"**: quanto resta, o mínimo e uma sugestão de compra
+  (o dobro do mínimo menos o que tem). Botão **Pedir compra** cria uma Solicitação de compra (prioridade Alta;
+  Urgente se acabou) com a sugestão escrita; o botão vira **"Pedido de compra já feito"** para não pedir duas vezes.
+- O número "Alertas" do topo passou a contar só materiais com mínimo cadastrado (com o estoque começando vazio,
+  antes todo material novo contava como alerta).
+- "Saldo de outras obras antes de comprar" (item 17 do plano) não se aplica hoje: o estoque é um só
+  (almoxarifado central); as obras recebem por entrega/consumo e não guardam saldo próprio. O quadro já mostra o
+  saldo central antes de pedir.
+
+**Arquivos**: `pb_hooks/estoque-minimo.pb.js` + `estoque-minimo-lib.js` (novos; campo interno escondido
+`alerta_minimo_enviado` no material); `frontend/src/pages/EstoqueAlmoxarifadoPage.jsx`.
+
+**Testes**: servidor **199/0** (10 verificações novas: avisa ao chegar no mínimo, não repete, avisa de novo
+depois de repor, quem recebe, material sem mínimo, mínimo aumentado), rodado a partir do `.zip`. Navegador
+`estoque-minimo.mjs` → 9/9 (painel, sininho, e-mail, pedir compra sem duplicar). Todos os 14 roteiros OK
+(118 verificações).
+
+## Etapa 4 concluída — o que vem depois
+
+Pelo plano da auditoria, a próxima é a **Etapa 5 — Limpeza**: unificar tabelas duplicadas e campos
+inglês/português (com migração de dados), QR Code gerado no próprio app e "superadmin" como campo em vez do
+e-mail fixo. Pendentes menores anotados: estoque de EPI ainda calculado na tela; limite de tentativas de
+login no servidor; remetente de e-mail com domínio próprio (painel do Brevo).

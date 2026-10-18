@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { auditLog, AUDIT_ACTIONS } from '@/lib/auditLogger.js';
 import Header from '@/components/Header.jsx';
@@ -23,10 +24,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Search, AlertCircle, Package, Boxes, TrendingDown, Wallet,
   ArrowDownCircle, ArrowUpCircle, History, Plus, Minus,
-  ChevronLeft, ChevronRight, X, ClipboardCheck,
+  ChevronLeft, ChevronRight, X, ClipboardCheck, ShoppingCart,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
+import { generateNumeroSolicitacao } from '@/utils/solicitacoesValidations.js';
 import { ehAdmin, cargoDe, podeAutorizarAjuste } from '@/lib/permissoes.js';
 import { MOTIVOS_DIVERGENCIA, TIPOS_DIVERGENCIA, QUEM_AUTORIZA } from '@/lib/divergencia.js';
 
@@ -116,6 +118,7 @@ const emptySaidaForm = {
 
 const EstoqueAlmoxarifadoPage = () => {
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   const companyId = currentUser?.company_id;
   const perms = usePermissions(currentUser);
 
@@ -160,6 +163,7 @@ const EstoqueAlmoxarifadoPage = () => {
   const [conferir, setConferir] = useState(null);
   const [contagem, setContagem] = useState({ quantidade: '', motivo_divergencia: '', observacoes: '' });
   const [pendentes, setPendentes] = useState([]);
+  const [pedidosCompra, setPedidosCompra] = useState([]); // solicitações de compra em aberto
   const autorizador = podeAutorizarAjuste(currentUser);
 
   // Histórico por material
@@ -259,11 +263,24 @@ const EstoqueAlmoxarifadoPage = () => {
     }
   }, [companyId]);
 
+  const fetchPedidosCompra = useCallback(async () => {
+    if (!companyId) return;
+    try {
+      setPedidosCompra(await pb.collection('solicitacoes').getFullList({
+        filter: `company_id = "${companyId}" && tipo = "Compra" && status != "Concluída" && status != "Cancelada" && status != "Rejeitada"`,
+        fields: 'id,descricao', $autoCancel: false,
+      }));
+    } catch {
+      setPedidosCompra([]);
+    }
+  }, [companyId]);
+
   useEffect(() => {
     if (companyId) {
       fetchMateriais();
       fetchAux();
       fetchPendentes();
+      fetchPedidosCompra();
       fetchMovimentacoes(1);
     } else {
       setLoading(false);
@@ -335,12 +352,11 @@ const EstoqueAlmoxarifadoPage = () => {
     const valorTotal = ativos.reduce(
       (s, m) => s + Number(m.quantity_in_stock || 0) * Number(m.unit_cost || 0), 0,
     );
-    const baixoEstoque = ativos.filter((m) => {
-      const qtd = Number(m.quantity_in_stock || 0);
-      const min = Number(m.min_quantity || 0);
-      return min > 0 && qtd <= min && qtd > 0;
-    }).length;
-    const semEstoque = ativos.filter((m) => Number(m.quantity_in_stock || 0) <= 0).length;
+    // Alerta só vale para material com estoque mínimo cadastrado (o mesmo
+    // critério do aviso do servidor, pb_hooks/estoque-minimo.pb.js).
+    const comMinimo = ativos.filter((m) => Number(m.min_quantity || 0) > 0 && Number(m.quantity_in_stock || 0) <= Number(m.min_quantity || 0));
+    const baixoEstoque = comMinimo.filter((m) => Number(m.quantity_in_stock || 0) > 0).length;
+    const semEstoque = comMinimo.length - baixoEstoque;
     return { totalItens, emEstoque, valorTotal, baixoEstoque, semEstoque };
   }, [materiais]);
 
@@ -625,6 +641,39 @@ const EstoqueAlmoxarifadoPage = () => {
     }
   };
 
+  // ---------- Materiais acabando (estoque mínimo) ----------
+  const acabando = useMemo(() => materiais
+    .filter((m) => m.status !== 'inactive' && Number(m.min_quantity || 0) > 0 && Number(m.quantity_in_stock || 0) <= Number(m.min_quantity || 0))
+    .sort((a, b) => Number(a.quantity_in_stock || 0) - Number(b.quantity_in_stock || 0)), [materiais]);
+  const pedidoDe = (m) => pedidosCompra.find((p) => (p.descricao || '').startsWith(`Comprar ${m.name}:`));
+  const sugestao = (m) => Math.max(Number(m.min_quantity || 0) * 2 - Number(m.quantity_in_stock || 0), 1);
+
+  const pedirCompra = async (m) => {
+    setSaving(true);
+    try {
+      const saldo = Number(m.quantity_in_stock || 0);
+      const sol = await pb.collection('solicitacoes').create({
+        company_id: companyId,
+        numero_solicitacao: generateNumeroSolicitacao(),
+        tipo: 'Compra',
+        solicitante_id: currentUser.id,
+        prioridade: saldo <= 0 ? 'Urgente' : 'Alta',
+        descricao: `Comprar ${m.name}: sugestão ${formatNumber(sugestao(m))} ${m.unit || ''} `
+          + `(estoque ${formatNumber(saldo)}, mínimo ${formatNumber(m.min_quantity)} ${m.unit || ''})`,
+        data_solicitacao: todayISO(),
+        status: 'Aberta',
+      }, { $autoCancel: false });
+      toast.success(`Pedido de compra de ${m.name} criado.`, {
+        action: { label: 'Abrir', onClick: () => navigate(`/solicitacoes/${sol.id}`) },
+      });
+      fetchPedidosCompra();
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Não foi possível criar o pedido de compra'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ---------- Histórico por material ----------
   const openHistModal = async (material) => {
     setHistModalMaterial(material);
@@ -750,6 +799,36 @@ const EstoqueAlmoxarifadoPage = () => {
           <KpiCard icon={Wallet} label="Valor em estoque" value={formatCurrency(dashboard.valorTotal)} sub="valor total" color="text-blue-600" />
           <KpiCard icon={TrendingDown} label="Alertas" value={dashboard.baixoEstoque + dashboard.semEstoque} sub={`${dashboard.baixoEstoque} baixo · ${dashboard.semEstoque} sem`} color="text-amber-600" />
         </div>
+
+        {acabando.length > 0 && (
+          <Card className="mb-6 border-red-500/40">
+            <CardContent className="p-4 space-y-2">
+              <p className="font-semibold">Materiais acabando ({acabando.length})</p>
+              {acabando.map((m) => {
+                const saldo = Number(m.quantity_in_stock || 0);
+                const pedido = pedidoDe(m);
+                return (
+                  <div key={m.id} data-testid="material-acabando" className="flex flex-wrap items-center justify-between gap-2 border rounded-md p-2 text-sm">
+                    <div>
+                      <strong>{m.name}</strong>
+                      <span className={saldo <= 0 ? 'text-red-600 font-semibold' : 'text-amber-700 font-semibold'}>
+                        {saldo <= 0 ? ' · acabou' : ` · restam ${formatNumber(saldo)} ${m.unit || ''}`}
+                      </span>
+                      <span className="text-muted-foreground"> · mínimo {formatNumber(m.min_quantity)} {m.unit || ''} · sugestão: comprar {formatNumber(sugestao(m))} {m.unit || ''}</span>
+                    </div>
+                    {pedido ? (
+                      <Button size="sm" variant="ghost" onClick={() => navigate(`/solicitacoes/${pedido.id}`)}>Pedido de compra já feito</Button>
+                    ) : (
+                      <Button size="sm" variant="outline" disabled={saving} onClick={() => pedirCompra(m)}>
+                        <ShoppingCart className="w-4 h-4 mr-1" />Pedir compra
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         {pendentes.length > 0 && (
           <Card className="mb-6 border-amber-500/40">

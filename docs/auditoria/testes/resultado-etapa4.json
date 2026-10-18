@@ -762,6 +762,66 @@
   "detalhe": "status 200"
  },
  {
+  "grupo": "minimo",
+  "teste": "Acima do mínimo (10 -> 7, mínimo 5): ninguém é avisado",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Chegou no mínimo (7 -> 4): administrador recebe aviso no sininho",
+  "ok": true,
+  "detalhe": "Estoque baixo: Cal hidratada 20kg — restam 4 sc (mínimo 5 sc)."
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Almoxarife também recebe o aviso",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Pedreiro não recebe aviso de estoque",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Continua baixo (4 -> 3): não repete o aviso",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Repôs (23) e baixou de novo (4): avisa outra vez",
+  "ok": true,
+  "detalhe": "2"
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Zerou depois de avisado: não repete (ainda abaixo do mínimo)",
+  "ok": true,
+  "detalhe": "2"
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Controle interno do aviso não aparece para as telas",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Material sem mínimo cadastrado não gera aviso",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "minimo",
+  "teste": "Cadastrar mínimo acima do saldo já avisa",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
   "grupo": "telas",
   "teste": "Usuário logado grava log de auditoria",
   "ok": true,
@@ -777,7 +837,7 @@
   "grupo": "auditoria",
   "teste": "Admin vê os logs da própria empresa",
   "ok": true,
-  "detalhe": "6 logs"
+  "detalhe": "8 logs"
  },
  {
   "grupo": "auditoria",

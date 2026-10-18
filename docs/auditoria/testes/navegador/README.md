@@ -35,4 +35,5 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `equipamento.mjs` | emprestar equipamento, atraso, receber de volta com o estado (manutenção) |
 | `divergencia.mjs` | conferir estoque: diferença com motivo, aguarda autorização, administrador autoriza |
 | `ocorrencias.mjs` | ocorrência com foto e gravidade alta, e-mail para a chefia, resolver com o que foi feito |
+| `estoque-minimo.mjs` | material chega no mínimo: painel, sininho, e-mail, pedir compra sem duplicar |
 | `fluxo-material.mjs` | pedido de material com itens: pedir → aprovar → separar → entregar (baixa) → confirmar |

@@ -392,6 +392,44 @@ check("ocorrencias", "Gestão reabre e limpa quem resolveu", s == 200 and not r.
 s, r = call("GET", "/api/collections/ocorrencias/records")
 check("permissao", "Sem login não vê ocorrências", r.get("totalItems", 0) == 0, f"status {s}")
 
+# ------------------------------------------------------------------ alerta de estoque mínimo (Etapa 4.5)
+def notifs(tok, uid):
+    return call("GET", "/api/collections/notificacoes/records?perPage=50&filter=" + q(f'usuarioId="{uid}" && tipo="estoque"'), tok)[1].get("items", [])
+_, uAlm = login("almox@teste.local")
+s, mm = call("POST", "/api/collections/materiais/records", tA, {"name": "Cal hidratada 20kg", "code": "MIN-1", "unit": "sc",
+             "quantity_in_stock": 10, "min_quantity": 5, "status": "active", "company_id": cA})
+antesA = len(notifs(tA, uA["id"]))
+def saida_m(qtd):
+    return call("POST", "/api/collections/movimentacoes/records", tA, {"material_id": mm.get("id"), "company_id": cA, "tipo": "Saída",
+                "quantidade": qtd, "status": "Aprovado", "data": "2026-10-18"})
+saida_m(3)
+check("minimo", "Acima do mínimo (10 -> 7, mínimo 5): ninguém é avisado", len(notifs(tA, uA["id"])) == antesA)
+saida_m(3)
+na = notifs(tA, uA["id"])
+check("minimo", "Chegou no mínimo (7 -> 4): administrador recebe aviso no sininho", len(na) == antesA + 1 and "Cal hidratada" in na[0].get("mensagem", "")
+      and "restam 4" in na[0].get("mensagem", ""), na[0].get("mensagem", "") if na else "")
+check("minimo", "Almoxarife também recebe o aviso", any("Cal hidratada" in n.get("mensagem", "") for n in notifs(tAlm, uAlm["id"])))
+check("minimo", "Pedreiro não recebe aviso de estoque", not any("Cal hidratada" in n.get("mensagem", "") for n in notifs(tPed, login("pedreiro.div@teste.local")[1]["id"])))
+saida_m(1)
+check("minimo", "Continua baixo (4 -> 3): não repete o aviso", len(notifs(tA, uA["id"])) == antesA + 1)
+call("POST", "/api/collections/movimentacoes/records", tA, {"material_id": mm.get("id"), "company_id": cA, "tipo": "Entrada",
+     "quantidade": 20, "status": "Aprovado", "data": "2026-10-18"})
+saida_m(19)
+na = notifs(tA, uA["id"])
+check("minimo", "Repôs (23) e baixou de novo (4): avisa outra vez", len(na) == antesA + 2, f"{len(na) - antesA}")
+saida_m(4)
+na = notifs(tA, uA["id"])
+check("minimo", "Zerou depois de avisado: não repete (ainda abaixo do mínimo)", len(na) == antesA + 2, f"{len(na) - antesA}")
+s, r = call("GET", "/api/collections/materiais/records/" + mm.get("id"), tA)
+check("minimo", "Controle interno do aviso não aparece para as telas", "alerta_minimo_enviado" not in r)
+s, mz = call("POST", "/api/collections/materiais/records", tA, {"name": "Material sem mínimo", "code": "MIN-0", "unit": "un",
+             "quantity_in_stock": 1, "min_quantity": 0, "status": "active", "company_id": cA})
+call("POST", "/api/collections/movimentacoes/records", tA, {"material_id": mz.get("id"), "company_id": cA, "tipo": "Saída",
+     "quantidade": 1, "status": "Aprovado", "data": "2026-10-18"})
+check("minimo", "Material sem mínimo cadastrado não gera aviso", len(notifs(tA, uA["id"])) == antesA + 2)
+s, r = call("PATCH", "/api/collections/materiais/records/" + mz.get("id"), tA, {"min_quantity": 2})
+check("minimo", "Cadastrar mínimo acima do saldo já avisa", len(notifs(tA, uA["id"])) == antesA + 3)
+
 # ------------------------------------------------------------------ auditoria
 s, r = call("POST", "/api/collections/audit_logs/records", tF, {"acao": "teste", "modulo": "x", "usuario_id": uF["id"]})
 check("telas", "Usuário logado grava log de auditoria", s == 200, err(r) if s >= 400 else "")
