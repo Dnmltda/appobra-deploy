@@ -73,6 +73,7 @@ const novos = fs.readdirSync(SINK).filter((f) => !antes.has(f));
 const eml = novos.length ? fs.readFileSync(SINK + "/" + novos[0], "utf8").replace(/=\r?\n/g, "").replace(/=3D/g, "=") : "";
 const link = eml.match(/https?:\/\/[^"\s<]+\/reset-password\?token=[A-Za-z0-9._-]+/)?.[0];
 check("Esqueci minha senha: e-mail enviado com link para /reset-password", !!link, novos.length ? (eml.match(/Subject:.*$/m) || [""])[0] : "nenhum e-mail");
+check("Esqueci minha senha: e-mail mostra o botão 'Criar nova senha', sem o endereço comprido", /Criar nova senha/.test(eml) && !/>\s*https?:\/\/[^<]*reset-password/.test(eml));
 await page.screenshot({ path: OUT + "esqueci-enviado.png" });
 await page.close();
 

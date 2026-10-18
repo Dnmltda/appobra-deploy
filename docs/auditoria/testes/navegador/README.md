@@ -31,4 +31,5 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `honestidade.mjs` | "Fale conosco" envia e-mail, alerta de documento real, excluir = arquivar |
 | `selecoes.mjs` | listas no lugar de texto livre (movimentações, perdas, contas a receber, equipamentos) |
 | `ids-materiais.mjs` | estoque começa vazio, sugestão de material, ID por ordem de chegada (só leitura) |
+| `convite.mjs` | convite de funcionário: e-mail com botão, link certo, cria a senha e entra |
 | `fluxo-material.mjs` | pedido de material com itens: pedir → aprovar → separar → entregar (baixa) → confirmar |

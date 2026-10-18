@@ -34,7 +34,7 @@ onBootstrap((e) => {
     settings.smtp.tls = false;
     settings.smtp.authMethod = "PLAIN";
 
-    settings.meta.senderName = "DNM&LTDA";
+    settings.meta.senderName = "DNM&LTDA OBRAS"; // nome que aparece como remetente
     settings.meta.senderAddress = String($os.getenv("SMTP_SENDER_EMAIL") || "dnmltda@hotmail.com").trim();
 
     e.app.save(settings);

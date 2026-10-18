@@ -41,6 +41,33 @@ Status: **4.1 testada localmente (servidor + navegador), ainda NÃO publicada**.
 
 **Publicação**: igual à Etapa 3 (`etapa3-telas.md`), o mesmo `.zip` leva tudo. Nada novo nos Secrets.
 
+## E-mails do app no padrão profissional (pedido do Diego, 18/10/2026)
+
+**Defeito encontrado:** o e-mail de **convite de funcionário** (e o de boas-vindas e um de senha antigo)
+mandava o link para o endereço antigo da Hostinger (`midnightblue-chamois…`), que não funciona mais. A
+pessoa recebia o convite e o link não abria o app. Corrigido.
+
+**Como fica (ver `email-convite.png`)**
+- Remetente aparece como **DNM&LTDA OBRAS** (nome, não o endereço de e-mail).
+- No lugar do endereço comprido, um **botão com uma frase**: "Criar minha senha" (convite), "Criar nova
+  senha" (esqueci a senha), "Entrar no APP OBRA" (boas-vindas). O endereço só fica na versão "texto puro"
+  do e-mail, que aparece apenas em programas de e-mail muito antigos.
+- O convite mostra o usuário e o **ID** da pessoa.
+- Os links vão para `FRONT_URL` se existir nos Secrets do Fly; **sem ela, vão para
+  `https://appobra-backend.fly.dev`, que já serve as telas** — funciona sem configurar nada.
+  `FRONT_URL` só é necessário se um dia o app ganhar um endereço próprio (ex.: `app.dnmltda.com.br`).
+- Arquivos: `pb_hooks/email-lib.js` (padrão único), `send-welcome-email.pb.js`, `send-password-reset.pb.js`,
+  `login-e-senha.pb.js`, `smtp-from-env.pb.js`.
+- Teste: `testes/navegador/convite.mjs` → 8/8 (e-mail chega, remetente com nome, botão com frase, sem
+  endereço comprido, link certo, pessoa cria a senha e entra). `login.mjs` agora confere o botão do
+  "Esqueci minha senha" (13/13).
+
+**Recomendação para depois (painel do Brevo, não é código):** o remetente hoje é
+`dnmltda@hotmail.com`. Hotmail/Outlook não autoriza o Brevo a enviar em nome dele, então parte dos
+e-mails pode cair no spam ou nem chegar. O profissional é enviar de um endereço do domínio próprio (ex.:
+`nao-responda@dnmltda.com.br`) autenticado no Brevo (DKIM/SPF). Quando tiver, basta pôr
+`SMTP_SENDER_EMAIL` nos Secrets do Fly.
+
 ## Próximos passos da Etapa 4
 - Empréstimo e devolução de equipamento (com inspeção na volta).
 - Divergência de estoque com motivo e autorização.

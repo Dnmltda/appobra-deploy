@@ -96,8 +96,8 @@ Junto com as Etapas 1 e 2 (ver `etapa1-seguranca.md`, passos de backup e confer�
 1. **Secrets do Fly** (`appobra-backend`) — snapshot do volume ANTES:
    - `LIMPEZA_INICIAL` = `sim` (só nesta publicação; deixa apenas o dnmltda@hotmail.com, ver acima);
    - `BREVO_SMTP_LOGIN` e `BREVO_SMTP_KEY` (e-mails);
-   - `FRONT_URL` = endereço onde as pessoas abrem o app, sem barra no final
-     (ex.: `https://app.dnmltda.com.br`) — é o link que vai no e-mail de "Esqueci minha senha";
+   - `FRONT_URL` **opcional**: sem ela os links dos e-mails vão para `https://appobra-backend.fly.dev`
+     (ver `etapa4-fluxos.md`, "E-mails"); só usar se o app ganhar um endereço próprio;
    - opcional `CONTATO_EMAIL` (padrão `dnmltda@hotmail.com`).
 2. **Telas**: o `.zip` já leva as telas novas (o Fly serve em `https://appobra-backend.fly.dev`). Se as
    pessoas usam o endereço da Hostinger, gerar e subir lá também:

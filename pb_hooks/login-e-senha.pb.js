@@ -19,29 +19,33 @@
 //    português abaixo. A resposta é sempre a mesma, exista ou não a conta.
 //
 // O link do e-mail usa o endereço das telas: variável FRONT_URL (Secrets
-// do Fly). Sem ela, fica o appURL já configurado.
+// do Fly); sem ela, o próprio servidor do Fly (ver email-lib.js). O e-mail
+// mostra um botão com a frase "Criar nova senha", não o endereço comprido.
 // ============================================================
 
 onBootstrap((e) => {
   e.next();
   const app = e.app;
   try {
+    const lib = require(`${__hooks}/email-lib.js`);
     const settings = app.settings();
-    const front = String($os.getenv("FRONT_URL") || "").trim().replace(/\/+$/, "");
-    if (front && settings.meta.appURL !== front) {
-      settings.meta.appURL = front;
+    const base = lib.enderecoApp();
+    if (settings.meta.appURL !== base) {
+      settings.meta.appURL = base;
       app.save(settings);
     }
 
     const users = app.findCollectionByNameOrId("users");
     users.passwordAuth.identityFields = ["email", "username"];
-    users.resetPasswordTemplate.subject = "Redefinir sua senha - {APP_NAME}";
-    users.resetPasswordTemplate.body =
-      "<p>Olá,</p>" +
-      "<p>Recebemos um pedido para criar uma nova senha de acesso ao {APP_NAME}.</p>" +
-      '<p><a href="{APP_URL}/reset-password?token={TOKEN}">Clique aqui para criar a nova senha</a></p>' +
-      "<p>Se o botão não abrir, copie este endereço no navegador:<br>{APP_URL}/reset-password?token={TOKEN}</p>" +
-      "<p>O link vale por pouco tempo. Se você não pediu, ignore este e-mail: sua senha continua a mesma.</p>";
+    users.resetPasswordTemplate.subject = "Criar nova senha - DNM&LTDA OBRAS";
+    users.resetPasswordTemplate.body = lib.corpo(
+      "Criar nova senha",
+      '<p style="margin:0 0 12px">Olá,</p>' +
+        '<p style="margin:0 0 8px">Recebemos um pedido para criar uma nova senha de acesso ao APP OBRA.</p>',
+      "Criar nova senha",
+      "{APP_URL}/reset-password?token={TOKEN}",
+      "O botão vale por pouco tempo e só uma vez. Se você não pediu, ignore este e-mail: sua senha continua a mesma."
+    );
     app.save(users);
   } catch (err) {
     console.log("[login-e-senha] Erro ao configurar login/recuperação:", err);
