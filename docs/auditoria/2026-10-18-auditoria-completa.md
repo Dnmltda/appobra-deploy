@@ -21,7 +21,11 @@ segurança/integridade → comparação com o documento mestre → plano de corr
 - **Etapa 2 — feita e testada localmente, aguardando publicação (junto com a 1):** ver
   `etapa2-estoque.md` (script completo: 108/0). Saldo pelo servidor, saída maior que o saldo recusada,
   movimentação lançada imutável (cancelar estorna), compra recebida entra no estoque.
-- Etapa 3 (telas) — precisa do código-fonte das telas no GitHub.
+- **Etapa 3 — feita e testada localmente, aguardando publicação:** ver `etapa3-telas.md`. Código-fonte das
+  telas em `frontend/`. Servidor 123/0; navegador 68/68. Corrigidos também: Compras sem listas no
+  formulário, login por ID/Usuário e "Esqueci minha senha" que nunca funcionaram, troca de senha no
+  perfil, "Fale conosco" falso; excluir passou a arquivar.
+- Próxima: Etapa 4 (fluxos do documento mestre).
 
 ---
 
