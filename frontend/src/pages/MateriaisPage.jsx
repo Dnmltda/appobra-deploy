@@ -69,6 +69,7 @@ import {
   X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AUDIT_MODULE = 'Materiais';
 
@@ -329,9 +330,11 @@ const MateriaisPage = () => {
       errs.unit_cost = 'Preço unitário deve ser maior ou igual a zero';
     }
 
-    const estoque = Number(formData.quantity_in_stock);
-    if (formData.quantity_in_stock === '' || formData.quantity_in_stock === null) {
-      errs.quantity_in_stock = 'Estoque é obrigatório';
+    // Na edição o saldo não é editável (muda só por movimentação); no
+    // cadastro, vazio vale 0.
+    const estoque = Number(formData.quantity_in_stock || 0);
+    if (editing) {
+      // nada a validar
     } else if (Number.isNaN(estoque)) {
       errs.quantity_in_stock = 'Estoque inválido';
     } else if (estoque < 0) {
@@ -383,7 +386,8 @@ const MateriaisPage = () => {
       fd.append('category', formData.category.trim());
       fd.append('marca', formData.marca.trim());
       fd.append('unit', formData.unit);
-      fd.append('quantity_in_stock', Number(formData.quantity_in_stock));
+      // Saldo inicial só no cadastro (o servidor registra como Entrada).
+      if (!editing) fd.append('quantity_in_stock', Number(formData.quantity_in_stock || 0));
       fd.append('min_quantity', Number(formData.min_quantity || 0));
       fd.append('unit_cost', Number(formData.unit_cost));
       fd.append('supplier_id', formData.supplier_id || '');
@@ -421,12 +425,7 @@ const MateriaisPage = () => {
       fetchMateriais(page);
     } catch (err) {
       console.error('Erro ao salvar material:', err);
-      const msg = err?.response?.data
-        ? Object.values(err.response.data)
-            .map((d) => d?.message)
-            .filter(Boolean)
-            .join(', ')
-        : err.message || 'Erro ao salvar material';
+      const msg = mensagemErro(err, 'Erro ao salvar material');
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -729,7 +728,7 @@ const MateriaisPage = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="mat_estoque">Estoque *</Label>
+                    <Label htmlFor="mat_estoque">{editing ? 'Estoque atual' : 'Estoque inicial'}</Label>
                     <Input
                       id="mat_estoque"
                       type="number"
@@ -738,8 +737,14 @@ const MateriaisPage = () => {
                       value={formData.quantity_in_stock}
                       onChange={(e) => setFormData({ ...formData, quantity_in_stock: e.target.value })}
                       placeholder="0"
+                      disabled={!!editing}
                       className={formErrors.quantity_in_stock ? 'border-destructive' : ''}
                     />
+                    {editing && (
+                      <p className="text-xs text-muted-foreground">
+                        Muda só por entrada, saída ou inventário (tela Estoque).
+                      </p>
+                    )}
                     {formErrors.quantity_in_stock && <p className="text-xs text-destructive">{formErrors.quantity_in_stock}</p>}
                   </div>
 

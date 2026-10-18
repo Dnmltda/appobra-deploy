@@ -38,6 +38,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AUDIT_MODULE = 'Movimentações';
 const PER_PAGE = 10;
@@ -480,9 +481,7 @@ const MovimentacoesPage = () => {
       fetchDashboardData();
     } catch (err) {
       console.error('Erro ao salvar movimentação:', err);
-      const msg = err?.response?.data
-        ? Object.values(err.response.data).map((d) => d?.message).filter(Boolean).join(', ')
-        : err.message || 'Erro ao salvar movimentação';
+      const msg = mensagemErro(err, 'Erro ao salvar movimentação');
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -545,7 +544,7 @@ const MovimentacoesPage = () => {
       fetchDashboardData();
     } catch (err) {
       console.error('Erro ao cancelar:', err);
-      toast.error('Erro ao cancelar movimentação');
+      toast.error(mensagemErro(err, 'Erro ao cancelar movimentação'));
     }
   };
 
@@ -563,7 +562,7 @@ const MovimentacoesPage = () => {
       fetchDashboardData();
     } catch (err) {
       console.error('Erro ao alterar status:', err);
-      toast.error('Erro ao alterar status');
+      toast.error(mensagemErro(err, 'Erro ao alterar status'));
     }
   };
 
@@ -1210,8 +1209,11 @@ const MovimentacoesPage = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="space-y-1">
-                <Label htmlFor="mov_qtd">Quantidade *</Label>
+                <Label htmlFor="mov_qtd">{['Inventário', 'Ajuste de Estoque'].includes(formData.tipo) ? 'Quantidade contada *' : 'Quantidade *'}</Label>
                 <Input id="mov_qtd" type="number" step="0.01" min="0" value={formData.quantidade} onChange={(e) => setFormData({ ...formData, quantidade: e.target.value })} className={formErrors.quantidade ? 'border-destructive' : ''} />
+                {['Inventário', 'Ajuste de Estoque'].includes(formData.tipo) && (
+                  <p className="text-xs text-muted-foreground">Ao aprovar, o estoque passa a ser este número.</p>
+                )}
                 {formErrors.quantidade && <p className="text-xs text-destructive">{formErrors.quantidade}</p>}
               </div>
               <div className="space-y-1">

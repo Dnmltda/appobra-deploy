@@ -26,6 +26,7 @@ import {
   Undo2, Eye, Download, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AUDIT_MODULE = 'Saldo por Funcionário';
 
@@ -359,11 +360,8 @@ const SaldoFuncionarioPage = () => {
         criado_por: currentUser.id,
       }, { $autoCancel: false });
 
-      // 3. Devolver a quantidade ao estoque do material
-      const novoEstoque = Number(material.quantity_in_stock || 0) + qtd;
-      const updated = await pb.collection('materiais').update(material.id, {
-        quantity_in_stock: novoEstoque,
-      }, { $autoCancel: false });
+      // 3. O servidor já devolveu a quantidade ao saldo; relê o material.
+      const updated = await pb.collection('materiais').getOne(material.id, { $autoCancel: false });
       setMateriais((prev) => prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)));
 
       toast.success(
@@ -379,9 +377,7 @@ const SaldoFuncionarioPage = () => {
       fetchAll();
     } catch (err) {
       console.error('Erro ao registrar devolução:', err);
-      const msg = err?.response?.data
-        ? Object.values(err.response.data).map((d) => d?.message).filter(Boolean).join(', ')
-        : err.message || 'Erro ao registrar devolução';
+      const msg = mensagemErro(err, 'Erro ao registrar devolução');
       toast.error(msg);
     } finally {
       setSaving(false);

@@ -37,6 +37,7 @@ import {
   ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend,
 } from 'recharts';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AUDIT_MODULE = 'Equipamentos';
 const PER_PAGE = 10;
@@ -531,9 +532,7 @@ const EquipamentosPage = () => {
       fetchAllForDashboard();
     } catch (err) {
       console.error('Erro ao salvar equipamento:', err);
-      const msg = err?.response?.data
-        ? Object.values(err.response.data).map((d) => d?.message).filter(Boolean).join(', ')
-        : err.message || 'Erro ao salvar equipamento';
+      const msg = mensagemErro(err, 'Erro ao salvar equipamento');
       toast.error(msg);
     } finally {
       setSaving(false);

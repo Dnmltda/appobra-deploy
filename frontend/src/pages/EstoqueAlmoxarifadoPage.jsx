@@ -26,6 +26,7 @@ import {
   ChevronLeft, ChevronRight, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AUDIT_MODULE = 'Estoque';
 const PER_PAGE = 10;
@@ -405,12 +406,14 @@ const EstoqueAlmoxarifadoPage = () => {
         criado_por: currentUser.id,
       }, { $autoCancel: false });
 
-      // 2. Atualizar estoque do material (+ quantidade)
-      const novoEstoque = Number(material.quantity_in_stock || 0) + qtd;
-      const updateData = { quantity_in_stock: novoEstoque };
+      // 2. O servidor já somou a entrada ao saldo (estoque-servidor.pb.js).
+      // Aqui só atualiza preço/fornecedor, se informados, e relê o material.
+      const updateData = {};
       if (entradaForm.valor_unitario !== '') updateData.unit_cost = valorUnit;
       if (entradaForm.fornecedor_id) updateData.supplier_id = entradaForm.fornecedor_id;
-      const updated = await pb.collection('materiais').update(material.id, updateData, { $autoCancel: false });
+      const updated = Object.keys(updateData).length
+        ? await pb.collection('materiais').update(material.id, updateData, { $autoCancel: false })
+        : await pb.collection('materiais').getOne(material.id, { $autoCancel: false });
 
       // Atualiza estado local
       setMateriais((prev) => prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)));
@@ -423,9 +426,7 @@ const EstoqueAlmoxarifadoPage = () => {
       fetchMovimentacoes(1);
     } catch (err) {
       console.error('Erro ao registrar entrada:', err);
-      const msg = err?.response?.data
-        ? Object.values(err.response.data).map((d) => d?.message).filter(Boolean).join(', ')
-        : err.message || 'Erro ao registrar entrada';
+      const msg = mensagemErro(err, 'Erro ao registrar entrada');
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -510,11 +511,8 @@ const EstoqueAlmoxarifadoPage = () => {
         toast.success(`Saída registrada: ${numero} (-${formatNumber(qtd)} ${material.unit || ''})`);
       }
 
-      // 2. Atualizar estoque do material (- quantidade)
-      const novoEstoque = estoqueAtual - qtd;
-      const updated = await pb.collection('materiais').update(material.id, {
-        quantity_in_stock: novoEstoque,
-      }, { $autoCancel: false });
+      // 2. O servidor já descontou a saída do saldo; relê o material.
+      const updated = await pb.collection('materiais').getOne(material.id, { $autoCancel: false });
 
       setMateriais((prev) => prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)));
 
@@ -527,9 +525,7 @@ const EstoqueAlmoxarifadoPage = () => {
       fetchMovimentacoes(1);
     } catch (err) {
       console.error('Erro ao registrar saída:', err);
-      const msg = err?.response?.data
-        ? Object.values(err.response.data).map((d) => d?.message).filter(Boolean).join(', ')
-        : err.message || 'Erro ao registrar saída';
+      const msg = mensagemErro(err, 'Erro ao registrar saída');
       toast.error(msg);
     } finally {
       setSaving(false);

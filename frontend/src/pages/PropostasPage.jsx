@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AUDIT_MODULE = 'Propostas';
 const PER_PAGE = 10;
@@ -422,12 +423,7 @@ const PropostasPage = () => {
       fetchPropostas(page);
     } catch (err) {
       console.error('Erro ao salvar proposta:', err);
-      const msg = err?.response?.data
-        ? Object.values(err.response.data)
-            .map((d) => d?.message)
-            .filter(Boolean)
-            .join(', ')
-        : err.message || 'Erro ao salvar proposta';
+      const msg = mensagemErro(err, 'Erro ao salvar proposta');
       toast.error(msg);
     } finally {
       setSaving(false);
