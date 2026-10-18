@@ -122,7 +122,10 @@ export const getSafeAuthErrorMessage = (error) => {
   if (!error) return 'Credenciais inválidas. Verifique seus dados e tente novamente.';
   const msg = String(error.message || '').toLowerCase();
   if (msg.includes('bloqueada') || msg.includes('bloqueado')) {
-    return 'Conta temporariamente bloqueada por excesso de tentativas. Tente novamente em alguns minutos.';
+    return 'Usuário bloqueado. Entre em contato com o administrador do sistema.';
+  }
+  if (msg.includes('mais de uma empresa')) {
+    return error.message; // ID repetido entre empresas: orienta a usar e-mail ou usuário
   }
   if (msg.includes('inativo')) {
     return 'Conta inativa. Entre em contato com o administrador do sistema.';

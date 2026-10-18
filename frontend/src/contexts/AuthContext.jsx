@@ -4,8 +4,6 @@ import { auditLog, AUDIT_ACTIONS, AUDIT_MODULES } from '@/lib/auditLogger.js';
 
 const AuthContext = createContext(null);
 
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -108,192 +106,70 @@ export const AuthProvider = ({ children }) => {
     await auditLog(AUDIT_ACTIONS.LOGIN_SUCCESS, AUDIT_MODULES.AUTH, `Login via ${fullUser.email}`);
   };
 
-  const checkUserLockout = async (userRecord) => {
-    if (userRecord.locked_until) {
-      const lockedUntil = new Date(userRecord.locked_until).getTime();
-      if (lockedUntil > Date.now()) {
-        const remainingMinutes = Math.ceil((lockedUntil - Date.now()) / 60000);
-        throw new Error(`Conta temporariamente bloqueada. Tente novamente em ${remainingMinutes} minutos.`);
-      } else {
-        await pb.collection('users').update(userRecord.id, {
-          locked_until: '',
-          login_attempts: 0
-        }, { $autoCancel: false });
-      }
+  // Login (Etapa 3 da auditoria). Antes as telas procuravam o usuário na
+  // lista ANTES de entrar — um visitante não pode ler essa lista, então as
+  // abas "ID" e "Usuário" nunca funcionaram e o contador de tentativas
+  // nunca era gravado. Agora quem confere é o servidor.
+  const confereSituacao = (record) => {
+    if (record.status === 'Bloqueado' || record.is_blocked === true) {
+      pb.authStore.clear();
+      throw new Error('Usuário bloqueado. Entre em contato com o administrador.');
+    }
+    if ((record.status === 'Inativo' || record.is_active === false) && record.email !== 'dnmltda@hotmail.com') {
+      pb.authStore.clear();
+      throw new Error('Usuário inativo. Entre em contato com o administrador.');
     }
   };
 
-  const handleLoginFailure = async (userRecord) => {
-    if (!userRecord) return;
-    const newAttempts = (userRecord.login_attempts || 0) + 1;
-    
-    const updateData = { login_attempts: newAttempts };
-    let locked = false;
-    
-    if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
-      const lockoutTime = new Date(Date.now() + LOCKOUT_DURATION);
-      updateData.locked_until = lockoutTime.toISOString();
-      locked = true;
-    }
-    
+  const entrar = async (fazerLogin, mensagemErro) => {
+    let authData;
     try {
-      await pb.collection('users').update(userRecord.id, updateData, { $autoCancel: false });
-    } catch (e) {
-      console.error('Failed to update login_attempts', e);
-    }
-
-    await auditLog(AUDIT_ACTIONS.LOGIN_FAILED, AUDIT_MODULES.AUTH, `Tentativa falha para ID: ${userRecord.id}`);
-    
-    if (locked) {
-      throw new Error('Número máximo de tentativas excedido. Conta bloqueada temporariamente (30 min).');
-    }
-    
-    throw new Error(`Credenciais inválidas. ${MAX_LOGIN_ATTEMPTS - newAttempts} tentativas restantes.`);
-  };
-
-  const loginWithEmail = async (email, password) => {
-    const cleanEmail = String(email).trim().toLowerCase();
-    let userRecord = null;
-    try {
-      const users = await pb.collection('users').getFullList({ filter: `email = "${cleanEmail}"`, $autoCancel: false });
-      if (users.length > 0) userRecord = users[0];
-      
-      if (userRecord) await checkUserLockout(userRecord);
-
-      const authData = await pb.collection('users').authWithPassword(cleanEmail, password, { $autoCancel: false });
-
-      if (authData.record.status === 'Bloqueado') {
-        pb.authStore.clear();
-        throw new Error('Usuário bloqueado. Entre em contato com o administrador.');
-      }
-      if (authData.record.status === 'Inativo') {
-        pb.authStore.clear();
-        throw new Error('Usuário inativo. Entre em contato com o administrador.');
-      }
-      
-      await handleLoginSuccess(authData);
-      return authData;
+      authData = await fazerLogin();
     } catch (error) {
-      if (error.message.includes('bloqueada') || error.message.includes('bloqueado') || error.message.includes('inativo')) {
-        throw error;
-      }
-      if (userRecord) {
-        await handleLoginFailure(userRecord);
-      } else {
-        throw new Error('Credenciais inválidas');
-      }
+      await auditLog(AUDIT_ACTIONS.LOGIN_FAILED, AUDIT_MODULES.AUTH, 'Tentativa de login sem sucesso').catch(() => {});
+      // Mensagem do servidor que ajuda a pessoa (ex.: ID repetido em duas empresas).
+      const doServidor = error?.response?.message || '';
+      throw new Error(/mais de uma empresa/.test(doServidor) ? doServidor : mensagemErro);
     }
+    confereSituacao(authData.record);
+    await handleLoginSuccess(authData);
+    return authData;
   };
 
-  const loginWithId = async (idUnico, password) => {
-    try {
-      const users = await pb.collection('users').getFullList({
-        filter: `id_unico="${String(idUnico).trim()}"`,
-        $autoCancel: false
+  const loginWithEmail = (email, password) =>
+    entrar(
+      () => pb.collection('users').authWithPassword(String(email).trim().toLowerCase(), password, { $autoCancel: false }),
+      'E-mail ou senha incorretos.',
+    );
+
+  const loginWithUsername = (username, password) =>
+    entrar(
+      () => pb.collection('users').authWithPassword(String(username).trim().toLowerCase(), password, { $autoCancel: false }),
+      'Usuário ou senha incorretos.',
+    );
+
+  // O ID curto (01, 02...) é por empresa; o servidor testa a senha em cada
+  // usuário com aquele ID (pb_hooks/login-e-senha.pb.js).
+  const loginWithId = (idUnico, password) =>
+    entrar(async () => {
+      const r = await pb.send('/api/custom/login-id', {
+        method: 'POST', body: { id_unico: String(idUnico).trim(), password }, $autoCancel: false,
       });
+      pb.authStore.save(r.token, r.record);
+      return r;
+    }, 'ID ou senha incorretos.');
 
-      if (users.length === 0) {
-        throw new Error('Usuário não encontrado');
-      }
-
-      const user = users[0];
-
-      if (user.is_blocked === true) {
-        throw new Error('Usuário bloqueado');
-      }
-
-      const isMasterAdminAccount = user.email === 'dnmltda@hotmail.com';
-      if (user.is_active === false && !isMasterAdminAccount) {
-        throw new Error('Usuário inativo');
-      }
-
-      const authData = await pb.collection('users').authWithPassword(
-        user.email,
-        password,
-        { $autoCancel: false }
-      );
-
-      await handleLoginSuccess(authData);
-      return authData;
-    } catch (error) {
-      console.error("Erro completo:", error);
-      throw error;
-    }
-  };
-
-  const loginWithUsername = async (username, password) => {
-    try {
-      const users = await pb.collection('users').getFullList({
-        filter: `username="${String(username).trim()}"`,
-        $autoCancel: false
-      });
-
-      if (users.length === 0) {
-        throw new Error('Usuário não encontrado');
-      }
-
-      const user = users[0];
-
-      if (user.is_blocked === true) {
-        throw new Error('Usuário bloqueado');
-      }
-
-      const isMasterAdminAccount = user.email === 'dnmltda@hotmail.com';
-      if (user.is_active === false && !isMasterAdminAccount) {
-        throw new Error('Usuário inativo');
-      }
-
-      const authData = await pb.collection('users').authWithPassword(
-        user.email,
-        password,
-        { $autoCancel: false }
-      );
-
-      await handleLoginSuccess(authData);
-      return authData;
-    } catch (error) {
-      console.error("Erro completo:", error);
-      throw error;
-    }
-  };
-
-  const requestPasswordReset = async (identifier, method = 'email') => {
-    let filterStr = ``;
-    if (method === 'email') filterStr += `email = "${identifier}"`;
-    else if (method === 'id') filterStr += `id_unico = "${String(identifier).trim()}"`;
-    else if (method === 'username') filterStr += `username = "${String(identifier).trim().toLowerCase()}"`;
-    
-    const users = await pb.collection('users').getFullList({ filter: filterStr, $autoCancel: false });
-    if (users.length === 0) throw new Error('Usuário não encontrado');
-    
-    const user = users[0];
-    const token = crypto.randomUUID();
-    const expires = new Date();
-    expires.setHours(expires.getHours() + 24);
-    
-    await pb.collection('users').update(user.id, {
-      password_reset_token: token,
-      password_reset_expires: expires.toISOString()
-    }, { $autoCancel: false });
-    
-    return { token, email: user.email };
+  // "Esqueci minha senha": o servidor procura a conta (e-mail, usuário ou
+  // ID) e envia o e-mail com o link; a resposta é sempre a mesma, exista ou
+  // não a conta. O token é do próprio PocketBase e expira sozinho.
+  const requestPasswordReset = async (identifier) => {
+    await pb.send('/api/custom/esqueci-senha', {
+      method: 'POST', body: { identificador: String(identifier).trim() }, $autoCancel: false,
+    });
   };
 
   const resetPassword = async (token, newPassword) => {
-    const users = await pb.collection('users').getFullList({ 
-      filter: `password_reset_token = "${token}"`,
-      $autoCancel: false 
-    });
-    
-    if (users.length === 0) throw new Error('Token inválido');
-    const user = users[0];
-    
-    await pb.collection('users').update(user.id, {
-      password: newPassword,
-      passwordConfirm: newPassword,
-      password_reset_token: '',
-      password_reset_expires: ''
-    }, { $autoCancel: false });
+    await pb.collection('users').confirmPasswordReset(token, newPassword, newPassword, { $autoCancel: false });
   };
 
   // Fluxo de convite de funcionário (ver EmployeeManagement.jsx ->
@@ -328,9 +204,12 @@ export const AuthProvider = ({ children }) => {
     }
     
     await pb.collection('users').update(currentUser.id, {
+      oldPassword: currentPassword,
       password: newPassword,
       passwordConfirm: newPassword
     }, { $autoCancel: false });
+    // Trocar a senha invalida a sessão atual; entra de novo com a senha nova.
+    await pb.collection('users').authWithPassword(currentUser.email, newPassword, { $autoCancel: false });
   };
 
   const updateProfile = async (data) => {

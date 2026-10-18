@@ -353,5 +353,21 @@ if tSU:
         s, r = call("GET", "/api/collections/companies/records?perPage=50", tM)
         check("telas", "Conta mestre (dnmltda) continua vendo todas as empresas", r.get("totalItems", 0) >= 2, f"{r.get('totalItems')}")
 
+# ------------------------------------------------------------------ login e recuperação de senha
+s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "adminb", "password": "Senha12345"})
+check("telas", "Login pelo nome de usuário", s == 200 and r.get("record", {}).get("company_id") == cB, f"status {s}")
+s, r = call("POST", "/api/custom/login-id", None, {"id_unico": uB.get("id_unico"), "password": "Senha12345"})
+check("permissao", "Login pelo ID: mesmo ID e mesma senha em duas empresas é recusado (não entra na conta errada)",
+      s >= 400 and "mais de uma empresa" in r.get("message", ""), f"status {s}")
+if tSU:
+    call("PATCH", f"/api/collections/users/records/{uB['id']}", tSU, {"password": "SenhaB12345", "passwordConfirm": "SenhaB12345"})
+    s, r = call("POST", "/api/custom/login-id", None, {"id_unico": uB.get("id_unico"), "password": "SenhaB12345"})
+    check("telas", "Login pelo ID curto (repetido entre empresas) entra na conta certa pela senha", s == 200 and r.get("record", {}).get("id") == uB["id"], f"status {s}")
+s, r = call("POST", "/api/custom/login-id", None, {"id_unico": uB.get("id_unico"), "password": "errada"})
+check("permissao", "Login pelo ID com senha errada é recusado", s >= 400, f"status {s}")
+s1, _ = call("POST", "/api/custom/esqueci-senha", None, {"identificador": "a@teste.local"})
+s2, _ = call("POST", "/api/custom/esqueci-senha", None, {"identificador": "ninguem@teste.local"})
+check("permissao", "Esqueci minha senha responde igual com ou sem conta", s1 == 200 and s2 == 200)
+
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)
