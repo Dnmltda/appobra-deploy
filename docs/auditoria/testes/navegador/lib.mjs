@@ -61,3 +61,13 @@ export function check(nome, ok, detalhe = "") {
   resultados.push({ nome, ok: !!ok, detalhe });
   console.log((ok ? "OK    " : "FALHA ") + nome + (detalhe ? " | " + detalhe : ""));
 }
+
+// Empresa nova começa sem materiais: cria o material de teste se não existir.
+export async function garantirMaterial(token, cid, nome, extra = {}) {
+  const f = encodeURIComponent(`company_id="${cid}" && name="${nome}"`);
+  const achou = (await api("GET", "/api/collections/materiais/records?perPage=1&filter=" + f, token)).data.items?.[0];
+  if (achou) return achou;
+  return (await api("POST", "/api/collections/materiais/records", token, {
+    name: nome, code: "T-" + nome.slice(0, 3).toUpperCase(), unit: "un", category: "Materiais de Construção", status: "active", company_id: cid, ...extra,
+  })).data;
+}

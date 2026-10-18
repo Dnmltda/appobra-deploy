@@ -1,4 +1,4 @@
-import { abrir, api, apiLogin, escolher, preencher, toast, check, OUT, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, escolher, preencher, toast, check, OUT, FRONT, garantirMaterial } from "./lib.mjs";
 
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
@@ -26,8 +26,7 @@ check("Compra gravada no servidor com fornecedor", r.data.items?.some((c) => c.f
 
 // ---- item + recebimento -> estoque
 const compra = r.data.items.find((c) => c.valor_previsto === 1500);
-const mats = await api("GET", "/api/collections/materiais/records?perPage=1&filter=" + encodeURIComponent(`company_id="${cid}" && name~"Areia"`), token);
-const mat = mats.data.items[0];
+const mat = await garantirMaterial(token, cid, "Areia média lavada", { unit: "m3" });
 const saldoAntes = mat.quantity_in_stock || 0;
 await page.goto(FRONT + "/compras/" + compra.id);
 await page.waitForTimeout(2000);

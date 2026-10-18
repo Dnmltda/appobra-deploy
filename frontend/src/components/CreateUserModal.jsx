@@ -43,7 +43,7 @@ const CreateUserModal = ({ open, onClose, onSuccess }) => {
         role: formData.cargo,
         company_id: currentUser.company_id,
         status: 'Ativo',
-        id_unico: formData.id_unico ? formData.id_unico : crypto.randomUUID().substring(0, 8)
+        // id_unico: dado pelo servidor (ordem de chegada)
       };
 
       await createUser(userDataToSubmit);
@@ -104,10 +104,6 @@ const CreateUserModal = ({ open, onClose, onSuccess }) => {
               <Input id="username" type="text" placeholder="joaosilva" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required className="bg-background" />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="id_unico" className="font-bold text-foreground">ID Único</Label>
-              <Input id="id_unico" type="text" placeholder="Deixe vazio p/ auto" value={formData.id_unico} onChange={(e) => setFormData({ ...formData, id_unico: e.target.value })} className="bg-background" />
-            </div>
             
             <div className="space-y-2">
               <Label htmlFor="cargo" className="font-bold text-foreground">Cargo *</Label>

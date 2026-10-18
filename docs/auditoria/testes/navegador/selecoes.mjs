@@ -1,8 +1,7 @@
-import { abrir, api, apiLogin, escolher, check, OUT, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, escolher, check, OUT, FRONT, garantirMaterial } from "./lib.mjs";
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
-const f = encodeURIComponent(`company_id="${cid}" && name~"Areia"`);
-const mat = (await api("GET", "/api/collections/materiais/records?perPage=1&filter=" + f, token)).data.items[0];
+const mat = await garantirMaterial(token, cid, "Areia média lavada", { unit: "m3" });
 await api("POST", "/api/collections/obras/records", token, { nome: "Obra Centro", company_id: cid });
 await api("POST", "/api/collections/clientes/records", token, { nome: "Construtora Alfa", email: "alfa@cliente.com", company_id: cid });
 await api("POST", "/api/collections/movimentacoes/records", token, { material_id: mat.id, company_id: cid, tipo: "Entrada", quantidade: 4,

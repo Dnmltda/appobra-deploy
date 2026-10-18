@@ -1,10 +1,11 @@
-import { abrir, api, apiLogin, escolher, preencher, toast, check, OUT, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, escolher, preencher, toast, check, OUT, FRONT, garantirMaterial } from "./lib.mjs";
 
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
 const busca = async (nome) => (await api("GET", "/api/collections/materiais/records?perPage=1&filter=" +
   encodeURIComponent(`company_id="${cid}" && name~"${nome}"`), token)).data.items[0];
 const saldo = async (id) => (await api("GET", "/api/collections/materiais/records/" + id, token)).data.quantity_in_stock;
+await garantirMaterial(token, cid, "Cimento CP II 50kg");
 const mat = await busca("Cimento");
 
 const { browser, page, erros } = await abrir();

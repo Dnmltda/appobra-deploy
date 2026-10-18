@@ -9,8 +9,8 @@ O código-fonte das telas agora está no GitHub em `frontend/` (veio de
 
 ## Testes
 
-- Servidor: `docs/auditoria/testes/audit_tests.py` → **123/0** (`resultado-etapa3.json`).
-- Navegador (Playwright, clicando nas telas): `docs/auditoria/testes/navegador/` → 7 roteiros, **68
+- Servidor: `docs/auditoria/testes/audit_tests.py` → **133/0** (`resultado-etapa3.json`).
+- Navegador (Playwright, clicando nas telas): `docs/auditoria/testes/navegador/` → 8 roteiros, **67
   verificações, todas OK** (compra completa, estoque, permissões por cargo, login/recuperação de senha
   com e-mail real capturado, troca de senha, "Fale conosco", listas).
 - Todas as 38 telas abrem sem erro de consulta ao servidor.
@@ -50,6 +50,33 @@ O código-fonte das telas agora está no GitHub em `frontend/` (veio de
 - Gerência e Engenheiro passam a ser reconhecidos nas telas de estoque (antes caíam como funcionário).
 - Um Almoxarife convidado não perde mais as permissões (o cargo vale mais que o "role").
 
+## Pedidos do Diego incluídos nesta etapa (18/10/2026)
+
+**ID por ordem de chegada (tempo de casa, não hierarquia)**
+- Quem abre a empresa é o **01**; cada pessoa nova recebe o próximo número (02, 03…), seja pedreiro ou
+  engenheiro. Quem dá o número é o servidor — ninguém digita nem "gera" ID.
+- Funcionário e acesso ao sistema da mesma pessoa têm o **mesmo número**.
+- O número **nunca muda** e **nunca é reaproveitado** (quem saiu continua contando).
+- Arquivos: `pb_hooks/id-tempo-de-casa.pb.js` + `id-lib.js` (substituem `generate-user-id.pb.js`); nas
+  telas, o campo ID virou só leitura e a tela de funcionários não gera mais "FUN-000001".
+
+**Estoque começa vazio**
+- Empresa nova **não** nasce mais com ~91 materiais de exemplo. Ao cadastrar um material, escolhendo a
+  categoria aparecem as sugestões (com "+") que já preenchem nome, código e unidade.
+- Arquivos: `pb_hooks/catalogo-lib.js` + `catalogo.pb.js` (`/api/custom/catalogo-materiais`); o
+  autocadastro (`self-register-company.pb.js`) não semeia mais.
+
+**Limpeza para começar do real — `pb_hooks/limpeza-inicial.pb.js`**
+- Só roda com `LIMPEZA_INICIAL=sim` nos Secrets do Fly, só uma vez, só na empresa do
+  `dnmltda@hotmail.com`, numa transação (tudo ou nada). **Fazer o snapshot do volume antes.**
+- Deixa **só o dnmltda@hotmail.com (ID 01)**: os outros acessos e funcionários são apagados; quem tem
+  histórico (retirada, movimentação, compra…) é arquivado — some das listas e o histórico continua com o nome.
+- Arquiva os materiais de exemplo que nunca tiveram movimentação e estão com saldo zero.
+- No log: `[limpeza-inicial] ... concluída.` Depois, tirar `LIMPEZA_INICIAL` dos Secrets (se ficar, não faz
+  nada: ela não roda duas vezes).
+- Lição registrada no arquivo: dentro de uma transação, "tentar apagar e, se falhar, arquivar" apaga a
+  linha mesmo com o erro e deixa o histórico apontando para o nada — por isso decide antes se há histórico.
+
 ## Arquivos principais
 
 | Onde | O quê |
@@ -66,7 +93,8 @@ O código-fonte das telas agora está no GitHub em `frontend/` (veio de
 
 Junto com as Etapas 1 e 2 (ver `etapa1-seguranca.md`, passos de backup e conferência dos logs). Além disso:
 
-1. **Secrets do Fly** (`appobra-backend`):
+1. **Secrets do Fly** (`appobra-backend`) — snapshot do volume ANTES:
+   - `LIMPEZA_INICIAL` = `sim` (só nesta publicação; deixa apenas o dnmltda@hotmail.com, ver acima);
    - `BREVO_SMTP_LOGIN` e `BREVO_SMTP_KEY` (e-mails);
    - `FRONT_URL` = endereço onde as pessoas abrem o app, sem barra no final
      (ex.: `https://app.dnmltda.com.br`) — é o link que vai no e-mail de "Esqueci minha senha";

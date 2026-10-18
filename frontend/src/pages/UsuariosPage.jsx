@@ -13,7 +13,6 @@ import {
   formatCPF,
   formatPhone,
   passwordStrengthLabel,
-  generateIdUnico,
   validateUsuarioForm,
 } from "@/utils/usuariosValidations.js";
 
@@ -724,12 +723,10 @@ const UsuariosPage = () => {
                 {formErrors.username && <p className="text-xs text-destructive">{formErrors.username}</p>}
               </div>
               <div className="space-y-2">
-                <Label>ID Único *</Label>
-                <div className="flex gap-2">
-                  <Input value={form.id_unico} onChange={(e) => set("id_unico", e.target.value)} />
-                  <Button type="button" variant="outline" size="sm" onClick={() => set("id_unico", generateIdUnico())}>Gerar</Button>
-                </div>
-                {formErrors.id_unico && <p className="text-xs text-destructive">{formErrors.id_unico}</p>}
+                <Label>ID</Label>
+                {/* Número por ordem de chegada na empresa, dado pelo servidor — não se edita. */}
+                <Input value={form.id_unico || 'gerado automaticamente'} readOnly tabIndex={-1} className="bg-muted/40" />
+                <p className="text-xs text-muted-foreground">Ordem de chegada na empresa. Não muda.</p>
               </div>
               <div className="space-y-2">
                 <Label>CPF</Label>

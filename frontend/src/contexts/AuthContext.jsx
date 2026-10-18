@@ -282,10 +282,6 @@ export const AuthProvider = ({ children }) => {
         const existingUsername = await pb.collection('users').getFullList({ filter: `username="${String(userData.username).trim().toLowerCase()}"`, $autoCancel: false });
         if (existingUsername.length > 0) throw new Error('Já existe um usuário com este nome de usuário.');
       }
-      if (userData.id_unico) {
-        const existingId = await pb.collection('users').getFullList({ filter: `id_unico="${String(userData.id_unico).trim()}"`, $autoCancel: false });
-        if (existingId.length > 0) throw new Error('Já existe um usuário com este ID único.');
-      }
 
       const newUser = await pb.collection('users').create({
         email: userData.email,
@@ -293,7 +289,7 @@ export const AuthProvider = ({ children }) => {
         passwordConfirm: userData.passwordConfirm || userData.password,
         name: userData.name,
         username: String(userData.username).trim().toLowerCase(),
-        id_unico: String(userData.id_unico || crypto.randomUUID()).trim(),
+        // id_unico: o servidor dá o número por ordem de chegada (id-tempo-de-casa.pb.js).
         cargo: userData.cargo,
         role: userData.role || userData.cargo || 'user',
         telefone: userData.telefone,

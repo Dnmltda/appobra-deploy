@@ -158,8 +158,14 @@ check("telas", "Obras: criar", s == 200, err(obra) if s >= 400 else "")
 s, forn = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor A", "cnpj": "00000000000100", "company_id": cA})
 check("telas", "Fornecedores: criar", s == 200, err(forn) if s >= 400 else "")
 s, mats = call("GET", "/api/collections/materiais/records?perPage=1&filter=" + q(f'company_id="{cA}"'), tA)
-check("telas", "Materiais: empresa nova já nasce com catálogo", mats.get("totalItems", 0) > 0, f"{mats.get('totalItems')} materiais")
-mat = (mats.get("items") or [None])[0]
+check("telas", "Materiais: empresa nova começa com o estoque vazio", s == 200 and mats.get("totalItems", 0) == 0, f"{mats.get('totalItems')} materiais")
+s, cat = call("GET", "/api/custom/catalogo-materiais", tA)
+check("telas", "Materiais: lista de sugestões disponível para cadastrar", s == 200 and len(cat) >= 90, f"{len(cat) if isinstance(cat, list) else cat}")
+s, cat2 = call("GET", "/api/custom/catalogo-materiais")
+check("permissao", "Lista de sugestões exige login", s >= 400, f"status {s}")
+s, mat = call("POST", "/api/collections/materiais/records", tA, {"name": "Cimento CP II 50kg", "code": "CON-001", "unit": "un",
+              "category": "Materiais de Construção", "status": "active", "company_id": cA})
+mat = mat if s == 200 else None
 s, r = call("POST", "/api/collections/materiais/records", tA, {"name": "Cimento CP-II 50kg", "code": "TST-1", "unit": "un", "quantity_in_stock": 0, "status": "active", "company_id": cA})
 check("telas", "Materiais: criar", s == 200, err(r) if s >= 400 else "")
 s, r = call("POST", "/api/collections/compras/records", tA, {"numero": "C-1", "numero_compra": "C-1", "fornecedorId": forn.get("id"), "fornecedor_id": forn.get("id"),
@@ -378,6 +384,33 @@ s, uX = call("POST", "/api/collections/users/records", tA, {"email": "sai@teste.
 s, r = call("DELETE", f"/api/collections/users/records/{uX.get('id')}", tA)
 s2, r2 = call("GET", f"/api/collections/users/records/{uX.get('id')}", tA)
 check("telas", "Excluir usuário inativa (continua na Gestão de Acessos para reativar)", s == 204 and r2.get("status") == "Inativo", f"status {s}/{r2.get('status')}")
+
+# ------------------------------------------------------------------ ID por ordem de chegada
+check("ids", "Quem abriu a empresa é o 01", uA.get("id_unico") == "01" and uB.get("id_unico") == "01", f"{uA.get('id_unico')}/{uB.get('id_unico')}")
+s, r = call("GET", f"/api/collections/users/records/{uF['id']}", tA)
+check("ids", "Segunda pessoa da empresa é a 02 (mesmo sendo funcionário comum)", r.get("id_unico") == "02", r.get("id_unico"))
+s, fun = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-ENG", "nome": "Engenheiro Novo", "nome_completo": "Engenheiro Novo",
+              "id_unico": "FUN-000001", "cargoId": (call("GET", "/api/collections/cargos/records?perPage=1", tA)[1].get("items") or [{}])[0].get("id", ""),
+              "company_id": cA, "email": "eng.novo@teste.local"})
+check("ids", "Funcionário novo recebe o próximo número, ignorando o que a tela mandou", s == 200 and fun.get("id_unico") not in ("FUN-000001", "", None)
+      and fun.get("id_unico", "").isdigit(), err(fun) if s >= 400 else fun.get("id_unico"))
+s, acc = call("POST", "/api/collections/users/records", tA, {"email": "eng.novo@teste.local", "username": "engnovo", "password": "Senha12345",
+              "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Engenheiro", "role": "Engenheiro", "status": "Ativo",
+              "id_unico": "77", "funcionario_id": fun.get("id")})
+check("ids", "Acesso ao sistema do mesmo funcionário usa o mesmo número", s == 200 and acc.get("id_unico") == fun.get("id_unico"),
+      err(acc) if s >= 400 else f"{acc.get('id_unico')} = {fun.get('id_unico')}")
+s, r = call("PATCH", f"/api/collections/users/records/{acc.get('id')}", tA, {"id_unico": "01"})
+check("ids", "Ninguém troca o número depois (nem o administrador)", r.get("id_unico") == fun.get("id_unico"), f"status {s} id {r.get('id_unico')}")
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{fun.get('id')}", tA, {"id_unico": "01"})
+check("ids", "Número do funcionário também não muda", r.get("id_unico") == fun.get("id_unico"), f"status {s} id {r.get('id_unico')}")
+s, b2 = call("POST", "/api/collections/users/records", tB, {"email": "b2@teste.local", "username": "bdois", "password": "Senha12345",
+             "passwordConfirm": "Senha12345", "company_id": cB, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Ativo"})
+check("ids", "Cada empresa tem a sua sequência (B: 02)", b2.get("id_unico") == "02", b2.get("id_unico"))
+ult = int(fun.get("id_unico") or 0)
+call("DELETE", f"/api/collections/funcionarios/records/{fun.get('id')}", tA)
+s, n2 = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-NOVO2", "nome": "Servente Novo", "nome_completo": "Servente Novo",
+             "cargoId": fun.get("cargoId", ""), "company_id": cA})
+check("ids", "Número de quem saiu não é reaproveitado", s == 200 and int(n2.get("id_unico") or 0) > ult, err(n2) if s >= 400 else f"{ult} -> {n2.get('id_unico')}")
 
 # ------------------------------------------------------------------ login e recuperação de senha
 s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "adminb", "password": "Senha12345"})

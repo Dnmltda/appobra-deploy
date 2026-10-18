@@ -30,3 +30,4 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `perfil-senha.mjs` | troca de senha pelo perfil |
 | `honestidade.mjs` | "Fale conosco" envia e-mail, alerta de documento real, excluir = arquivar |
 | `selecoes.mjs` | listas no lugar de texto livre (movimentações, perdas, contas a receber, equipamentos) |
+| `ids-materiais.mjs` | estoque começa vazio, sugestão de material, ID por ordem de chegada (só leitura) |

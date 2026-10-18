@@ -292,7 +292,9 @@ onBootstrap((e) => {
         ? "(@request.body.role:isset = false || @request.body.role = role || @request.body.role = cargo)"
         : `(@request.body.${f}:isset = false || @request.body.${f} = ${f})`)
       .join(" && ");
-    col.listRule = `${SEG_SAME} || ${SEG_MASTER}`;
+    // Arquivados (deleted_at, ex.: limpeza inicial) saem da lista; o "excluir"
+    // da Gestão de Acessos só inativa e continua aparecendo para reativar.
+    col.listRule = `(${SEG_SAME} || ${SEG_MASTER}) && deleted_at = ""`;
     col.viewRule = `${SEG_SAME} || ${SEG_MASTER}`;
     col.createRule = `(${SEG_ADMIN} && @request.auth.company_id = company_id) || ${SEG_MASTER}`;
     col.updateRule =

@@ -128,8 +128,7 @@ export const validateUsuarioForm = (data, mode = "create") => {
   if (!data.username || !isValidUsername(data.username))
     errors.username = "Username inválido (3-40 chars: a-z, 0-9, . _ -).";
 
-  if (!data.id_unico || String(data.id_unico).trim().length === 0)
-    errors.id_unico = "ID único é obrigatório.";
+  // id_unico não é validado aqui: o servidor dá o número (ordem de chegada).
 
   if (mode === "create") {
     if (!data.password || !isStrongPassword(data.password))

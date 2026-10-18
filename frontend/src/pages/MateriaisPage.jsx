@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -203,6 +203,7 @@ const MateriaisPage = () => {
   // Busca os materiais já cadastrados nesta empresa para a categoria
   // clicada, pra oferecer como "modelo" ao cadastrar um novo (mesma
   // categoria/unidade, só muda marca/preço/código).
+  const catalogoRef = useRef(null);
   const selecionarCategoria = useCallback(
     async (categoria) => {
       setCategoriaAtiva(categoria);
@@ -215,7 +216,16 @@ const MateriaisPage = () => {
           sort: 'name',
           $autoCancel: false,
         });
-        setMateriaisModelo(data);
+        // Sugestões do catálogo padrão (empresa nova começa sem materiais):
+        // aparecem junto, sem repetir o que a empresa já cadastrou.
+        if (!catalogoRef.current) {
+          catalogoRef.current = await pb.send('/api/custom/catalogo-materiais', { $autoCancel: false }).catch(() => []);
+        }
+        const nomes = new Set(data.map((m) => String(m.name || '').toLowerCase()));
+        const sugestoes = (catalogoRef.current || [])
+          .filter((c) => c.category === categoria && !nomes.has(String(c.name).toLowerCase()))
+          .map((c) => ({ ...c, id: `sug-${c.code}`, sugestao: true }));
+        setMateriaisModelo([...data, ...sugestoes]);
       } catch (err) {
         console.error('Erro ao carregar materiais da categoria:', err);
         setMateriaisModelo([]);
@@ -236,7 +246,7 @@ const MateriaisPage = () => {
       category: modelo.category || prev.category,
       unit: modelo.unit || prev.unit,
       description: modelo.description || prev.description,
-      code: '',
+      code: modelo.sugestao ? modelo.code || '' : '',
       marca: '',
       unit_cost: '',
     }));
@@ -605,12 +615,12 @@ const MateriaisPage = () => {
                     {categoriaAtiva && (
                       <div className="mt-2 border rounded-lg p-3 bg-muted/40">
                         <p className="text-xs text-muted-foreground mb-2">
-                          Materiais já cadastrados em "{categoriaAtiva}" — clique para reaproveitar nome e unidade (depois é só completar marca, código e preço). Se não tiver o que você precisa, pode digitar um material novo abaixo.
+                          Materiais de "{categoriaAtiva}" — clique para preencher nome e unidade (os com "+" são sugestões ainda não cadastradas). Depois é só completar marca e preço. Se não tiver o que você precisa, digite um material novo abaixo.
                         </p>
                         {carregandoModelos ? (
                           <p className="text-xs text-muted-foreground">Carregando...</p>
                         ) : materiaisModelo.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">Nenhum material cadastrado nesta categoria ainda.</p>
+                          <p className="text-xs text-muted-foreground">Nenhum material nem sugestão nesta categoria.</p>
                         ) : (
                           <div className="flex flex-wrap gap-2">
                             {materiaisModelo.map((modelo) => (
@@ -620,7 +630,7 @@ const MateriaisPage = () => {
                                 onClick={() => usarMaterialModelo(modelo)}
                                 className="text-xs px-2 py-1 rounded-full border bg-background hover:bg-primary/10 hover:border-primary transition-colors"
                               >
-                                {modelo.name}{modelo.marca ? ` (${modelo.marca})` : ''}
+                                {modelo.sugestao ? '+ ' : ''}{modelo.name}{modelo.marca ? ` (${modelo.marca})` : ''}
                               </button>
                             ))}
                           </div>

@@ -15,7 +15,6 @@ import { Plus, Pencil, Trash2, GraduationCap, Loader2, Upload, X } from 'lucide-
 import { toast } from 'sonner';
 import Header from '@/components/Header.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { generateNextId } from '@/lib/idGenerator.js';
 import { auditLog, AUDIT_ACTIONS, AUDIT_MODULES } from '@/lib/auditLogger.js';
 
 // A collection "users" (login) só aceita estes valores no campo cargo (SelectField
@@ -383,17 +382,14 @@ const EmployeeManagement = () => {
 
     setSubmitting(true);
     try {
-      let id_unico = editingEmployee?.id_unico;
-      if (!editingEmployee) {
-        id_unico = await generateNextId('funcionarios', currentUser.company_id);
-      }
+      // O ID (01, 02...) é dado pelo servidor por ordem de chegada na empresa
+      // (pb_hooks/id-tempo-de-casa.pb.js); a tela não gera mais "FUN-000001".
 
       // Usa FormData para permitir upload da foto (campo file).
       const fd = new FormData();
       fd.append('matricula', formData.matricula);
       fd.append('nome', formData.nome.trim());
       fd.append('nome_completo', formData.nome.trim());
-      fd.append('id_unico', id_unico);
       fd.append('company_id', currentUser.company_id);
       fd.append('cargoId', formData.cargoId || '');
       fd.append('hierarquia', formData.hierarquia || '');

@@ -1,4 +1,4 @@
-import { abrir, api, apiLogin, check, OUT, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, check, OUT, FRONT, garantirMaterial } from "./lib.mjs";
 
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
@@ -37,8 +37,8 @@ for (const caso of CASOS) {
     check(`${caso.cargo}: ${r} ${esperado ? "bloqueado" : "liberado"}`, negado === esperado);
   }
   if (caso.cargo === "Gerência") {
-    const mats = await api("GET", "/api/collections/materiais/records?perPage=1&filter=" + encodeURIComponent(`company_id="${cid}"`), token);
-    await api("POST", "/api/collections/movimentacoes/records", token, { material_id: mats.data.items[0].id, company_id: cid,
+    const m0 = await garantirMaterial(token, cid, "Cimento CP II 50kg");
+    await api("POST", "/api/collections/movimentacoes/records", token, { material_id: m0.id, company_id: cid,
       tipo: "Entrada", quantidade: 5, unidade: "un", status: "Pendente", numero_movimentacao: "MOV-GER-1" });
     await page.goto(FRONT + "/movimentacoes");
     await page.waitForTimeout(2000);

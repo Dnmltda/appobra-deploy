@@ -307,9 +307,21 @@
  },
  {
   "grupo": "telas",
-  "teste": "Materiais: empresa nova já nasce com catálogo",
+  "teste": "Materiais: empresa nova começa com o estoque vazio",
   "ok": true,
-  "detalhe": "91 materiais"
+  "detalhe": "0 materiais"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Materiais: lista de sugestões disponível para cadastrar",
+  "ok": true,
+  "detalhe": "91"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Lista de sugestões exige login",
+  "ok": true,
+  "detalhe": "status 401"
  },
  {
   "grupo": "telas",
@@ -706,6 +718,54 @@
   "teste": "Excluir usuário inativa (continua na Gestão de Acessos para reativar)",
   "ok": true,
   "detalhe": "status 204/Inativo"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Quem abriu a empresa é o 01",
+  "ok": true,
+  "detalhe": "01/01"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Segunda pessoa da empresa é a 02 (mesmo sendo funcionário comum)",
+  "ok": true,
+  "detalhe": "02"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Funcionário novo recebe o próximo número, ignorando o que a tela mandou",
+  "ok": true,
+  "detalhe": "05"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Acesso ao sistema do mesmo funcionário usa o mesmo número",
+  "ok": true,
+  "detalhe": "05 = 05"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Ninguém troca o número depois (nem o administrador)",
+  "ok": true,
+  "detalhe": "status 200 id 05"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Número do funcionário também não muda",
+  "ok": true,
+  "detalhe": "status 200 id 05"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Cada empresa tem a sua sequência (B: 02)",
+  "ok": true,
+  "detalhe": "02"
+ },
+ {
+  "grupo": "ids",
+  "teste": "Número de quem saiu não é reaproveitado",
+  "ok": true,
+  "detalhe": "5 -> 06"
  },
  {
   "grupo": "telas",
