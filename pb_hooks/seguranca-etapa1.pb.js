@@ -387,8 +387,8 @@ onRecordEnrich((e) => {
 // ...nem pode ser descoberto por busca (?filter=password_reset_token~"a").
 onRecordsListRequest((e) => {
   if (!(e.auth && e.auth.isSuperuser())) {
-    const q = e.request.url.query();
-    const texto = String(q.get("filter") || "") + " " + String(q.get("sort") || "");
+    const q = e.requestInfo().query || {};
+    const texto = String(q["filter"] || "") + " " + String(q["sort"] || "");
     if (/password_reset_token|remember_token/.test(texto)) {
       throw new BadRequestError("Filtro não permitido.");
     }

@@ -73,11 +73,19 @@ tF, uF = login("func@teste.local")
 
 # ------------------------------------------------------------------ isolamento
 s, r = call("GET", "/api/collections/companies/records?perPage=50", tA)
-names = [x["name"] for x in r.get("items", [])]
+names = [x["name"] for x in r.get("items", [])] if s == 200 else [f"erro {s}"]
 check("isolamento", "Empresa só enxerga a si mesma em companies", names == ["Empresa A"], f"vê {names}")
 
 s, r = call("GET", "/api/collections/users/records?perPage=50", tB)
-check("isolamento", "Empresa B não lista usuários da A", "funca" not in json.dumps(r), f"B vê {r.get('totalItems')} usuário(s)")
+check("isolamento", "Empresa B não lista usuários da A", s == 200 and "funca" not in json.dumps(r), f"status {s}, B vê {r.get('totalItems')} usuário(s)")
+s, r = call("GET", "/api/collections/users/records?perPage=50", tA)
+check("telas", "Admin A lista os usuários da própria empresa", s == 200 and r.get("totalItems", 0) >= 2, f"status {s}, {r.get('totalItems')}")
+# A tela de login consulta o usuário pelo e-mail ANTES de autenticar; tem que
+# voltar lista vazia (não erro), senão o login por e-mail quebra.
+s, r = call("GET", "/api/collections/users/records?filter=" + q('email = "a@teste.local"'))
+check("telas", "Login: consulta prévia por e-mail sem login não dá erro", s == 200, f"status {s}")
+s, r = call("GET", "/api/collections/users/records?filter=" + q('password_reset_token ~ "a"'), tA)
+check("permissao", "Ninguém busca usuários pelo token do convite", s >= 400, f"status {s}")
 
 s, r = call("POST", "/api/collections/users/records", tA, {
     "email": "intruso@teste.local", "username": "intruso", "password": "Senha12345", "passwordConfirm": "Senha12345",
@@ -100,11 +108,11 @@ for col, body in [
     if "company_id" not in body:
         check("isolamento", f"[{col}] servidor preenche a empresa quando a tela não manda", rec.get("company_id") == cA)
     s, r = call("GET", f"/api/collections/{col}/records?perPage=50", tB)
-    check("isolamento", f"[{col}] Empresa B não vê registros da A", r.get("totalItems", 0) == 0, f"B vê {r.get('totalItems')}")
+    check("isolamento", f"[{col}] Empresa B não vê registros da A", s == 200 and r.get("totalItems", 0) == 0, f"status {s}, B vê {r.get('totalItems')}")
     s, r = call("DELETE", f"/api/collections/{col}/records/{rec['id']}", tB)
     check("isolamento", f"[{col}] Empresa B não apaga registro da A", s >= 400, f"status {s}")
     s, r = call("GET", f"/api/collections/{col}/records?perPage=50", tA)
-    check("telas", f"[{col}] Empresa A continua vendo o próprio registro", r.get("totalItems", 0) >= 1)
+    check("telas", f"[{col}] Empresa A continua vendo o próprio registro", s == 200 and r.get("totalItems", 0) >= 1, f"status {s}")
 
 # ------------------------------------------------------------------ permissões
 s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tF, {"role": "Administrador", "cargo": "Administrador"})
@@ -305,12 +313,12 @@ s, r = call("GET", "/api/collections/auditoria/records?perPage=50", tA)
 check("auditoria", "Admin vê os logs da própria empresa", s == 200 and r.get("totalItems", 0) > 0, f"{r.get('totalItems')} logs")
 idsA = {x["id"] for x in r.get("items", [])}
 s, r = call("GET", "/api/collections/auditoria/records?perPage=50", tB)
-check("auditoria", "Empresa B não vê logs da A", not ({x["id"] for x in r.get("items", [])} & idsA))
+check("auditoria", "Empresa B não vê logs da A", s == 200 and not ({x["id"] for x in r.get("items", [])} & idsA), f"status {s}")
 if idsA:
     s, r = call("DELETE", f"/api/collections/auditoria/records/{next(iter(idsA))}", tA)
     check("auditoria", "Nem o admin apaga log de auditoria", s >= 400, f"status {s}")
 s, r = call("GET", "/api/collections/auditoria/records?perPage=1", tF)
-check("auditoria", "Funcionário comum não lê auditoria", r.get("totalItems", 0) == 0)
+check("auditoria", "Funcionário comum não lê auditoria", s == 200 and r.get("totalItems", 0) == 0, f"status {s}")
 
 # ------------------------------------------------------------------ convite e conta mestre
 tok = str(uuid.uuid4())
