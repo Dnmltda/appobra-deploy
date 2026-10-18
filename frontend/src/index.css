@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* DNM&LTDA OBRAS Brand Colors */
+    --background: 0 0% 100%;
+    --foreground: 210 40% 16%;
+    
+    --card: 0 0% 98%;
+    --card-foreground: 210 40% 16%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 40% 16%;
+    
+    /* Primary: Azul Escuro #1a3a52 */
+    --primary: 210 51% 22%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary/Accent: Dourado #d4af37 */
+    --secondary: 45 69% 52%;
+    --secondary-foreground: 210 51% 22%;
+    
+    --accent: 45 69% 52%;
+    --accent-foreground: 210 51% 22%;
+    
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+    
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 45 69% 52%;
+    
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 210 51% 10%;
+    --foreground: 0 0% 100%;
+    --card: 210 51% 14%;
+    --card-foreground: 0 0% 100%;
+    --popover: 210 51% 14%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 45 69% 52%;
+    --primary-foreground: 210 51% 22%;
+    --secondary: 210 51% 20%;
+    --secondary-foreground: 45 69% 52%;
+    --accent: 45 69% 52%;
+    --accent-foreground: 210 51% 22%;
+    --muted: 210 51% 20%;
+    --muted-foreground: 215 20% 65%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 51% 20%;
+    --input: 210 51% 20%;
+    --ring: 45 69% 52%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow-x: hidden;
+    font-variant-numeric: tabular-nums;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+    font-weight: 700;
+    color: hsl(var(--primary));
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 { font-size: 2.5rem; }
+  h2 { font-size: 2rem; }
+  h3 { font-size: 1.75rem; }
+  h4 { font-size: 1.5rem; }
+  h5 { font-size: 1.25rem; }
+  h6 { font-size: 1rem; }
+
+  p {
+    line-height: 1.625;
+    max-width: 65ch;
+  }
+
+  .app-container {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

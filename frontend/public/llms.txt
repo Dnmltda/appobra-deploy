@@ -1,0 +1,23 @@
+## Pages
+- [- DNM&LTDA](/notificacoes): No description available
+- [- DNM&LTDA](/settings): No description available
+- [- DNM&LTDA OBRAS](/audit): No description available
+- [- Gestão](/*): No description available
+- [Cadastro de Empresas — APP OBRA | DNM&LTDA](/empresas/:id/editar): Módulo de cadastro e gestão de empresas com auditoria, filtros e exportações.
+- [Central de Documentos - DNM&LTDA](/documentos): No description available
+- [Compras - APP OBRA | DNM&LTDA](/compras/:id/editar): Gestão completa de compras: solicitação, cotação, aprovação, pedido, recebimento e anexos.
+- [Controle de Treinamentos - DNM&LTDA](/trainingtracker): No description available
+- [Detalhes da Compra - APP OBRA](/compras/:id): No description available
+- [Detalhes da Empresa — APP OBRA](/empresas/:id): No description available
+- [Detalhes da Solicitação - APP OBRA](/solicitacoes/:id): No description available
+- [Detalhes do Usuário — APP OBRA](/usuarios/:id): No description available
+- [Gestão de Acessos — APP OBRA | DNM&LTDA](/usuarios): Gestão de acessos — perfis, permissões, bloqueio, ativação e reset de senha. Novas pessoas são cadastradas em Funcionários.
+- [Gestão de Fornecedores - DNM&LTDA](/suppliers): No description available
+- [Gestão de Funcionários - DNM&LTDA](/employees): No description available
+- [Gestão de Obras - DNM&LTDA](/projects): No description available
+- [Meu Perfil - DNM&LTDA](/profile): No description available
+- [Painel de Segurança - Empresa](/adminsecuritypanel): No description available
+- [Perdas e Ganhos - DNM&LTDA](/perdas-ganhos): No description available
+- [Relatórios - Exportação](/relatorios): No description available
+- [Saldo por Funcionário - DNM&LTDA](/saldo-funcionario): Controle de materiais em posse de cada funcionário
+- [Solicitações - APP OBRA | DNM&LTDA](/solicitacoes/:id/editar): Gestão completa de solicitações internas: material, compra, equipamento, EPI, manutenção e mais, com fluxo de aprovação e anexos.
