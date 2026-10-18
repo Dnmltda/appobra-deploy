@@ -7,6 +7,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +23,29 @@ const LossesGainsModule = () => {
   const [registros, setRegistros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState([]);
+  // Listas para escolher o item e o local (antes eram texto livre).
+  const [materiais, setMateriais] = useState([]);
+  const [obras, setObras] = useState([]);
+  const [itemOutro, setItemOutro] = useState(false);
+
+  useEffect(() => {
+    if (!currentUser?.company_id) return;
+    const f = `company_id = "${currentUser.company_id}"`;
+    pb.collection('materiais').getFullList({ filter: f, sort: 'name', $autoCancel: false }).then(setMateriais).catch(() => setMateriais([]));
+    pb.collection('obras').getFullList({ filter: f, sort: 'nome', $autoCancel: false }).then(setObras).catch(() => setObras([]));
+  }, [currentUser?.company_id]);
+
+  const escolherMaterial = (id) => {
+    if (id === 'outro') { setItemOutro(true); setFormData((f) => ({ ...f, item_id: '', item_nome: '' })); return; }
+    const m = materiais.find((x) => x.id === id);
+    setItemOutro(false);
+    setFormData((f) => ({
+      ...f,
+      item_id: id,
+      item_nome: m?.name || '',
+      valor_estimado: f.valor_estimado || (m?.unit_cost ? Number((m.unit_cost * Number(f.quantidade || 1)).toFixed(2)) : ''),
+    }));
+  };
   
   const [formData, setFormData] = useState({
     tipo: 'Quebra', item_nome: '', quantidade: 1, data: new Date().toISOString().split('T')[0],
@@ -66,15 +90,17 @@ const LossesGainsModule = () => {
   const handleOpenModal = () => {
     const typeMap = { 'quebras': 'Quebra', 'extravios': 'Extravio', 'avarias': 'Avaria', 'sobras': 'Sobra', 'recuperacoes': 'Recuperação' };
     setFormData({
-      tipo: typeMap[activeTab], item_nome: '', quantidade: 1, data: new Date().toISOString().split('T')[0],
+      tipo: typeMap[activeTab], item_id: '', item_nome: '', quantidade: 1, data: new Date().toISOString().split('T')[0],
       motivo: '', valor_estimado: '', status: 'Registrado', localizacao: '', descricao: ''
     });
+    setItemOutro(false);
     setShowModal(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!currentUser || !currentUser.company_id) return;
+    if (!String(formData.item_nome || '').trim()) { toast.error('Escolha o item'); return; }
     try {
       const data = {
         ...formData,
@@ -203,10 +229,32 @@ const LossesGainsModule = () => {
             <DialogTitle>Registrar {formData.tipo}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4 mt-4">
-            <div className="col-span-2"><Label>Item</Label><Input required value={formData.item_nome} onChange={e=>setFormData({...formData, item_nome: e.target.value})} /></div>
+            <div className="col-span-2 space-y-2">
+              <Label>Item</Label>
+              <Select value={itemOutro ? 'outro' : (formData.item_id || '')} onValueChange={escolherMaterial}>
+                <SelectTrigger><SelectValue placeholder="Escolha o material" /></SelectTrigger>
+                <SelectContent>
+                  {materiais.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}{m.code ? ` (${m.code})` : ''}</SelectItem>)}
+                  <SelectItem value="outro">Outro item (não cadastrado)</SelectItem>
+                </SelectContent>
+              </Select>
+              {itemOutro && (
+                <Input required placeholder="Descreva o item" value={formData.item_nome} onChange={e=>setFormData({...formData, item_nome: e.target.value})} />
+              )}
+            </div>
             <div className="col-span-1"><Label>Data</Label><Input type="date" required value={formData.data} onChange={e=>setFormData({...formData, data: e.target.value})} /></div>
             <div className="col-span-1"><Label>Qtd</Label><Input type="number" required value={formData.quantidade} onChange={e=>setFormData({...formData, quantidade: e.target.value})} /></div>
-            <div className="col-span-1"><Label>Localização</Label><Input value={formData.localizacao} onChange={e=>setFormData({...formData, localizacao: e.target.value})} /></div>
+            <div className="col-span-1 space-y-2"><Label>Localização</Label>
+              <Select value={formData.localizacao || 'none'} onValueChange={(v)=>setFormData({...formData, localizacao: v === 'none' ? '' : v})}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não informado</SelectItem>
+                  <SelectItem value="Almoxarifado">Almoxarifado</SelectItem>
+                  {obras.map((o) => <SelectItem key={o.id} value={o.nome}>{o.nome}</SelectItem>)}
+                  <SelectItem value="Outro local">Outro local</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="col-span-1"><Label>Valor R$</Label><Input type="number" step="0.01" value={formData.valor_estimado} onChange={e=>setFormData({...formData, valor_estimado: parseFloat(e.target.value)})} /></div>
             <div className="col-span-2"><Label>Motivo</Label><Input value={formData.motivo} onChange={e=>setFormData({...formData, motivo: e.target.value})} /></div>
             <div className="col-span-2 flex justify-end gap-3 mt-4">

@@ -1200,7 +1200,7 @@ const EPIsPage = () => {
               <div className="space-y-1.5"><Label>Funcionário *</Label>
                 <Select value={entregaForm.funcionario_id || 'none'} onValueChange={(v) => {
                   const f = funcionarios.find((x) => x.id === v);
-                  setEntregaForm({ ...entregaForm, funcionario_id: v === 'none' ? '' : v, cargo: f?.cargo || f?.funcao || '', setor: f?.setor || '' });
+                  setEntregaForm({ ...entregaForm, funcionario_id: v === 'none' ? '' : v, cargo: f?.funcao || f?.cargo || '', setor: f?.departamento || f?.setor || '' });
                 }}><SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger><SelectContent><SelectItem value="none">Selecione</SelectItem>{funcionarios.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome_completo || f.nome || f.id}</SelectItem>)}</SelectContent></Select>
               </div>
               <div className="space-y-1.5"><Label>EPI *</Label>

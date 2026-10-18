@@ -111,9 +111,14 @@ const ContasReceberPage = () => {
   const [editingConta, setEditingConta] = useState(null);
   const [formData, setFormData] = useState(crEmptyForm);
 
+  // Clientes cadastrados, para escolher em vez de digitar o nome.
+  const [clientes, setClientes] = useState([]);
+
   useEffect(() => {
     if (currentUser?.company_id) {
       fetchContas();
+      pb.collection('clientes').getFullList({ filter: `company_id = "${currentUser.company_id}"`, sort: 'nome', $autoCancel: false })
+        .then(setClientes).catch(() => setClientes([]));
     }
   }, [currentUser]);
 
@@ -291,13 +296,28 @@ const ContasReceberPage = () => {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="cr_cliente">Cliente *</Label>
-                  <Input
-                    id="cr_cliente"
-                    value={formData.cliente}
-                    onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
-                    required
-                    className="text-foreground"
-                  />
+                  {clientes.length > 0 ? (
+                    <Select value={formData.cliente || ''} onValueChange={(v) => setFormData({ ...formData, cliente: v })}>
+                      <SelectTrigger id="cr_cliente"><SelectValue placeholder="Escolha o cliente" /></SelectTrigger>
+                      <SelectContent>
+                        {formData.cliente && !clientes.some((c) => c.nome === formData.cliente) && (
+                          <SelectItem value={formData.cliente}>{formData.cliente}</SelectItem>
+                        )}
+                        {clientes.map((c) => <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <>
+                      <Input
+                        id="cr_cliente"
+                        value={formData.cliente}
+                        onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+                        required
+                        className="text-foreground"
+                      />
+                      <p className="text-xs text-muted-foreground">Dica: cadastre seus clientes em Clientes para escolher da lista.</p>
+                    </>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="cr_descricao">Descrição *</Label>

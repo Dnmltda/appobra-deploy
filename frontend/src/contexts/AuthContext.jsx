@@ -110,12 +110,15 @@ export const AuthProvider = ({ children }) => {
   // lista ANTES de entrar — um visitante não pode ler essa lista, então as
   // abas "ID" e "Usuário" nunca funcionaram e o contador de tentativas
   // nunca era gravado. Agora quem confere é o servidor.
+  // Só o "status" decide (como no login por e-mail original): is_active e
+  // is_blocked vêm falsos por padrão em contas criadas por alguns caminhos
+  // e trancariam para fora quem está "Ativo".
   const confereSituacao = (record) => {
-    if (record.status === 'Bloqueado' || record.is_blocked === true) {
+    if (record.status === 'Bloqueado') {
       pb.authStore.clear();
       throw new Error('Usuário bloqueado. Entre em contato com o administrador.');
     }
-    if ((record.status === 'Inativo' || record.is_active === false) && record.email !== 'dnmltda@hotmail.com') {
+    if (record.status === 'Inativo' && record.email !== 'dnmltda@hotmail.com') {
       pb.authStore.clear();
       throw new Error('Usuário inativo. Entre em contato com o administrador.');
     }

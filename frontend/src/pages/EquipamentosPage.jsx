@@ -137,6 +137,22 @@ const emptyForm = {
   observacoes: '',
 };
 
+// Local do equipamento: lista (almoxarifado, obras cadastradas, oficina)
+// em vez de texto livre — o mesmo lugar sempre com o mesmo nome.
+const SeletorLocalEquip = ({ id, obras, value, onChange }) => {
+  const opcoes = ['Almoxarifado', ...obras.map((o) => o.nome).filter(Boolean), 'Oficina / Manutenção', 'Outro'];
+  return (
+    <Select value={value || 'none'} onValueChange={(v) => onChange(v === 'none' ? '' : v)}>
+      <SelectTrigger id={id}><SelectValue placeholder="Selecione" /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">Não informado</SelectItem>
+        {value && !opcoes.includes(value) && <SelectItem value={value}>{value}</SelectItem>}
+        {opcoes.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+};
+
 const EquipamentosPage = () => {
   const { currentUser, isAdmin } = useAuth();
   const companyId = currentUser?.company_id;
@@ -1475,7 +1491,7 @@ const EquipamentosPage = () => {
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label htmlFor="eq_local">Local Atual</Label>
-                <Input id="eq_local" value={formData.local_atual} onChange={(e) => setFormData({ ...formData, local_atual: e.target.value })} />
+                <SeletorLocalEquip id="eq_local" obras={obras} value={formData.local_atual} onChange={(v) => setFormData({ ...formData, local_atual: v })} />
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label htmlFor="eq_obra">Obra Atual</Label>
@@ -1734,7 +1750,7 @@ const EquipamentosPage = () => {
               <p className="text-sm text-muted-foreground">Transferindo <strong>{transferTarget.nome}</strong> ({transferTarget.numero_patrimonial})</p>
               <div className="space-y-1">
                 <Label htmlFor="tr_local">Novo Local</Label>
-                <Input id="tr_local" value={transferData.local_atual} onChange={(e) => setTransferData({ ...transferData, local_atual: e.target.value })} />
+                <SeletorLocalEquip id="tr_local" obras={obras} value={transferData.local_atual} onChange={(v) => setTransferData({ ...transferData, local_atual: v })} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="tr_resp">Novo Responsável</Label>
@@ -1788,7 +1804,7 @@ const EquipamentosPage = () => {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="ob_local">Local na obra</Label>
-                <Input id="ob_local" value={obraData.local_atual} onChange={(e) => setObraData({ ...obraData, local_atual: e.target.value })} />
+                <SeletorLocalEquip id="ob_local" obras={obras} value={obraData.local_atual} onChange={(v) => setObraData({ ...obraData, local_atual: v })} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="ob_obs">Observações</Label>

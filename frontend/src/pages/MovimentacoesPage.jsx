@@ -140,6 +140,20 @@ const emptyForm = {
   status: 'Pendente',
 };
 
+// Origem/destino de uma movimentação: lista curta em vez de texto livre
+// (pedido do Diego: menos digitação, dados iguais para todo mundo).
+const LOCAIS = ['Almoxarifado', 'Obra', 'Fornecedor', 'Funcionário', 'Descarte', 'Outro'];
+const SeletorLocal = ({ id, value, onChange }) => (
+  <Select value={value || 'none'} onValueChange={(v) => onChange(v === 'none' ? '' : v)}>
+    <SelectTrigger id={id}><SelectValue placeholder="Selecione" /></SelectTrigger>
+    <SelectContent>
+      <SelectItem value="none">Não informado</SelectItem>
+      {value && !LOCAIS.includes(value) && <SelectItem value={value}>{value}</SelectItem>}
+      {LOCAIS.map((l) => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+    </SelectContent>
+  </Select>
+);
+
 // ---------- Permissões por role ----------
 const usePermissions = (currentUser) => {
   // Cargos oficiais (lib/permissoes.js). Antes comparava pedaços de texto
@@ -215,17 +229,21 @@ const MovimentacoesPage = () => {
 
   const filtersRef = useRef(null);
 
+  const [centrosCusto, setCentrosCusto] = useState([]);
+
   // ---------- Carregamento de dados auxiliares ----------
   const fetchAux = useCallback(async () => {
     if (!companyId) return;
     try {
-      const [mats, obs, fors, funcs, users] = await Promise.all([
+      const [mats, obs, fors, funcs, users, ccs] = await Promise.all([
         pb.collection('materiais').getFullList({ filter: `company_id = "${companyId}"`, sort: 'name', $autoCancel: false }),
         pb.collection('obras').getFullList({ filter: `company_id = "${companyId}"`, sort: 'nome', $autoCancel: false }),
         pb.collection('fornecedores').getFullList({ filter: `company_id = "${companyId}"`, sort: 'nome', $autoCancel: false }),
         pb.collection('funcionarios').getFullList({ filter: `company_id = "${companyId}"`, sort: 'nome', $autoCancel: false }),
         pb.collection('users').getFullList({ filter: `company_id = "${companyId}"`, sort: 'name', $autoCancel: false }),
+        pb.collection('centro_custos').getFullList({ sort: 'nome', $autoCancel: false }).catch(() => []),
       ]);
+      setCentrosCusto(ccs);
       setMateriais(mats);
       setObras(obs);
       setFornecedores(fors);
@@ -403,9 +421,10 @@ const MovimentacoesPage = () => {
     setFormData((p) => ({
       ...p,
       material_id: materialId,
-      codigo: mat?.code || p.codigo,
-      categoria: mat?.category || p.categoria,
-      unidade: mat?.unit || p.unidade,
+      // Código, categoria e unidade vêm sempre do material (campos travados).
+      codigo: mat?.code || '',
+      categoria: mat?.category || '',
+      unidade: mat?.unit || 'un',
       valor_unitario: mat?.unit_cost != null ? String(mat.unit_cost) : p.valor_unitario,
     }));
   };
@@ -1202,11 +1221,11 @@ const MovimentacoesPage = () => {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="mov_categoria">Categoria</Label>
-                <Input id="mov_categoria" value={formData.categoria} onChange={(e) => setFormData({ ...formData, categoria: e.target.value })} />
+                <Input id="mov_categoria" value={formData.categoria} readOnly tabIndex={-1} placeholder="vem do material" className="bg-muted/40" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="mov_codigo">Código</Label>
-                <Input id="mov_codigo" value={formData.codigo} onChange={(e) => setFormData({ ...formData, codigo: e.target.value })} />
+                <Input id="mov_codigo" value={formData.codigo} readOnly tabIndex={-1} placeholder="vem do material" className="bg-muted/40" />
               </div>
             </div>
 
@@ -1221,7 +1240,7 @@ const MovimentacoesPage = () => {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="mov_unidade">Unidade *</Label>
-                <Input id="mov_unidade" value={formData.unidade} onChange={(e) => setFormData({ ...formData, unidade: e.target.value })} placeholder="un, kg, m..." className={formErrors.unidade ? 'border-destructive' : ''} />
+                <Input id="mov_unidade" value={formData.unidade} readOnly tabIndex={-1} placeholder="vem do material" className={`bg-muted/40 ${formErrors.unidade ? 'border-destructive' : ''}`} />
                 {formErrors.unidade && <p className="text-xs text-destructive">{formErrors.unidade}</p>}
               </div>
               <div className="space-y-1">
@@ -1248,15 +1267,24 @@ const MovimentacoesPage = () => {
               </div>
               <div className="space-y-1">
                 <Label htmlFor="mov_cc">Centro de Custo</Label>
-                <Input id="mov_cc" value={formData.centro_custo} onChange={(e) => setFormData({ ...formData, centro_custo: e.target.value })} />
+                <Select value={formData.centro_custo || 'none'} onValueChange={(v) => setFormData({ ...formData, centro_custo: v === 'none' ? '' : v })}>
+                  <SelectTrigger id="mov_cc"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {formData.centro_custo && !centrosCusto.some((c) => c.nome === formData.centro_custo) && (
+                      <SelectItem value={formData.centro_custo}>{formData.centro_custo}</SelectItem>
+                    )}
+                    {centrosCusto.map((c) => <SelectItem key={c.id} value={c.nome}>{c.codigo ? `${c.codigo} — ` : ''}{c.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="mov_origem">Origem</Label>
-                <Input id="mov_origem" value={formData.origem} onChange={(e) => setFormData({ ...formData, origem: e.target.value })} />
+                <SeletorLocal id="mov_origem" value={formData.origem} onChange={(v) => setFormData({ ...formData, origem: v })} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="mov_destino">Destino</Label>
-                <Input id="mov_destino" value={formData.destino} onChange={(e) => setFormData({ ...formData, destino: e.target.value })} />
+                <SeletorLocal id="mov_destino" value={formData.destino} onChange={(v) => setFormData({ ...formData, destino: v })} />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="mov_forn">Fornecedor</Label>
