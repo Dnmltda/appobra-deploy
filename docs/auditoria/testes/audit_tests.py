@@ -359,6 +359,51 @@ if tSU:
         s, r = call("GET", "/api/collections/companies/records?perPage=50", tM)
         check("telas", "Conta mestre (dnmltda) continua vendo todas as empresas", r.get("totalItems", 0) >= 2, f"{r.get('totalItems')}")
 
+# ------------------------------------------------------------------ fluxo de material (Etapa 4.1)
+s, mf = call("POST", "/api/collections/materiais/records", tA, {"name": "Argamassa AC-II", "code": "FLX-1", "unit": "un",
+             "quantity_in_stock": 10, "status": "active", "company_id": cA})
+def nova_sol(num, qtd):
+    s, so = call("POST", "/api/collections/solicitacoes/records", tF, {"company_id": cA, "numero_solicitacao": num, "tipo": "Material",
+                 "solicitante_id": uF["id"], "descricao": "pedido de material", "status": "Aberta", "obra_id": obra.get("id")})
+    s2, it = call("POST", "/api/collections/solicitacoes_itens/records", tF, {"solicitacao_id": so.get("id"), "material_id": mf.get("id"), "quantidade": qtd})
+    return so, s2, it
+so, s2, it = nova_sol("SOL-FLX-1", 4)
+check("fluxo", "Funcionário pede material com item e quantidade", s2 == 200 and it.get("unidade") == "un", err(it) if s2 >= 400 else "")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Entregue"})
+check("fluxo", "Não dá para pular etapa (Aberta -> Entregue)", s >= 400 and "fora de ordem" in r.get("message", ""), r.get("message", "")[:80])
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Aprovada"})
+check("fluxo", "Quem pediu não aprova", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Aprovada"})
+check("fluxo", "Gestão aprova", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/solicitacoes_itens/records", tF, {"solicitacao_id": so["id"], "material_id": mf.get("id"), "quantidade": 1})
+check("fluxo", "Depois de aprovada não entra material novo", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/solicitacoes_itens/records/{it['id']}", tA, {"quantidade": 9})
+check("fluxo", "Depois de aprovada a quantidade não muda", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Em separação"})
+check("fluxo", "Almoxarifado começa a separar", s == 200, err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Entregue"})
+s_m, m2 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
+check("fluxo", "Entregar dá baixa no estoque (10 -> 6)", s == 200 and m2.get("quantity_in_stock") == 6, err(r) if s >= 400 else f"saldo {m2.get('quantity_in_stock')}")
+s, movs = call("GET", "/api/collections/movimentacoes/records?filter=" + q(f'solicitacao_id="{so["id"]}"'), tA)
+check("fluxo", "A saída fica ligada à solicitação (Consumo de Obra)", movs.get("totalItems") == 1 and movs["items"][0].get("tipo") == "Consumo de Obra")
+s, it2 = call("GET", f"/api/collections/solicitacoes_itens/records/{it['id']}", tA)
+check("fluxo", "Item registra a quantidade entregue", it2.get("quantidade_entregue") == 4 and bool(it2.get("movimentacao_id")))
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Cancelada"})
+check("fluxo", "Depois de entregue não dá para cancelar", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Concluída"})
+check("fluxo", "Quem pediu confirma o recebimento (Concluída)", s == 200, err(r) if s >= 400 else "")
+s, sx = call("POST", "/api/collections/solicitacoes/records", tF, {"company_id": cA, "numero_solicitacao": "SOL-ESPERTO", "tipo": "Material",
+             "solicitante_id": uF["id"], "descricao": "tentando pular", "status": "Aprovada"})
+check("fluxo", "Funcionário que cria pedido já 'Aprovada' fica 'Aberta'", s == 200 and sx.get("status") == "Aberta", sx.get("status"))
+so2, s2, it3 = nova_sol("SOL-FLX-2", 999)
+for st in ("Aprovada", "Em separação"):
+    call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tA, {"status": st})
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tA, {"status": "Entregue"})
+s_m, m3 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
+s_s, sol2 = call("GET", f"/api/collections/solicitacoes/records/{so2['id']}", tA)
+check("fluxo", "Entrega sem saldo é recusada e nada muda", s >= 400 and "Saldo insuficiente" in r.get("message", "") and m3.get("quantity_in_stock") == 6
+      and sol2.get("status") == "Em separação", r.get("message", "")[:90])
+
 # ------------------------------------------------------------------ excluir vira arquivar
 s, fx = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor a arquivar", "cnpj": "99999999000199", "company_id": cA})
 s, r = call("DELETE", f"/api/collections/fornecedores/records/{fx.get('id')}", tF)

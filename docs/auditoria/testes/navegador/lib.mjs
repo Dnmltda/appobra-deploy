@@ -1,7 +1,6 @@
 import { createRequire } from "module";
-const require = createRequire(process.env.PLAYWRIGHT_DIR || "/opt/node22/lib/node_modules/");
+const require = createRequire("/opt/node22/lib/node_modules/");
 const { chromium } = require("playwright");
-export const CHROME = process.env.CHROME || "/opt/pw-browsers/chromium-1194/chrome-linux/chrome";
 export const fs = require("fs");
 
 export const FRONT = process.env.FRONT || "http://127.0.0.1:4173";
@@ -25,7 +24,7 @@ export async function apiLogin(email, pass = "Senha12345") {
 }
 
 export async function abrir(email = "a@teste.local", pass = "Senha12345") {
-  const browser = await chromium.launch({ executablePath: CHROME });
+  const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
   const page = await browser.newPage({ viewport: { width: 1366, height: 860 } });
   const erros = [];
   page.on("console", (m) => { if (m.type() === "error") erros.push(m.text().slice(0, 220)); });

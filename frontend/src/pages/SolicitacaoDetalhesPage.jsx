@@ -20,8 +20,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Pencil, FileText, Plus, Trash2, CheckCircle2, Download, ClipboardCheck, Paperclip,
+  ArrowLeft, Pencil, FileText, Plus, Trash2, CheckCircle2, Download, ClipboardCheck, Paperclip, Package, Truck, XCircle,
 } from "lucide-react";
+import { podeGerirSolicitacoes, podeGerirEstoque, cargoDe } from "@/lib/permissoes.js";
+
+// Fluxo do material de consumo (documento mestre): cada passo e quem pode dar.
+const PASSOS = [
+  { status: "Aberta", rotulo: "Pedido" },
+  { status: "Aprovada", rotulo: "Aprovado" },
+  { status: "Em separação", rotulo: "Separando" },
+  { status: "Entregue", rotulo: "Entregue" },
+  { status: "Concluída", rotulo: "Recebido" },
+];
+const ABERTOS = ["Aberta", "Em análise", "Aguardando aprovação", "draft", "pending"];
+const passoAtual = (status) => (ABERTOS.includes(status) ? 0 : PASSOS.findIndex((p) => p.status === status));
+const nivelDoCargo = (cargo) => ({ Administrador: "Administrador", Diretoria: "Administrador", "Gerência": "Gerente", Engenheiro: "Engenheiro" }[cargo] || "Supervisor");
 
 const SolicitacaoDetalhesPage = () => {
   const { id } = useParams();
@@ -33,6 +46,11 @@ const SolicitacaoDetalhesPage = () => {
   const [aprovacoes, setAprovacoes] = useState([]);
   const [anexos, setAnexos] = useState([]);
   const [historico, setHistorico] = useState([]);
+  const [itens, setItens] = useState([]);
+  const [materiais, setMateriais] = useState([]);
+  const [novoItem, setNovoItem] = useState({ material_id: "", quantidade: "" });
+  const [confirmarEntrega, setConfirmarEntrega] = useState(false);
+  const [mudando, setMudando] = useState(false);
 
   const [aprovModal, setAprovModal] = useState(false);
   const [aprovForm, setAprovForm] = useState(emptyAprov());
@@ -50,10 +68,14 @@ const SolicitacaoDetalhesPage = () => {
     try {
       const s = await pb.collection("solicitacoes").getOne(id, { expand: "solicitante_id,obra_id,responsavel_id", $autoCancel: false });
       setSolicitacao(s);
-      const [ap, an, hi] = await Promise.all([
-        h.fetchAprovacoes(id), h.fetchAnexos(id), h.fetchHistorico(id),
+      const [ap, an, hi, it] = await Promise.all([
+        h.fetchAprovacoes(id), h.fetchAnexos(id), h.fetchHistorico(id), h.fetchItens(id),
       ]);
-      setAprovacoes(ap); setAnexos(an); setHistorico(hi);
+      setAprovacoes(ap); setAnexos(an); setHistorico(hi); setItens(it);
+      if (s.tipo === "Material" && currentUser?.company_id) {
+        pb.collection("materiais").getFullList({ filter: `company_id = "${currentUser.company_id}"`, sort: "name", $autoCancel: false })
+          .then(setMateriais).catch(() => setMateriais([]));
+      }
     } catch (err) {
       console.error(err);
       toast.error("Erro ao carregar solicitação");
@@ -98,6 +120,39 @@ const SolicitacaoDetalhesPage = () => {
     const res = await h.concluirSolicitacao(solicitacao);
     if (res.success) { toast.success("Solicitação concluída"); loadAll(); }
     else toast.error(res.error);
+  };
+
+  // ---------- fluxo do material ----------
+  const souSolicitante = solicitacao?.solicitante_id === currentUser?.id;
+  const gestao = podeGerirSolicitacoes(currentUser);
+  const estoque = podeGerirEstoque(currentUser);
+  const temFluxo = solicitacao?.tipo === "Material" || itens.length > 0;
+  const aberta = ABERTOS.includes(solicitacao?.status);
+
+  const incluirItem = async (e) => {
+    e.preventDefault();
+    if (!novoItem.material_id || !(Number(novoItem.quantidade) > 0)) { toast.error("Escolha o material e a quantidade"); return; }
+    const res = await h.addItem(id, novoItem.material_id, novoItem.quantidade);
+    if (res.success) { setNovoItem({ material_id: "", quantidade: "" }); setItens(await h.fetchItens(id)); }
+    else toast.error(res.error);
+  };
+
+  const tirarItem = async (itemId) => {
+    const res = await h.removeItem(itemId);
+    if (res.success) setItens(await h.fetchItens(id)); else toast.error(res.error);
+  };
+
+  const avancar = async (status, mensagem) => {
+    setMudando(true);
+    const res = status === "Aprovada" || status === "Rejeitada"
+      ? await h.addAprovacao(id, {
+          nivel_aprovacao: nivelDoCargo(cargoDe(currentUser)), usuario_id: currentUser.id, status_aprovacao: status === "Aprovada" ? "Aprovado" : "Rejeitado",
+          data_aprovacao: new Date().toISOString().split("T")[0], hora_aprovacao: new Date().toTimeString().slice(0, 5), observacao: "",
+        }).then((r) => (r.success ? r : { success: false, error: r.errors?._form }))
+      : await h.mudarStatus(solicitacao, status);
+    setMudando(false);
+    setConfirmarEntrega(false);
+    if (res.success) { toast.success(mensagem); loadAll(); } else toast.error(res.error || "Não foi possível mudar o passo.");
   };
 
   const gerarPDF = () => {
@@ -161,10 +216,19 @@ const SolicitacaoDetalhesPage = () => {
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" onClick={gerarPDF}><FileText className="w-4 h-4 mr-2" />PDF</Button>
               {h.canEdit && !["Cancelada", "Concluída", "Rejeitada"].includes(solicitacao.status) && <Button variant="outline" onClick={() => navigate(`/solicitacoes/${id}/editar`)}><Pencil className="w-4 h-4 mr-2" />Editar</Button>}
-              {h.canApprove && !["Aprovada", "Concluída", "Cancelada", "Rejeitada"].includes(solicitacao.status) && <Button onClick={() => setAprovModal(true)}><CheckCircle2 className="w-4 h-4 mr-2" />Aprovar</Button>}
-              {h.canEdit && !["Concluída", "Cancelada", "Rejeitada"].includes(solicitacao.status) && <Button variant="outline" onClick={handleConcluir}><CheckCircle2 className="w-4 h-4 mr-2" />Concluir</Button>}
+              {!temFluxo && h.canApprove && !["Aprovada", "Concluída", "Cancelada", "Rejeitada"].includes(solicitacao.status) && <Button onClick={() => setAprovModal(true)}><CheckCircle2 className="w-4 h-4 mr-2" />Aprovar</Button>}
+              {!temFluxo && h.canEdit && !["Concluída", "Cancelada", "Rejeitada"].includes(solicitacao.status) && <Button variant="outline" onClick={handleConcluir}><CheckCircle2 className="w-4 h-4 mr-2" />Concluir</Button>}
             </div>
           </div>
+
+          {temFluxo && (
+            <FluxoMaterial
+              solicitacao={solicitacao} itens={itens} materiais={materiais} aberta={aberta}
+              podeEditarItens={aberta && (souSolicitante || gestao)} gestao={gestao} estoque={estoque} souSolicitante={souSolicitante}
+              novoItem={novoItem} setNovoItem={setNovoItem} incluirItem={incluirItem} tirarItem={tirarItem}
+              avancar={avancar} mudando={mudando} confirmarEntrega={confirmarEntrega} setConfirmarEntrega={setConfirmarEntrega}
+            />
+          )}
 
           {/* Dados principais */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -331,6 +395,103 @@ const SolicitacaoDetalhesPage = () => {
         </DialogContent>
       </Dialog>
     </>
+  );
+};
+
+// Andamento + materiais pedidos: o "próximo passo" aparece como um botão só,
+// para quem pode dar aquele passo.
+const FluxoMaterial = ({
+  solicitacao, itens, materiais, podeEditarItens, gestao, estoque, souSolicitante, aberta,
+  novoItem, setNovoItem, incluirItem, tirarItem, avancar, mudando, confirmarEntrega, setConfirmarEntrega,
+}) => {
+  const st = solicitacao.status;
+  const atual = passoAtual(st);
+  const encerrada = ["Cancelada", "Rejeitada"].includes(st);
+  return (
+    <Card className="mb-6 border-primary/30">
+      <CardHeader className="pb-2"><CardTitle className="text-lg">Andamento do pedido de material</CardTitle></CardHeader>
+      <CardContent className="space-y-5">
+        {encerrada ? (
+          <p className="text-sm font-medium text-red-700">Pedido {st.toLowerCase()}.</p>
+        ) : (
+          <ol className="flex flex-wrap gap-2" aria-label="Passos do pedido">
+            {PASSOS.map((p, i) => (
+              <li key={p.status} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${
+                i < atual ? "bg-green-50 border-green-300 text-green-800" : i === atual ? "bg-primary text-primary-foreground border-primary font-semibold" : "text-muted-foreground"}`}>
+                <span className="w-5 h-5 rounded-full border flex items-center justify-center text-xs">{i < atual ? "✓" : i + 1}</span>{p.rotulo}
+              </li>
+            ))}
+          </ol>
+        )}
+
+        <div>
+          <p className="text-sm font-semibold mb-2">Materiais pedidos</p>
+          {itens.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhum material ainda. {podeEditarItens ? "Inclua abaixo o que precisa." : ""}</p>
+          ) : (
+            <div className="divide-y border rounded-lg">
+              {itens.map((it) => (
+                <div key={it.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                  <span className="font-medium">{it.expand?.material_id?.name || "Material"}</span>
+                  <span className="flex items-center gap-3">
+                    <span>{it.quantidade} {it.unidade}</span>
+                    {it.quantidade_entregue > 0 && <Badge variant="outline" className="text-green-700 border-green-300">entregue</Badge>}
+                    {podeEditarItens && (
+                      <Button size="sm" variant="ghost" title="Tirar" onClick={() => tirarItem(it.id)}><Trash2 className="w-4 h-4 text-red-600" /></Button>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {podeEditarItens && (
+            <form onSubmit={incluirItem} className="flex flex-col sm:flex-row gap-2 mt-3">
+              <div className="flex-1">
+                <Select value={novoItem.material_id} onValueChange={(v) => setNovoItem({ ...novoItem, material_id: v })}>
+                  <SelectTrigger aria-label="Material"><SelectValue placeholder="Escolha o material" /></SelectTrigger>
+                  <SelectContent>
+                    {materiais.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} ({m.quantity_in_stock || 0} {m.unit} em estoque)</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Input type="number" min="0" step="0.01" placeholder="Quantidade" aria-label="Quantidade" className="sm:w-32"
+                value={novoItem.quantidade} onChange={(e) => setNovoItem({ ...novoItem, quantidade: e.target.value })} />
+              <Button type="submit"><Plus className="w-4 h-4 mr-1" />Incluir</Button>
+            </form>
+          )}
+        </div>
+
+        {!encerrada && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {aberta && gestao && (
+              <>
+                <Button disabled={mudando || itens.length === 0} onClick={() => avancar("Aprovada", "Pedido aprovado")}><CheckCircle2 className="w-4 h-4 mr-2" />Aprovar pedido</Button>
+                <Button variant="outline" disabled={mudando} onClick={() => avancar("Rejeitada", "Pedido recusado")}><XCircle className="w-4 h-4 mr-2" />Recusar</Button>
+              </>
+            )}
+            {st === "Aprovada" && estoque && (
+              <Button disabled={mudando} onClick={() => avancar("Em separação", "Separação iniciada")}><Package className="w-4 h-4 mr-2" />Começar a separar</Button>
+            )}
+            {st === "Em separação" && estoque && (
+              confirmarEntrega ? (
+                <div className="flex flex-wrap items-center gap-2 p-3 border rounded-lg bg-amber-50 text-sm">
+                  <span>Confirmar a entrega? Os materiais saem do estoque agora.</span>
+                  <Button size="sm" disabled={mudando} onClick={() => avancar("Entregue", "Entregue — estoque atualizado")}>Sim, entregar</Button>
+                  <Button size="sm" variant="outline" onClick={() => setConfirmarEntrega(false)}>Voltar</Button>
+                </div>
+              ) : (
+                <Button onClick={() => setConfirmarEntrega(true)}><Truck className="w-4 h-4 mr-2" />Entregar</Button>
+              )
+            )}
+            {st === "Entregue" && (souSolicitante || gestao) && (
+              <Button disabled={mudando} onClick={() => avancar("Concluída", "Recebimento confirmado")}><CheckCircle2 className="w-4 h-4 mr-2" />Confirmar que recebi</Button>
+            )}
+            {aberta && !gestao && <p className="text-sm text-muted-foreground">Aguardando aprovação.</p>}
+            {["Aprovada", "Em separação"].includes(st) && !estoque && <p className="text-sm text-muted-foreground">O almoxarifado está preparando o seu pedido.</p>}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

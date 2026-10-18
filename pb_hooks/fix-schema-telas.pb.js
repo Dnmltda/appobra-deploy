@@ -63,6 +63,23 @@ onBootstrap((e) => {
     },
   };
 
+  // Unidades de obra no material (antes só un/kg/m/m2/m3/l — não dava para
+  // cadastrar cimento em "saco"). Só acrescenta; nada que existe muda.
+  try {
+    const mat = app.findCollectionByNameOrId("materiais");
+    const un = mat.fields.getByName("unit");
+    const atuais = [];
+    for (let i = 0; i < un.values.length; i++) atuais.push(String(un.values[i]));
+    const novas = ["sc", "cx", "pc", "par", "rl", "barra", "lata", "gl", "t"].filter((u) => !atuais.includes(u));
+    if (novas.length) {
+      un.values = atuais.concat(novas);
+      app.save(mat);
+      console.log(`[fix-schema-telas] materiais: unidades novas ${novas.join(", ")}.`);
+    }
+  } catch (err) {
+    console.log("[fix-schema-telas] Erro nas unidades de materiais:", err);
+  }
+
   Object.keys(PLANO).forEach((nome) => {
     try {
       const col = app.findCollectionByNameOrId(nome);

@@ -138,8 +138,14 @@ const SolicitacoesPage = () => {
     e.preventDefault();
     const res = editing ? await h.updateSolicitacao(editing.id, form) : await h.createSolicitacao(form);
     if (res.success) {
-      toast.success(editing ? "Solicitação atualizada com sucesso" : "Solicitação cadastrada com sucesso");
       setDialogOpen(false);
+      // Pedido de material: vai direto para a página do pedido incluir os materiais.
+      if (!editing && res.record?.tipo === "Material") {
+        toast.success("Pedido criado. Agora inclua os materiais.");
+        navigate(`/solicitacoes/${res.record.id}`);
+        return;
+      }
+      toast.success(editing ? "Solicitação atualizada com sucesso" : "Solicitação cadastrada com sucesso");
     } else {
       setFormErrors(res.errors || {});
       if (res.errors?._form) toast.error(res.errors._form);
@@ -202,7 +208,9 @@ const SolicitacoesPage = () => {
             <div className="flex gap-2 flex-wrap">
               <Button variant="outline" onClick={exportExcel}><FileDown className="w-4 h-4 mr-2" />Excel</Button>
               <Button variant="outline" onClick={printList}><FileText className="w-4 h-4 mr-2" />Imprimir</Button>
-              {h.canEdit && <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Nova Solicitação</Button>}
+              {/* Qualquer pessoa com acesso a Solicitações pode fazer um pedido
+                  (antes só a gestão via o botão e o pedreiro não conseguia pedir). */}
+              <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Nova Solicitação</Button>
             </div>
           </div>
 
@@ -572,15 +580,18 @@ const SolicitacoesPage = () => {
                 <Input type="date" value={form.data_prazo} onChange={(e) => setForm({ ...form, data_prazo: e.target.value })} />
                 {formErrors.data_prazo && <p className="text-xs text-red-600">{formErrors.data_prazo}</p>}
               </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {STATUS_SOLICITACAO.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Status só para a gestão; quem pede não escolhe (o servidor cria como "Aberta"). */}
+              {h.canApprove && form.tipo !== "Material" && (
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUS_SOLICITACAO.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Descrição *</Label>

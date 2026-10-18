@@ -25,7 +25,9 @@ segurança/integridade → comparação com o documento mestre → plano de corr
   telas em `frontend/`. Servidor 123/0; navegador 68/68. Corrigidos também: Compras sem listas no
   formulário, login por ID/Usuário e "Esqueci minha senha" que nunca funcionaram, troca de senha no
   perfil, "Fale conosco" falso; excluir passou a arquivar.
-- Próxima: Etapa 4 (fluxos do documento mestre).
+- **Etapa 4 — em andamento:** ver `etapa4-fluxos.md`. 4.1 feita e testada localmente (pedido de material
+  com itens → aprovar → separar → entregar com baixa no estoque → confirmar recebimento). Servidor 147/0.
+  Próximo: empréstimo e devolução de equipamento.
 
 ---
 

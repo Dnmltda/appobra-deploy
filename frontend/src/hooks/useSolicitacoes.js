@@ -11,6 +11,8 @@ import {
   validateAprovacaoForm,
   generateNumeroSolicitacao,
 } from "@/utils/solicitacoesValidations.js";
+import { ehAdmin, podeGerirSolicitacoes } from "@/lib/permissoes.js";
+import { mensagemErro } from "@/lib/erros.js";
 
 const COL = "solicitacoes";
 const APROV = "solicitacoes_aprovacao";
@@ -53,20 +55,11 @@ export const useSolicitacoes = () => {
   });
   const [saving, setSaving] = useState(false);
 
-  const canManage = isAdmin || currentUser?.cargo === "Administrador";
-  const canEdit =
-    isAdmin ||
-    currentUser?.cargo === "Administrador" ||
-    currentUser?.cargo === "Gerente" ||
-    currentUser?.cargo === "Gerência" ||
-    currentUser?.cargo === "Supervisor";
-  const canApprove =
-    isAdmin ||
-    currentUser?.cargo === "Administrador" ||
-    currentUser?.cargo === "Gerente" ||
-    currentUser?.cargo === "Gerência" ||
-    currentUser?.cargo === "Supervisor" ||
-    currentUser?.cargo === "Engenheiro";
+  // Mesma regra do servidor (lib/permissoes.js). Antes usava "Gerente" e
+  // "Supervisor", que não são cargos do app, e deixava Almoxarife de fora.
+  const canManage = isAdmin || ehAdmin(currentUser);
+  const canEdit = isAdmin || podeGerirSolicitacoes(currentUser);
+  const canApprove = isAdmin || podeGerirSolicitacoes(currentUser);
 
   const fetchAux = useCallback(async () => {
     if (!currentUser?.company_id) return;
@@ -294,6 +287,49 @@ export const useSolicitacoes = () => {
     }
   };
 
+  // ---------- ITENS (materiais pedidos) ----------
+  const fetchItens = async (solicitacaoId) => {
+    try {
+      return await pb.collection("solicitacoes_itens").getFullList({
+        filter: `solicitacao_id = "${solicitacaoId}"`, expand: "material_id", sort: "created", $autoCancel: false,
+      });
+    } catch (err) {
+      return [];
+    }
+  };
+
+  const addItem = async (solicitacaoId, materialId, quantidade) => {
+    try {
+      await pb.collection("solicitacoes_itens").create(
+        { solicitacao_id: solicitacaoId, material_id: materialId, quantidade: Number(quantidade) }, { $autoCancel: false },
+      );
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: mensagemErro(err, "Não foi possível incluir o material.") };
+    }
+  };
+
+  const removeItem = async (itemId) => {
+    try {
+      await pb.collection("solicitacoes_itens").delete(itemId, { $autoCancel: false });
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: mensagemErro(err, "Não foi possível tirar o material.") };
+    }
+  };
+
+  // Próximo passo do fluxo de material (o servidor confere a ordem e, na
+  // entrega, dá a baixa no estoque).
+  const mudarStatus = async (solicitacao, status) => {
+    try {
+      const rec = await pb.collection(COL).update(solicitacao.id, { status, atualizado_por: currentUser.id }, { $autoCancel: false });
+      await auditLog("Solicitação: " + status, "Solicitações", `${solicitacao.numero_solicitacao}: ${solicitacao.status} → ${status}`, "success");
+      return { success: true, record: rec };
+    } catch (err) {
+      return { success: false, error: mensagemErro(err, "Não foi possível mudar o passo.") };
+    }
+  };
+
   // ---------- ANEXOS ----------
   const fetchAnexos = async (solicitacaoId) => {
     try {
@@ -371,6 +407,7 @@ export const useSolicitacoes = () => {
     fetchAprovacoes, addAprovacao,
     fetchAnexos, addAnexo, deleteAnexo, fileUrl,
     fetchHistorico, exportAudit,
+    fetchItens, addItem, removeItem, mudarStatus,
   };
 };
 

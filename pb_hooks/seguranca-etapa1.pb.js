@@ -217,10 +217,11 @@ onBootstrap((e) => {
       console.log("[seguranca-etapa1] Aviso: solicitacoes ainda sem solicitante_id (banco novo); regras aplicadas no próximo início.");
     } else {
       // Gestão altera qualquer solicitação da empresa. Quem pediu pode editar
-      // a própria, mas não aprovar: o status só pode ficar igual ou ir para
-      // "Cancelada".
+      // a própria, mas não aprovar: o status só pode ficar igual, ir para
+      // "Cancelada" (antes da entrega) ou "Concluída" (confirmar recebimento).
       col.updateRule = `${SEG_SAME} && (${SEG_GESTAO} || (solicitante_id = @request.auth.id && ` +
-        `(@request.body.status:isset = false || @request.body.status = status || @request.body.status = "Cancelada")))`;
+        `(@request.body.status:isset = false || @request.body.status = status || ` +
+        `(@request.body.status = "Cancelada" && status != "Entregue") || (@request.body.status = "Concluída" && status = "Entregue"))))`;
       app.save(col);
     }
   } catch (err) {

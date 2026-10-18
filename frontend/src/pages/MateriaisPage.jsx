@@ -76,7 +76,13 @@ const AUDIT_MODULE = 'Materiais';
 const PER_PAGE = 10;
 
 // Valores válidos do campo `unit` (select) da collection `materiais` existente.
-const UNIDADE_OPTIONS = ['un', 'kg', 'm', 'm2', 'm3', 'l'];
+// Unidades de obra (o servidor aceita as mesmas — fix-schema-telas.pb.js).
+// Antes só havia un/kg/m/m2/m3/l: cimento em "saco" não dava para cadastrar.
+const UNIDADE_OPTIONS = ['un', 'sc', 'cx', 'pc', 'par', 'rl', 'barra', 'lata', 'gl', 'kg', 't', 'm', 'm2', 'm3', 'l'];
+const UNIDADE_NOMES = {
+  un: 'unidade', sc: 'saco', cx: 'caixa', pc: 'peça', par: 'par', rl: 'rolo', barra: 'barra', lata: 'lata', gl: 'galão',
+  kg: 'quilo', t: 'tonelada', m: 'metro', m2: 'metro quadrado', m3: 'metro cúbico', l: 'litro',
+};
 // Valores válidos do campo `status` (select) da collection `materiais` existente.
 const STATUS_VALUES = ['active', 'inactive'];
 const STATUS_LABELS = { active: 'Ativo', inactive: 'Inativo' };
@@ -730,7 +736,7 @@ const MateriaisPage = () => {
                       </SelectTrigger>
                       <SelectContent>
                         {UNIDADE_OPTIONS.map((u) => (
-                          <SelectItem key={u} value={u}>{u}</SelectItem>
+                          <SelectItem key={u} value={u}>{u} — {UNIDADE_NOMES[u]}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
