@@ -74,6 +74,14 @@ import {
   ImageIcon,
   UserCircle,
 } from "lucide-react";
+import { CARGOS } from "@/lib/permissoes.js";
+
+// Perfil de acesso sugerido para cada cargo (o admin ainda pode trocar).
+const perfilDoCargo = (cargo) => {
+  if (cargo === "Gerência") return "Gerente";
+  if (["Pedreiro", "Servente", "Encanador", "Eletricista", "Faxina"].includes(cargo)) return "Funcionário";
+  return PERFIS_ACESSO.includes(cargo) ? cargo : "Funcionário";
+};
 
 const emptyForm = {
   nome_completo: "",
@@ -739,7 +747,20 @@ const UsuariosPage = () => {
               </div>
               <div className="space-y-2">
                 <Label>Cargo *</Label>
-                <Input value={form.cargo} onChange={(e) => set("cargo", e.target.value)} placeholder="Ex.: Engenheiro Civil" />
+                {/* Lista fixa: o cargo define o que a pessoa acessa (lib/permissoes.js).
+                    Antes era texto livre e "Engenheiro Civil" não era reconhecido. */}
+                <Select
+                  value={form.cargo}
+                  onValueChange={(v) => setForm((f) => ({ ...f, cargo: v, perfil_acesso: perfilDoCargo(v) }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {form.cargo && !CARGOS.includes(form.cargo) && (
+                      <SelectItem value={form.cargo}>{form.cargo} (antigo)</SelectItem>
+                    )}
+                    {CARGOS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 {formErrors.cargo && <p className="text-xs text-destructive">{formErrors.cargo}</p>}
               </div>
               <div className="space-y-2">

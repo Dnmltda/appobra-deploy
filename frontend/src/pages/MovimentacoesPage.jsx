@@ -39,6 +39,7 @@ import {
   Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
 import { mensagemErro } from '@/lib/erros.js';
+import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
 
 const AUDIT_MODULE = 'Movimentações';
 const PER_PAGE = 10;
@@ -141,11 +142,13 @@ const emptyForm = {
 
 // ---------- Permissões por role ----------
 const usePermissions = (currentUser) => {
-  const role = String(currentUser?.role || currentUser?.cargo || '').toLowerCase();
-  const isAdmin = !!currentUser?.isAdmin || role === 'admin' || role === 'administrador' || role === 'diretoria';
-  const isGerente = role.includes('gerente') || role.includes('mestre') || role.includes('diretor');
-  const isAlmoxarife = role.includes('almoxar');
-  const isComprador = role.includes('comprad');
+  // Cargos oficiais (lib/permissoes.js). Antes comparava pedaços de texto
+  // ("gerente") e não reconhecia "Gerência" nem "Engenheiro".
+  const cargo = cargoDe(currentUser);
+  const isAdmin = ehAdmin(currentUser) || cargo === 'Diretoria';
+  const isGerente = ['Gerência', 'Engenheiro', 'Mestre de Obras'].includes(cargo);
+  const isAlmoxarife = cargo === 'Almoxarife';
+  const isComprador = cargo === 'Comprador';
   const isFuncionario = !isAdmin && !isGerente && !isAlmoxarife && !isComprador;
 
   return {

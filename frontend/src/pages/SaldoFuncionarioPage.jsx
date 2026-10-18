@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
+import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
 
 const AUDIT_MODULE = 'Saldo por Funcionário';
 
@@ -49,11 +50,11 @@ const todayISO = () => new Date().toISOString().split('T')[0];
 const nowTime = () => new Date().toTimeString().split(' ')[0].slice(0, 5);
 
 const usePermissions = (currentUser) => {
-  const role = String(currentUser?.role || currentUser?.cargo || '').toLowerCase();
-  const isAdmin = !!currentUser?.isAdmin || role === 'admin' || role === 'administrador' || role === 'diretoria';
-  const isGerente = role.includes('gerente') || role.includes('mestre') || role.includes('diretor');
-  const isAlmoxarife = role.includes('almoxar');
-  const isComprador = role.includes('comprad');
+  const cargo = cargoDe(currentUser);
+  const isAdmin = ehAdmin(currentUser) || cargo === 'Diretoria';
+  const isGerente = ['Gerência', 'Engenheiro', 'Mestre de Obras'].includes(cargo);
+  const isAlmoxarife = cargo === 'Almoxarife';
+  const isComprador = cargo === 'Comprador';
   return {
     isAdmin,
     canMove: isAdmin || isGerente || isAlmoxarife || isComprador,

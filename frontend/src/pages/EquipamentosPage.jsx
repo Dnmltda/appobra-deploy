@@ -38,6 +38,7 @@ import {
   CartesianGrid, Tooltip, Legend,
 } from 'recharts';
 import { mensagemErro } from '@/lib/erros.js';
+import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
 
 const AUDIT_MODULE = 'Equipamentos';
 const PER_PAGE = 10;
@@ -139,11 +140,11 @@ const emptyForm = {
 const EquipamentosPage = () => {
   const { currentUser, isAdmin } = useAuth();
   const companyId = currentUser?.company_id;
-  const userRole = currentUser?.role || currentUser?.cargo;
+  const userRole = cargoDe(currentUser);
 
   // Permissões por role
   const perms = useMemo(() => {
-    const admin = isAdmin || userRole === 'admin' || userRole === 'Administrador' || userRole === 'Diretoria';
+    const admin = isAdmin || ehAdmin(currentUser) || userRole === 'Diretoria';
     const gerente = admin || userRole === 'Gerência' || userRole === 'Gerente' || userRole === 'Engenheiro';
     const almoxarife = gerente || userRole === 'Almoxarife' || userRole === 'Mestre de Obras';
     const tecnico = almoxarife;

@@ -121,7 +121,7 @@ const Header = () => {
                             {currentUser?.name || currentUser?.nome_completo || currentUser?.email}
                           </span>
                           <span className="text-xs text-white/70">
-                            {currentUser?.role || currentUser?.cargo || 'Usuário'}
+                            {currentUser?.cargo || currentUser?.role || 'Usuário'}
                           </span>
                         </div>
                       </Button>

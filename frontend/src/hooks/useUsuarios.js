@@ -211,7 +211,8 @@ export const useUsuarios = () => {
       is_active: (data.status || "Ativo") === "Ativo",
       is_blocked: !!data.bloqueado,
       observacoes: data.observacoes || "",
-      role: data.perfil_acesso || data.cargo || "Funcionário",
+      // O cargo define as permissões (tela e servidor); role acompanha o cargo.
+      role: data.cargo || data.perfil_acesso || "Funcionário",
     };
     return payload;
   };

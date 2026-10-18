@@ -24,6 +24,7 @@ import {
   ShieldCheck 
 } from 'lucide-react';
 import Logo from './Logo.jsx';
+import { ehAdmin, podeAcessar } from '@/lib/permissoes.js';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { language } = useLanguage();
@@ -37,34 +38,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Role-based menu visibility
-  const userRole = currentUser?.role || currentUser?.cargo || 'Funcionário';
-  
+  // Mesmo mapa da proteção de rotas (lib/permissoes.js).
   const hasPermission = (module) => {
-    if (isAdmin || userRole === 'admin' || userRole === 'Administrador') return true;
-    
-    const rolePermissions = {
-      'Diretoria': ['dashboard', 'obras', 'financeiro', 'rh', 'documentos', 'auditoria', 'configuracoes', 'relatorios', 'empresas', 'usuarios', 'estoque', 'saldo_funcionario'],
-      'Gerência': ['dashboard', 'obras', 'materiais', 'compras', 'financeiro', 'rh', 'documentos', 'relatorios', 'estoque', 'saldo_funcionario'],
-      'Engenheiro': ['dashboard', 'obras', 'materiais', 'compras', 'documentos', 'equipamentos', 'relatorios', 'estoque', 'saldo_funcionario'],
-      'Mestre de Obras': ['dashboard', 'obras', 'materiais', 'funcionarios', 'equipamentos', 'epis', 'solicitacoes', 'estoque', 'saldo_funcionario'],
-      'Almoxarife': ['dashboard', 'materiais', 'movimentacoes', 'compras', 'fornecedores', 'epis', 'equipamentos', 'solicitacoes', 'estoque', 'saldo_funcionario'],
-      'Comprador': ['dashboard', 'compras', 'solicitacoes', 'fornecedores', 'estoque'],
-      'Financeiro': ['dashboard', 'financeiro', 'compras', 'relatorios'],
-      'RH': ['dashboard', 'rh', 'funcionarios', 'epis', 'documentos'],
-      'Cliente': ['dashboard', 'obras'],
-      'Funcionário': ['dashboard', 'solicitacoes'],
-      // Mesmo conjunto básico definido em ProtectedRoute.jsx — mantenha os
-      // dois sincronizados.
-      'Pedreiro': ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos'],
-      'Servente': ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos'],
-      'Encanador': ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos'],
-      'Eletricista': ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos'],
-      'Faxina': ['dashboard', 'solicitacoes', 'estoque', 'movimentacoes']
-    };
-
-    const permissions = rolePermissions[userRole] || ['dashboard'];
-    return permissions.includes(module);
+    if (isAdmin) return true;
+    if (module === 'usuarios') return ehAdmin(currentUser);
+    return podeAcessar(currentUser, module);
   };
 
   // The 15 requested modules

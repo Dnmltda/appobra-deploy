@@ -87,6 +87,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -258,10 +259,10 @@ const EPIsPage = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   // Permissões
-  const role = currentUser?.role || currentUser?.cargo || 'Funcionário';
-  const canManage = isAdmin || role === 'admin' || role === 'Administrador' ||
-    ['Técnico de Segurança', 'Almoxarife', 'Gerência', 'Gerente', 'RH'].includes(role);
-  const canDelete = isAdmin || role === 'admin' || role === 'Administrador';
+  const role = cargoDe(currentUser);
+  const canManage = isAdmin || ehAdmin(currentUser) ||
+    ['Técnico de Segurança', 'Almoxarife', 'Gerência', 'Gerente', 'RH', 'Mestre de Obras'].includes(role);
+  const canDelete = isAdmin || ehAdmin(currentUser);
   const isFuncionarioOnly = role === 'Funcionário';
 
   // -------------------------------------------------------------------------

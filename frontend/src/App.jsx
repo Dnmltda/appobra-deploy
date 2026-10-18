@@ -983,36 +983,36 @@ function App() {
               <Route path="/notificacoes" element={<ProtectedRoute><PaginaNotificacoes /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
               <Route path="/admin/security" element={<ProtectedRoute requiredRoles={['admin', 'Administrador']}><AdminSecurityPanel /></ProtectedRoute>} />
-              <Route path="/qrcode" element={<ProtectedRoute><QRCodeModule /></ProtectedRoute>} />
-              <Route path="/perdas-ganhos" element={<ProtectedRoute><LossesGainsModule /></ProtectedRoute>} />
-              <Route path="/financeiro/contas-pagar" element={<ProtectedRoute><ContasPagar /></ProtectedRoute>} />
-              <Route path="/financeiro/contas-receber" element={<ProtectedRoute><ContasReceberPage /></ProtectedRoute>} />
-              <Route path="/clientes" element={<ProtectedRoute><ClientesPage /></ProtectedRoute>} />
-              <Route path="/propostas" element={<ProtectedRoute><PropostasPage /></ProtectedRoute>} />
+              <Route path="/qrcode" element={<ProtectedRoute module="qrcode"><QRCodeModule /></ProtectedRoute>} />
+              <Route path="/perdas-ganhos" element={<ProtectedRoute module="perdas_ganhos"><LossesGainsModule /></ProtectedRoute>} />
+              <Route path="/financeiro/contas-pagar" element={<ProtectedRoute module="financeiro"><ContasPagar /></ProtectedRoute>} />
+              <Route path="/financeiro/contas-receber" element={<ProtectedRoute module="financeiro"><ContasReceberPage /></ProtectedRoute>} />
+              <Route path="/clientes" element={<ProtectedRoute module="comercial"><ClientesPage /></ProtectedRoute>} />
+              <Route path="/propostas" element={<ProtectedRoute module="comercial"><PropostasPage /></ProtectedRoute>} />
 
               {/* Cadastro de Empresas */}
-              <Route path="/empresas" element={<ProtectedRoute><EmpresasPage /></ProtectedRoute>} />
-              <Route path="/empresas/:id" element={<ProtectedRoute><EmpresaDetalhesPage /></ProtectedRoute>} />
-              <Route path="/empresas/:id/editar" element={<ProtectedRoute><EmpresasPage /></ProtectedRoute>} />
+              <Route path="/empresas" element={<ProtectedRoute module="empresas"><EmpresasPage /></ProtectedRoute>} />
+              <Route path="/empresas/:id" element={<ProtectedRoute module="empresas"><EmpresaDetalhesPage /></ProtectedRoute>} />
+              <Route path="/empresas/:id/editar" element={<ProtectedRoute module="empresas"><EmpresasPage /></ProtectedRoute>} />
 
               {/* Cadastro de Usuários */}
               <Route path="/usuarios" element={<ProtectedRoute requiredRoles={['admin', 'Administrador']}><UsuariosPage /></ProtectedRoute>} />
-              <Route path="/usuarios/:id" element={<ProtectedRoute><UsuarioDetalhesPage /></ProtectedRoute>} />
+              <Route path="/usuarios/:id" element={<ProtectedRoute requiredRoles={['admin', 'Administrador']}><UsuarioDetalhesPage /></ProtectedRoute>} />
               <Route path="/usuarios/:id/editar" element={<ProtectedRoute requiredRoles={['admin', 'Administrador']}><UsuariosPage /></ProtectedRoute>} />
               
               {/* RH Sub-routes */}
-              <Route path="/trainings" element={<ProtectedRoute><TreinamentosPage /></ProtectedRoute>} />
-              <Route path="/rh/equipes" element={<ProtectedRoute><EquipesPage /></ProtectedRoute>} />
-              <Route path="/rh/escalas" element={<ProtectedRoute><EscalasPage /></ProtectedRoute>} />
-              <Route path="/rh/documentos" element={<ProtectedRoute><DocumentosPage /></ProtectedRoute>} />
+              <Route path="/trainings" element={<ProtectedRoute module="rh"><TreinamentosPage /></ProtectedRoute>} />
+              <Route path="/rh/equipes" element={<ProtectedRoute module="rh"><EquipesPage /></ProtectedRoute>} />
+              <Route path="/rh/escalas" element={<ProtectedRoute module="rh"><EscalasPage /></ProtectedRoute>} />
+              <Route path="/rh/documentos" element={<ProtectedRoute module="rh"><DocumentosPage /></ProtectedRoute>} />
               
               {/* Frota Sub-routes */}
-              <Route path="/frota/dashboard" element={<ProtectedRoute><FrotaDashboardPage /></ProtectedRoute>} />
-              <Route path="/frota/veiculos" element={<ProtectedRoute><VeiculosPage /></ProtectedRoute>} />
-              <Route path="/frota/abastecimentos" element={<ProtectedRoute><AbastecimentosPage /></ProtectedRoute>} />
-              <Route path="/frota/manutencoes" element={<ProtectedRoute><ManutencoesFrotaPage /></ProtectedRoute>} />
-              <Route path="/frota/licenciamentos" element={<ProtectedRoute><LicenciamentoFrotaPage /></ProtectedRoute>} />
-              <Route path="/frota/quilometragem" element={<ProtectedRoute><QuiloMetragemPage /></ProtectedRoute>} />
+              <Route path="/frota/dashboard" element={<ProtectedRoute module="frota"><FrotaDashboardPage /></ProtectedRoute>} />
+              <Route path="/frota/veiculos" element={<ProtectedRoute module="frota"><VeiculosPage /></ProtectedRoute>} />
+              <Route path="/frota/abastecimentos" element={<ProtectedRoute module="frota"><AbastecimentosPage /></ProtectedRoute>} />
+              <Route path="/frota/manutencoes" element={<ProtectedRoute module="frota"><ManutencoesFrotaPage /></ProtectedRoute>} />
+              <Route path="/frota/licenciamentos" element={<ProtectedRoute module="frota"><LicenciamentoFrotaPage /></ProtectedRoute>} />
+              <Route path="/frota/quilometragem" element={<ProtectedRoute module="frota"><QuiloMetragemPage /></ProtectedRoute>} />
               
               {/* Catch-all */}
               <Route path="*" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
