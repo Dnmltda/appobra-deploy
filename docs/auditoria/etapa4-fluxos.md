@@ -1,7 +1,7 @@
 # Etapa 4 — Fluxos do documento mestre
 
 Data: 18/10/2026 · Feita pelo Claude Code · Sobre as Etapas 1 a 3
-Status: **4.1, 4.2 e 4.3 testadas localmente (servidor + navegador), ainda NÃO publicadas**.
+Status: **4.1 a 4.4 testadas localmente (servidor + navegador), ainda NÃO publicadas**.
 
 ## 4.1 — Material de consumo: pedir → aprovar → separar → entregar → confirmar
 
@@ -120,6 +120,31 @@ conseguem aprovar.
 17 de 20, fica aguardando, administrador autoriza, estoque vai a 17; contagem igual não pede motivo).
 Todos os 12 roteiros OK (99 verificações). `estoque.mjs` passou a mandar o motivo no inventário de teste.
 
+## 4.4 — Ocorrências (módulo novo; ver `ocorrencia-registrar.png`)
+
+**Como fica para quem usa (menu "Ocorrências", para todos os cargos menos Cliente)**
+- Botão grande **Registrar ocorrência**: o que aconteceu (acidente, quase acidente, dano a equipamento ou
+  material, problema na obra, falta de material, atraso, clima, furto ou sumiço, outro), **gravidade** (Baixa,
+  Média, Alta — botões coloridos), descrição, obra, onde, pessoa envolvida, equipamento e **até 5 fotos**
+  (no celular abre a câmera).
+- Número **OCO-0001, OCO-0002…** por empresa, dado pelo servidor.
+- **Gravidade Alta** → e-mail na hora para Administrador, Diretoria, Gerência e Engenheiro da empresa (com
+  botão "Ver a ocorrência").
+- Quem registrou vê as próprias; a gestão (Administrador, Diretoria, Gerência, Engenheiro, Mestre de Obras,
+  Almoxarife) vê todas e trata: **Começar a resolver** → **Marcar como resolvida** (obrigatório dizer o que
+  foi feito) ou **Cancelar** (obrigatório dizer por quê); **Reabrir** se voltar a acontecer.
+- Abas **Em aberto / Resolvidas / Todas**. Fica gravado quem registrou, quem resolveu e quando.
+- Ninguém apaga ocorrência (nem o administrador) — é histórico. Quem registrou pode corrigir o texto só
+  enquanto está "Aberta".
+
+**Arquivos**: `pb_hooks/ocorrencias.pb.js` (tabela nova `ocorrencias`, regras e aviso por e-mail);
+`frontend/src/pages/OcorrenciasPage.jsx` (nova), `App.jsx` (rota `/ocorrencias`), `components/Sidebar.jsx`,
+`lib/permissoes.js` (`podeGerirOcorrencias` e módulo nos cargos).
+
+**Testes**: servidor **189/0** (15 verificações novas: numeração, quem vê, quem fecha, não apaga, isolamento
+entre empresas, sem login), rodado a partir do `.zip`. Navegador `ocorrencias.mjs` → 10/10 (pedreiro registra
+com foto e gravidade Alta, e-mail chega ao administrador, administrador resolve). Todos os 13 roteiros OK
+(109 verificações). `permissoes.mjs` passou a conferir "Ocorrências" no menu do pedreiro.
+
 ## Próximos passos da Etapa 4
-- Ocorrências.
 - Alerta de estoque mínimo.

@@ -30,7 +30,8 @@ segurança/integridade → comparação com o documento mestre → plano de corr
   testada (emprestar equipamento → receber de volta conferindo o estado). E-mails com botão e link certo
   (o convite de funcionário apontava para o endereço antigo); 4.3 feita e testada (conferir estoque:
   diferença com motivo e autorização; o servidor passou a decidir quem aprova movimentação).
-  Servidor 174/0; navegador 99/99. Próximo: Ocorrências.
+  4.4 feita e testada (módulo Ocorrências, que não existia). Servidor 189/0; navegador 109/109.
+  Próximo: alerta de estoque mínimo.
 
 ---
 
@@ -93,7 +94,7 @@ Anexo com o detalhe das telas (rotas, chaves de cada formulário, evidências): 
 | EPIs | Sim | Cadastro, entrega, devolução, reposição, histórico. O mais completo. |
 | Compras | Parcial | Itens, aprovação, recebimento, anexos. Recebimento não entra no estoque. |
 | Perdas e ganhos | Parcial | Registro em texto (sem ligar ao material), sem aprovação, sem ajuste. Sem item de menu. |
-| Ocorrências | **Não existe** | |
+| Ocorrências | **Não existe** → criado na Etapa 4.4 | |
 | Documentos | Parcial | Central de documentos sem separação por empresa. Alerta de vencimento é texto fixo falso. |
 | Relatórios / exportações | Sim | CSV, XLSX, PDF (~11 tipos), impressão. |
 | Auditoria | Parcial | Duas tabelas de log (`audit_logs` e `auditoria`); logs podem ser apagados e forjados. |

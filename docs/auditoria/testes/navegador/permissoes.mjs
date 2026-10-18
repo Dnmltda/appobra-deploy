@@ -16,7 +16,7 @@ const CASOS = [
     pode: ["/estoque", "/movimentacoes", "/qrcode", "/perdas-ganhos"], naoPode: ["/empresas", "/financeiro/contas-pagar", "/frota/veiculos", "/clientes", "/usuarios"] },
   { cargo: "Gerência", menu: ["Obras", "Financeiro", "Movimentações"], semMenu: ["Gestão de Acessos"],
     pode: ["/movimentacoes", "/empresas", "/clientes", "/frota/veiculos"], naoPode: ["/usuarios", "/auditoria"] },
-  { cargo: "Pedreiro", menu: ["Solicitações", "EPIs", "Equipamentos"], semMenu: ["Materiais", "Estoque", "Compras", "Financeiro"],
+  { cargo: "Pedreiro", menu: ["Solicitações", "EPIs", "Equipamentos", "Ocorrências"], semMenu: ["Materiais", "Estoque", "Compras", "Financeiro"],
     pode: ["/solicitacoes", "/saldo-funcionario"], naoPode: ["/estoque", "/compras", "/empresas", "/rh/equipes", "/perdas-ganhos"] },
 ];
 

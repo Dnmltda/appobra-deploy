@@ -34,4 +34,5 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `convite.mjs` | convite de funcionário: e-mail com botão, link certo, cria a senha e entra |
 | `equipamento.mjs` | emprestar equipamento, atraso, receber de volta com o estado (manutenção) |
 | `divergencia.mjs` | conferir estoque: diferença com motivo, aguarda autorização, administrador autoriza |
+| `ocorrencias.mjs` | ocorrência com foto e gravidade alta, e-mail para a chefia, resolver com o que foi feito |
 | `fluxo-material.mjs` | pedido de material com itens: pedir → aprovar → separar → entregar (baixa) → confirmar |

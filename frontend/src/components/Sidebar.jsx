@@ -21,7 +21,8 @@ import {
   FolderOpen, 
   BarChart3, 
   Settings, 
-  ShieldCheck 
+  ShieldCheck,
+  Siren,
 } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { ehAdmin, podeAcessar } from '@/lib/permissoes.js';
@@ -49,6 +50,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const menuItems = [
     { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'obras', path: '/projects', label: 'Obras', icon: Building2 },
+    { id: 'ocorrencias', path: '/ocorrencias', label: 'Ocorrências', icon: Siren },
     { id: 'materiais', path: '/materiais', label: 'Materiais', icon: Package },
     { id: 'estoque', path: '/estoque', label: 'Estoque', icon: Boxes },
     { id: 'movimentacoes', path: '/movimentacoes', label: 'Movimentações', icon: ArrowRightLeft },
@@ -84,6 +86,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     documentos: 'GESTAO',
     auditoria: 'GESTAO',
     obras: 'GESTAO',
+    ocorrencias: 'GESTAO',
     materiais: 'SUPRIMENTOS',
     equipamentos: 'SUPRIMENTOS',
     epis: 'SUPRIMENTOS',

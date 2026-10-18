@@ -672,6 +672,96 @@
   "detalhe": ""
  },
  {
+  "grupo": "permissao",
+  "teste": "Não dá para registrar ocorrência em outra empresa",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Pedreiro registra ocorrência: nasce Aberta, com número, na própria empresa e no nome dele",
+  "ok": true,
+  "detalhe": "OCO-0001 Aberta"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Sem descrição é recusada",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Numeração segue por empresa (OCO-0002)",
+  "ok": true,
+  "detalhe": "OCO-0002"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Pedreiro vê só as que ele registrou",
+  "ok": true,
+  "detalhe": "1"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Gestão vê todas da empresa",
+  "ok": true,
+  "detalhe": "2"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Empresa B não vê ocorrências da A",
+  "ok": true,
+  "detalhe": "0"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Pedreiro não fecha a ocorrência",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Quem registrou corrige o texto enquanto está Aberta",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Fechar exige dizer o que foi feito",
+  "ok": true,
+  "detalhe": "Diga o que foi feito para fechar a ocorrência."
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Gestão resolve e fica quem resolveu e quando",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Depois de tratada, quem registrou não muda o texto",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Ninguém apaga ocorrência (nem o administrador)",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "ocorrencias",
+  "teste": "Gestão reabre e limpa quem resolveu",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Sem login não vê ocorrências",
+  "ok": true,
+  "detalhe": "status 200"
+ },
+ {
   "grupo": "telas",
   "teste": "Usuário logado grava log de auditoria",
   "ok": true,

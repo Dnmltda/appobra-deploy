@@ -10,31 +10,31 @@ export const CARGOS = [
   'Financeiro', 'RH', 'Funcionário', 'Cliente', 'Pedreiro', 'Servente', 'Encanador', 'Eletricista', 'Faxina',
 ];
 
-const OBRA = ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos'];
+const OBRA = ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos', 'ocorrencias'];
 
 export const MODULOS_POR_CARGO = {
   'Diretoria': ['dashboard', 'obras', 'financeiro', 'rh', 'documentos', 'auditoria', 'configuracoes', 'relatorios',
-    'estoque', 'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos'],
+    'estoque', 'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos', 'ocorrencias'],
   'Gerência': ['dashboard', 'obras', 'materiais', 'compras', 'financeiro', 'rh', 'documentos', 'relatorios', 'estoque',
-    'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos', 'solicitacoes', 'movimentacoes', 'equipamentos'],
+    'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos', 'solicitacoes', 'movimentacoes', 'equipamentos', 'ocorrencias'],
   'Engenheiro': ['dashboard', 'obras', 'materiais', 'compras', 'documentos', 'equipamentos', 'relatorios', 'estoque',
-    'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos', 'solicitacoes', 'movimentacoes'],
+    'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos', 'solicitacoes', 'movimentacoes', 'ocorrencias'],
   'Mestre de Obras': ['dashboard', 'obras', 'materiais', 'funcionarios', 'equipamentos', 'epis', 'solicitacoes', 'estoque',
-    'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos'],
+    'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos', 'ocorrencias'],
   'Almoxarife': ['dashboard', 'materiais', 'movimentacoes', 'compras', 'fornecedores', 'epis', 'equipamentos', 'solicitacoes',
-    'estoque', 'saldo_funcionario', 'qrcode', 'perdas_ganhos'],
-  'Comprador': ['dashboard', 'compras', 'solicitacoes', 'fornecedores', 'estoque'],
-  'Financeiro': ['dashboard', 'financeiro', 'compras', 'relatorios'],
-  'RH': ['dashboard', 'rh', 'funcionarios', 'epis', 'documentos'],
+    'estoque', 'saldo_funcionario', 'qrcode', 'perdas_ganhos', 'ocorrencias'],
+  'Comprador': ['dashboard', 'compras', 'solicitacoes', 'fornecedores', 'estoque', 'ocorrencias'],
+  'Financeiro': ['dashboard', 'financeiro', 'compras', 'relatorios', 'ocorrencias'],
+  'RH': ['dashboard', 'rh', 'funcionarios', 'epis', 'documentos', 'ocorrencias'],
   'Cliente': ['dashboard', 'obras'],
-  'Funcionário': ['dashboard', 'solicitacoes'],
+  'Funcionário': ['dashboard', 'solicitacoes', 'ocorrencias'],
   // Execução de obra: painel, pedir material/EPI, ver o próprio saldo e os equipamentos.
   'Pedreiro': OBRA,
   'Servente': OBRA,
   'Encanador': OBRA,
   'Eletricista': OBRA,
   // Faxina: controla o material de limpeza e pode pedir reposição.
-  'Faxina': ['dashboard', 'solicitacoes', 'estoque', 'movimentacoes'],
+  'Faxina': ['dashboard', 'solicitacoes', 'estoque', 'movimentacoes', 'ocorrencias'],
 };
 
 export const ehAdmin = (user) =>
@@ -61,3 +61,7 @@ export const podeGerirSolicitacoes = (user) =>
 // Autorizar diferença de estoque (inventário/ajuste/perda que muda o saldo).
 export const podeAutorizarAjuste = (user) =>
   ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro'].includes(cargoDe(user));
+
+// Tratar ocorrências (andamento, resolver, reabrir) — mesma lista do servidor.
+export const podeGerirOcorrencias = (user) =>
+  ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife'].includes(cargoDe(user));
