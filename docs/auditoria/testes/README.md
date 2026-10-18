@@ -12,6 +12,8 @@ chmod +x pocketbase
 export PB_SUPERUSER_EMAIL=teste@local.test PB_SUPERUSER_PASSWORD='SenhaTeste123!'
 ./pocketbase migrate up --dir=./pb_data --migrationsDir=./pb_migrations --hooksDir=./pb_hooks
 ./pocketbase migrate up --dir=./pb_data --migrationsDir=./pb_migrations --hooksDir=./pb_hooks
+# o banco do zip já tem superusuário próprio: cria o de teste (alguns testes usam)
+./pocketbase superuser upsert "$PB_SUPERUSER_EMAIL" "$PB_SUPERUSER_PASSWORD" --dir=./pb_data
 
 # 3. Servidor na porta 8097
 ./pocketbase serve --http=127.0.0.1:8097 --dir=./pb_data --migrationsDir=./pb_migrations \
@@ -27,6 +29,7 @@ done
 python3 -I /caminho/do/repo/docs/auditoria/testes/audit_tests.py resultado.json
 ```
 
-Cada linha sai como `OK` ou `FALHA`. Resultado da auditoria de 18/10/2026: `resultado-2026-10-18.json`
-(10 OK / 21 FALHA). O teste cria registros e altera o funcionário de teste, então rode sempre num
+Cada linha sai como `OK` ou `FALHA`. Resultados guardados:
+- `resultado-2026-10-18.json` — primeira versão do script, na auditoria (10 OK / 21 FALHA);
+- `resultado-antes-etapa1.json` / `resultado-depois-etapa1.json` — script atual (36/50 → 85/3). O teste cria registros e altera o funcionário de teste, então rode sempre num
 `pb_data` novo.

@@ -8,6 +8,20 @@ segurança/integridade → comparação com o documento mestre → plano de corr
 
 ---
 
+## Andamento
+
+- **Etapa 1 — feita e testada localmente, aguardando publicação:** ver `etapa1-seguranca.md`
+  (testes 36/50 → 85/3). Durante a Etapa 1 apareceram três defeitos novos, já corrigidos nela:
+  - **D10.** Compras e Equipamentos não salvavam pela tela; EPIs perdiam ~24 campos (mesmo problema de
+    nomes que Solicitações tinha).
+  - **D11.** Fornecedor, compra, EPI e veículo: só o primeiro cadastro do sistema inteiro era salvo
+    (gerador de código sempre devolvia `PREFIXO-000001`).
+  - **D12.** Campos "únicos" valiam para o sistema todo (duas empresas não podiam ter o mesmo
+    fornecedor; só um veículo sem chassi/RENAVAM no sistema).
+- Etapa 2 (estoque) — próxima.
+
+---
+
 ## 0. Resumo para o Diego (leia isto primeiro)
 
 O app tem muitas telas prontas e a base de dados cobre quase todos os módulos do documento mestre.

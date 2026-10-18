@@ -1,31 +1,37 @@
 /// <reference path="../pb_data/types.d.ts" />
+
+// Gera o código sequencial SOL-000001, SOL-000002... POR EMPRESA.
+//
+// Correção (18/10/2026): a versão anterior chamava findRecordsByFilter com
+// um objeto no lugar do "sort" e filtrava com ~ "^SOL-" ("~" é busca
+// literal, não regex). A busca sempre falhava em silêncio, todo registro
+// recebia SOL-000001 e, a partir do segundo, o cadastro era recusado
+// por duplicidade — no sistema inteiro, não só na empresa.
 onRecordCreate((e) => {
   const prefix = "SOL";
-  
-  // Find the highest existing number
+  const companyId = e.record.get("company_id") || "";
+
   let maxNumber = 0;
   try {
-    const records = $app.findRecordsByFilter("solicitacoes_compra", `id_unico ~ "^${prefix}-"`, { limit: 1000 });
+    const records = $app.findRecordsByFilter(
+      "solicitacoes_compra",
+      "company_id = {:c} && id_unico ~ {:p}",
+      "",
+      0,
+      0,
+      { c: companyId, p: prefix + "-" }
+    );
     records.forEach((record) => {
-      const idUnico = record.get("id_unico");
-      if (idUnico) {
-        const match = idUnico.match(new RegExp(`^${prefix}-(\\d+)$`));
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxNumber) {
-            maxNumber = num;
-          }
-        }
+      const match = String(record.get("id_unico") || "").match(new RegExp(`^${prefix}-(\\d+)$`));
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) maxNumber = num;
       }
     });
   } catch (err) {
-    // No records found yet, start from 0
+    // Nenhum registro ainda nesta empresa: começa do 1.
   }
-  
-  // Generate new ID
-  const newNumber = maxNumber + 1;
-  const newId = `${prefix}-${String(newNumber).padStart(6, "0")}`;
-  
-  e.record.set("id_unico", newId);
+
+  e.record.set("id_unico", `${prefix}-${String(maxNumber + 1).padStart(6, "0")}`);
   e.next();
 }, "solicitacoes_compra");

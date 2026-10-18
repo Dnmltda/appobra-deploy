@@ -1,6 +1,22 @@
-import json, sys, urllib.request, urllib.error
+"""Testes de regressão do servidor do APP OBRA.
 
-B = "http://127.0.0.1:8097"
+Rodam contra um PocketBase LOCAL e isolado (ver README.md), nunca contra
+produção. Pré-requisito: empresas "Empresa A" (a@teste.local) e "Empresa B"
+(b@teste.local) criadas pelo autocadastro, senha Senha12345.
+
+Uso: python3 -I audit_tests.py resultado.json
+"""
+import json
+import os
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+
+B = os.environ.get("PB_URL", "http://127.0.0.1:8097")
+SU_EMAIL = os.environ.get("PB_SUPERUSER_EMAIL", "audit@local.test")
+SU_PASS = os.environ.get("PB_SUPERUSER_PASSWORD", "AuditPass123!")
 results = []
 
 
@@ -28,116 +44,249 @@ def login(ident, pw="Senha12345"):
     return r["token"], r["record"]
 
 
-def check(name, ok, detail=""):
-    results.append((name, ok, detail))
-    print(("OK   " if ok else "FALHA") + " | " + name + (" | " + detail if detail else ""))
+def check(grupo, name, ok, detail=""):
+    results.append({"grupo": grupo, "teste": name, "ok": bool(ok), "detalhe": detail})
+    print(("OK    " if ok else "FALHA ") + f"[{grupo}] {name}" + (f" | {detail}" if detail else ""))
 
 
 def err(r):
-    d = r.get("data") or {}
-    return (r.get("message", "") + " " + json.dumps(d, ensure_ascii=False))[:200]
+    return (r.get("message", "") + " " + json.dumps(r.get("data") or {}, ensure_ascii=False))[:200]
 
+
+def q(f):
+    return urllib.parse.quote(f)
+
+
+s, su = call("POST", "/api/collections/_superusers/auth-with-password", body={"identity": SU_EMAIL, "password": SU_PASS})
+tSU = su.get("token")
 
 tA, uA = login("a@teste.local")
 tB, uB = login("b@teste.local")
 cA, cB = uA["company_id"], uB["company_id"]
-print("role admin A:", uA.get("role"), "cargo:", uA.get("cargo"))
 
-# --- Isolamento: companies / users
+# Funcionário comum da A (criado pelo admin, como na tela)
+s, r = call("POST", "/api/collections/users/records", tA, {
+    "email": "func@teste.local", "username": "funca", "password": "Senha12345", "passwordConfirm": "Senha12345",
+    "company_id": cA, "role": "Funcionário", "cargo": "Funcionário", "status": "Ativo", "id_unico": "02", "name": "Func A"})
+check("permissao", "Admin cria funcionário na própria empresa", s == 200, err(r) if s >= 400 else "")
+tF, uF = login("func@teste.local")
+
+# ------------------------------------------------------------------ isolamento
 s, r = call("GET", "/api/collections/companies/records?perPage=50", tA)
 names = [x["name"] for x in r.get("items", [])]
-check("Empresa A NAO enxerga dados de outras empresas (companies)", "Empresa B" not in names, f"A ve: {names}")
+check("isolamento", "Empresa só enxerga a si mesma em companies", names == ["Empresa A"], f"vê {names}")
 
-s, r = call("GET", "/api/collections/users/records?perPage=50", tA)
-emails = [x.get("email") or x.get("username") for x in r.get("items", [])]
-check("Empresa A NAO lista usuarios da B", "adminb" not in json.dumps(r), f"A ve {len(r.get('items', []))} usuarios")
+s, r = call("GET", "/api/collections/users/records?perPage=50", tB)
+check("isolamento", "Empresa B não lista usuários da A", "funca" not in json.dumps(r), f"B vê {r.get('totalItems')} usuário(s)")
 
 s, r = call("POST", "/api/collections/users/records", tA, {
     "email": "intruso@teste.local", "username": "intruso", "password": "Senha12345", "passwordConfirm": "Senha12345",
     "company_id": cB, "role": "Administrador", "cargo": "Administrador", "status": "Ativo", "id_unico": "99"})
-check("Admin A NAO consegue criar usuario dentro da empresa B", s >= 400, f"status {s} {err(r) if s>=400 else 'criado id ' + r.get('id','')}")
+check("isolamento", "Admin A não cria usuário dentro da empresa B", s >= 400, f"status {s}")
 
-# --- Funcionario comum da empresa A
-s, r = call("POST", "/api/collections/users/records", tA, {
-    "email": "func@teste.local", "username": "funca", "password": "Senha12345", "passwordConfirm": "Senha12345",
-    "company_id": cA, "role": "Funcionário", "cargo": "Funcionário", "status": "Ativo", "id_unico": "02", "name": "Func A"})
-check("Admin A cria funcionario na propria empresa", s == 200, f"status {s} {err(r) if s>=400 else ''}")
-tF, uF = login("func@teste.local")
+for col, body in [
+    ("perdas_ganhos", {"tipo": "Quebra", "item_nome": "Betoneira A", "quantidade": 1, "status": "Registrado", "company_id": cA}),
+    ("veiculos", {"id_unico": "V1", "placa": "AAA0A00", "marca": "Ford", "modelo": "Cargo", "company_id": cA}),
+    ("contas_pagar", {"descricao": "Conta da A", "valor": 1000, "data_vencimento": "2026-11-01 12:00:00.000Z", "company_id": cA}),
+    ("contas_receber", {"cliente": "Cliente A", "descricao": "Receber A", "valor": 500, "data_vencimento": "2026-11-01 12:00:00.000Z", "company_id": cA}),
+    ("equipes", {"id_unico": "E1", "nome": "Equipe A", "company_id": cA}),
+    ("documentos_central", {"nome": "Contrato A"}),  # tela não manda company_id
+    ("qrcode_leituras", {"item_tipo": "Material", "usuario_id": uA["id"], "acao": "Leitura"}),  # idem
+]:
+    s, rec = call("POST", f"/api/collections/{col}/records", tA, body)
+    check("telas", f"[{col}] Admin A cria registro (payload da tela)", s == 200, err(rec) if s >= 400 else "")
+    if s >= 400:
+        continue
+    if "company_id" not in body:
+        check("isolamento", f"[{col}] servidor preenche a empresa quando a tela não manda", rec.get("company_id") == cA)
+    s, r = call("GET", f"/api/collections/{col}/records?perPage=50", tB)
+    check("isolamento", f"[{col}] Empresa B não vê registros da A", r.get("totalItems", 0) == 0, f"B vê {r.get('totalItems')}")
+    s, r = call("DELETE", f"/api/collections/{col}/records/{rec['id']}", tB)
+    check("isolamento", f"[{col}] Empresa B não apaga registro da A", s >= 400, f"status {s}")
+    s, r = call("GET", f"/api/collections/{col}/records?perPage=50", tA)
+    check("telas", f"[{col}] Empresa A continua vendo o próprio registro", r.get("totalItems", 0) >= 1)
 
+# ------------------------------------------------------------------ permissões
 s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tF, {"role": "Administrador", "cargo": "Administrador"})
-check("Funcionario NAO consegue se promover a Administrador", s >= 400 or r.get("role") != "Administrador",
-      f"status {s} role agora={r.get('role')} cargo={r.get('cargo')}")
-
+check("permissao", "Funcionário não se promove a Administrador", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tF, {"role": "admin"})
+check("permissao", "Funcionário não se dá role=admin", s >= 400, f"status {s}")
 s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tF, {"company_id": cB})
-check("Funcionario NAO consegue se mover para a empresa B", s >= 400 or r.get("company_id") != cB,
-      f"status {s} company_id agora={'B' if r.get('company_id') == cB else 'A'}")
-# volta para A (como superuser seria o certo; aqui usa o proprio token se tiver mudado)
-call("PATCH", f"/api/collections/users/records/{uF['id']}", tF, {"company_id": cA, "role": "Funcionário", "cargo": "Funcionário"})
+check("permissao", "Funcionário não se move para outra empresa", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tF, {"telefone": "11999990000", "name": "Func A2"})
+check("telas", "Funcionário altera o próprio telefone e nome", s == 200, err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tF,
+            {"name": "Func A3", "role": "Funcionário", "cargo": "Funcionário", "status": "Ativo", "id_unico": "02"})
+check("telas", "Perfil reenviando os mesmos cargo/status (como a tela faz) é aceito", s == 200, err(r) if s >= 400 else "")
+if tSU:
+    call("PATCH", f"/api/collections/users/records/{uF['id']}", tSU, {"role": ""})
+    s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tF, {"name": "Func A4", "role": "Funcionário", "status": "Ativo"})
+    check("telas", "Usuário antigo com role vazio salva o perfil (tela manda role = cargo)", s == 200, err(r) if s >= 400 else "")
+    call("PATCH", f"/api/collections/users/records/{uF['id']}", tSU, {"role": "Funcionário"})
+s, r = call("PATCH", f"/api/collections/users/records/{uF['id']}", tA, {"cargo": "Almoxarife"})
+check("permissao", "Admin muda o cargo de funcionário da própria empresa", s == 200 and r.get("cargo") == "Almoxarife", err(r) if s >= 400 else "")
+call("PATCH", f"/api/collections/users/records/{uF['id']}", tA, {"cargo": "Funcionário"})
 
-# --- Fluxo estoque
-s, obra = call("POST", "/api/collections/obras/records", tA, {"nome": "Obra Teste A", "status": "Em Andamento", "company_id": cA})
-check("Admin A cria obra", s == 200, err(obra) if s >= 400 else "")
-s, mats = call("GET", "/api/collections/materiais/records?perPage=1&filter=" + urllib.parse.quote(f'company_id="{cA}"'), tA)
-check("Empresa nova ja nasce com catalogo de materiais", mats.get("totalItems", 0) > 0, f"{mats.get('totalItems')} materiais")
-mat = mats["items"][0] if mats.get("items") else None
-if mat:
-    q0 = mat.get("quantity_in_stock") or 0
-    s, mv = call("POST", "/api/collections/movimentacoes/records", tA, {
-        "material_id": mat["id"], "obra_id": obra.get("id"), "company_id": cA, "tipo": "Entrada", "type": "entrada",
-        "quantidade": 10, "status": "Finalizado", "data": "2026-10-18 12:00:00.000Z"})
-    check("Admin A registra movimentacao de Entrada", s == 200, err(mv) if s >= 400 else "")
-    s, m2 = call("GET", f"/api/collections/materiais/records/{mat['id']}", tA)
-    check("Saldo do material muda pelo servidor apos Entrada (+10)", (m2.get("quantity_in_stock") or 0) == q0 + 10,
-          f"antes {q0} depois {m2.get('quantity_in_stock')}")
-    s, mv2 = call("POST", "/api/collections/movimentacoes/records", tA, {
-        "material_id": mat["id"], "company_id": cA, "tipo": "Saída", "type": "saida", "quantidade": 999999, "status": "Finalizado"})
-    check("Servidor recusa Saida maior que o saldo", s >= 400, f"status {s}" + ("" if s >= 400 else " (aceitou saida de 999999)"))
-    if s == 200:
-        s, r = call("PATCH", f"/api/collections/movimentacoes/records/{mv2['id']}", tA, {"quantidade": 1})
-        check("Movimentacao registrada NAO pode ser editada (historico imutavel)", s >= 400, f"status {s}")
-    s, r = call("DELETE", f"/api/collections/materiais/records/{mat['id']}", tA)
-    check("Admin A consegue inativar/excluir material (regra de delete)", s < 400, f"status {s} {err(r) if s>=400 else 'EXCLUIDO de verdade (hard delete)'}")
+s, obraB = call("POST", "/api/collections/obras/records", tB, {"nome": "Obra secreta B", "company_id": cB})
+check("telas", "Admin B cria obra", s == 200, err(obraB) if s >= 400 else "")
+if tSU:
+    call("PATCH", f"/api/collections/users/records/{uF['id']}", tSU, {"role": "admin"})
+    tF2, _ = login("func@teste.local")
+    s, r = call("DELETE", f"/api/collections/obras/records/{obraB.get('id')}", tF2)
+    check("isolamento", "Mesmo com role=admin, usuário da A não apaga obra da B", s >= 400, f"status {s}")
+    call("PATCH", f"/api/collections/users/records/{uF['id']}", tSU, {"role": "Funcionário"})
 
-# --- Solicitacao
+s, r = call("GET", f"/api/collections/users/records/{uF['id']}", tA)
+check("permissao", "Token de convite não aparece para outros usuários", "password_reset_token" not in r, "")
+
+s, r = call("PATCH", f"/api/collections/companies/records/{cA}", tA, {"phone": "1133334444"})
+check("telas", "Admin edita os dados da própria empresa (Configurações)", s == 200, err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/companies/records/{cB}", tA, {"phone": "0"})
+check("isolamento", "Admin A não edita a empresa B", s >= 400, f"status {s}")
+
+# ------------------------------------------------------------------ módulos (payloads das telas)
+s, obra = call("POST", "/api/collections/obras/records", tA, {"nome": "Obra Teste A", "descricao": "", "status": "Planejamento", "company_id": cA})
+check("telas", "Obras: criar", s == 200, err(obra) if s >= 400 else "")
+s, forn = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor A", "cnpj": "00000000000100", "company_id": cA})
+check("telas", "Fornecedores: criar", s == 200, err(forn) if s >= 400 else "")
+s, mats = call("GET", "/api/collections/materiais/records?perPage=1&filter=" + q(f'company_id="{cA}"'), tA)
+check("telas", "Materiais: empresa nova já nasce com catálogo", mats.get("totalItems", 0) > 0, f"{mats.get('totalItems')} materiais")
+mat = (mats.get("items") or [None])[0]
+s, r = call("POST", "/api/collections/materiais/records", tA, {"name": "Cimento CP-II 50kg", "code": "TST-1", "unit": "un", "quantity_in_stock": 0, "status": "active", "company_id": cA})
+check("telas", "Materiais: criar", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/compras/records", tA, {"numero": "C-1", "numero_compra": "C-1", "fornecedorId": forn.get("id"), "fornecedor_id": forn.get("id"),
+            "descricao": "Compra teste", "valor": 100, "status": "Solicitado", "company_id": cA, "obra_id": obra.get("id")})
+check("telas", "Compras: criar", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/epis/records", tA, {"id_unico": "EPI-1", "tipo": "Capacete", "status": "Ativo", "company_id": cA})
+check("telas", "EPIs: criar", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/equipamentos/records", tA, {"code": "EQ-1", "name": "Betoneira", "status": "available", "company_id": cA})
+check("telas", "Equipamentos: criar", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/financeiro/records", tA, {"obra_id": obra.get("id"), "type": "despesa", "description": "Diária", "amount": 150,
+            "due_date": "2026-11-01 12:00:00.000Z", "status": "pendente", "company_id": cA})
+check("telas", "Financeiro: Administrador lança", s == 200, err(r) if s >= 400 else "")
+
+# ------------------------------------------------------------------ formulários exatos das telas
+# Chaves copiadas do que as telas enviam (docs/auditoria/anexo-frontend.md §3).
+s, f2 = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor A2", "cnpj": "00000000000200", "company_id": cA})
+check("telas", "Fornecedores: segundo fornecedor da empresa", s == 200, err(f2) if s >= 400 else f2.get("id_unico", ""))
+s, fB = call("POST", "/api/collections/fornecedores/records", tB, {"nome": "Mesmo fornecedor", "cnpj": "00000000000100", "company_id": cB})
+check("isolamento", "Outra empresa cadastra fornecedor com o mesmo CNPJ", s == 200, err(fB) if s >= 400 else fB.get("id_unico", ""))
+for n in (1, 2):
+    s, r = call("POST", "/api/collections/compras/records", tA, {
+        "numero_compra": f"CMP-2026-000{n}", "company_id": cA, "fornecedor_id": forn.get("id"), "obra_id": obra.get("id"),
+        "solicitante_id": uA["id"], "comprador_id": uA["id"], "categoria": "Material", "subcategoria": "", "centro_custo": "",
+        "prioridade": "Normal", "justificativa": "", "observacoes": "", "descricao": f"Compra pela tela {n}",
+        "data_solicitacao": "2026-10-18", "data_entrega_prevista": "", "data_entrega_real": "", "status": "Solicitado",
+        "valor_previsto": 250, "valor_aprovado": 0, "valor_final": 0, "forma_pagamento": "Boleto", "parcelas": 1,
+        "responsavel_aprovacao_id": "", "data_aprovacao": "", "criado_por": uA["id"], "atualizado_por": uA["id"]})
+    check("telas", f"Compras: criar pela tela (compra {n})", s == 200, err(r) if s >= 400 else "")
+for n in (1, 2):
+    s, r = call("POST", "/api/collections/equipamentos/records", tA, {
+        "numero_patrimonial": f"PAT-{n}", "codigo_interno": f"EQ-00{n}", "nome": f"Betoneira 400L {n}", "descricao": "",
+        "categoria": "Máquinas", "marca": "CSM", "modelo": "", "fabricante": "", "numero_serie": "", "data_compra": "2026-01-10",
+        "garantia": "12 meses", "vida_util": 5, "valor_compra": 3500, "valor_atual": 3000, "depreciacao": 500,
+        "estado_conservacao": "Bom", "situacao": "Disponível", "local_atual": "Almoxarifado", "obra_atual_id": obra.get("id"),
+        "responsavel_id": uA["id"], "centro_custo": "", "observacoes": "", "company_id": cA, "criado_por": uA["id"], "atualizado_por": uA["id"]})
+    check("telas", f"Equipamentos: criar pela tela (equipamento {n})", s == 200 and r.get("nome") == f"Betoneira 400L {n}", err(r) if s >= 400 else "")
+    if s == 200 and n == 1:
+        s, r2 = call("PATCH", f"/api/collections/equipamentos/records/{r['id']}", tA, {"situacao": "Baixado", "motivo_baixa": "Quebrou", "obra_atual_id": None})
+        check("telas", "Equipamentos: dar baixa", s == 200 and r2.get("situacao") == "Baixado", err(r2) if s >= 400 else "")
+for n in (1, 2):
+    s, r = call("POST", "/api/collections/epis/records", tA, {
+        "codigo": f"EPI-CAP-{n}", "nome": "Capacete classe B", "descricao": "", "categoria": "Cabeça", "marca": "3M", "numero_ca": "12345",
+        "validade_ca": "2028-01-01", "tamanho": "Único", "quantidade_estoque": 20, "estoque_minimo": 5, "unidade": "un",
+        "valor_unitario": 35.5, "status": "Ativo", "tipo": "Capacete", "id_unico": f"EPI-1700000000-{n}", "company_id": cA, "criado_por": uA["id"]})
+    check("telas", f"EPIs: criar pela tela (EPI {n}) guardando nome e estoque",
+          s == 200 and r.get("nome") == "Capacete classe B" and r.get("quantidade_estoque") == 20, err(r) if s >= 400 else "")
+for n in (1, 2):
+    s, r = call("POST", "/api/collections/veiculos/records", tA, {"placa": f"ABC1D2{n}", "marca": "Fiat", "modelo": "Strada", "tipo": "Carro",
+                                                                 "status": "Ativo", "company_id": cA, "id_unico": f"VEI-17000000{n}"})
+    check("telas", f"Veículos: cadastrar sem chassi/RENAVAM (veículo {n})", s == 200, err(r) if s >= 400 else "")
+
+# ------------------------------------------------------------------ solicitações
 s, sol = call("POST", "/api/collections/solicitacoes/records", tA, {
     "company_id": cA, "numero_solicitacao": "SOL-T1", "tipo": "Material", "categoria": "Elétrica", "solicitante_id": uA["id"],
     "prioridade": "Normal", "descricao": "teste", "status": "Aberta", "data_solicitacao": "2026-10-18 12:00:00.000Z"})
-check("Admin A cria solicitacao", s == 200, err(sol) if s >= 400 else "")
+check("telas", "Solicitações: Admin cria", s == 200, err(sol) if s >= 400 else "")
 if s == 200:
-    s, r = call("PATCH", f"/api/collections/solicitacoes/records/{sol['id']}", tA, {"status": "Aprovada"})
-    check("Admin A (role Administrador) consegue aprovar solicitacao", s == 200, f"status {s} {err(r) if s>=400 else ''}")
-    s, r = call("POST", "/api/collections/solicitacoes/records", tF, {
-        "company_id": cA, "numero_solicitacao": "SOL-T2", "tipo": "Material", "solicitante_id": uF["id"], "descricao": "func", "status": "Aberta"})
-    check("Funcionario cria solicitacao", s == 200, err(r) if s >= 400 else "")
-    s, r = call("PATCH", f"/api/collections/solicitacoes/records/{sol['id']}", tF, {"status": "Aprovada"})
-    check("Funcionario NAO aprova solicitacao", s >= 400, f"status {s}")
+    s, r = call("PATCH", f"/api/collections/solicitacoes/records/{sol['id']}", tA, {"status": "Aprovada", "responsavel_id": uA["id"]})
+    check("telas", "Solicitações: Administrador aprova", s == 200, err(r) if s >= 400 else "")
+s, solF = call("POST", "/api/collections/solicitacoes/records", tF, {
+    "company_id": cA, "numero_solicitacao": "SOL-T2", "tipo": "Material", "solicitante_id": uF["id"], "descricao": "func", "status": "Aberta"})
+check("telas", "Solicitações: Funcionário cria", s == 200, err(solF) if s >= 400 else "")
+if s == 200:
+    s, r = call("PATCH", f"/api/collections/solicitacoes/records/{solF['id']}", tF, {"status": "Aprovada"})
+    check("permissao", "Solicitações: Funcionário não aprova a própria", s >= 400, f"status {s}")
+    s, r = call("PATCH", f"/api/collections/solicitacoes/records/{solF['id']}", tF, {"descricao": "func corrigido"})
+    check("telas", "Solicitações: Funcionário corrige a própria", s == 200, err(r) if s >= 400 else "")
+    s, r = call("PATCH", f"/api/collections/solicitacoes/records/{solF['id']}", tF, {"status": "Cancelada", "observacoes": "[Cancelamento] engano"})
+    check("telas", "Solicitações: Funcionário cancela a própria", s == 200, err(r) if s >= 400 else "")
 
-# --- Colecoes sem company_id: B le/apaga dados da A?
-for col, body in [
-    ("pedidos_compra", None), ("perdas_ganhos", {"tipo": "Quebra", "item_nome": "Betoneira A", "quantidade": 1}),
-    ("veiculos", {"id_unico": "V1", "placa": "AAA0A00", "marca": "Ford", "modelo": "Cargo"}),
-    ("contas_pagar", {"descricao": "Conta da A", "valor": 1000, "data_vencimento": "2026-11-01 12:00:00.000Z"}),
-    ("auditoria", None), ("equipes", {"id_unico": "E1", "nome": "Equipe A"}),
-    ("documentos_central", {"nome": "Contrato A"}),
-]:
-    if body:
-        s, rec = call("POST", f"/api/collections/{col}/records", tA, body)
-        if s >= 400:
-            check(f"[{col}] A cria registro", False, err(rec)); continue
-    s, r = call("GET", f"/api/collections/{col}/records?perPage=50", tB)
-    n = r.get("totalItems", 0)
-    check(f"[{col}] Empresa B NAO ve registros da A", n == 0, f"B ve {n} registro(s)")
-    if body and n:
-        s, r2 = call("DELETE", f"/api/collections/{col}/records/{rec['id']}", tB)
-        check(f"[{col}] Empresa B NAO apaga registro da A", s >= 400, f"status {s}")
+# ------------------------------------------------------------------ estoque (Etapa 2)
+if mat:
+    q0 = mat.get("quantity_in_stock") or 0
+    s, mv = call("POST", "/api/collections/movimentacoes/records", tA, {
+        "material_id": mat["id"], "obra_id": obra.get("id"), "company_id": cA, "tipo": "Entrada",
+        "quantidade": 10, "status": "Aprovado", "data": "2026-10-18 12:00:00.000Z"})
+    check("telas", "Estoque: registrar Entrada", s == 200, err(mv) if s >= 400 else "")
+    s, m2 = call("GET", f"/api/collections/materiais/records/{mat['id']}", tA)
+    check("estoque", "Saldo muda pelo servidor após Entrada (+10)", (m2.get("quantity_in_stock") or 0) == q0 + 10,
+          f"antes {q0} depois {m2.get('quantity_in_stock')}")
+    s, mv2 = call("POST", "/api/collections/movimentacoes/records", tA, {
+        "material_id": mat["id"], "company_id": cA, "tipo": "Saída", "quantidade": 999999, "status": "Aprovado"})
+    check("estoque", "Servidor recusa Saída maior que o saldo", s >= 400, f"status {s}")
+    if mv.get("id"):
+        s, r = call("PATCH", f"/api/collections/movimentacoes/records/{mv['id']}", tA, {"quantidade": 1})
+        check("estoque", "Movimentação registrada não pode ser editada", s >= 400, f"status {s}")
 
-s, r = call("GET", "/api/collections/auditoria/records?perPage=1", tB)
-if r.get("items"):
-    s, r2 = call("DELETE", f"/api/collections/auditoria/records/{r['items'][0]['id']}", tB)
-    check("Log de auditoria NAO pode ser apagado por usuario comum", s >= 400, f"status {s}")
-
+# ------------------------------------------------------------------ auditoria
+s, r = call("POST", "/api/collections/audit_logs/records", tF, {"acao": "teste", "modulo": "x", "usuario_id": uF["id"]})
+check("telas", "Usuário logado grava log de auditoria", s == 200, err(r) if s >= 400 else "")
 s, r = call("POST", "/api/collections/audit_logs/records", None, {"acao": "falso", "modulo": "x"})
-check("Visitante sem login NAO grava em audit_logs", s >= 400, f"status {s}")
+check("auditoria", "Visitante sem login não grava log", s >= 400, f"status {s}")
+s, r = call("GET", "/api/collections/auditoria/records?perPage=50", tA)
+check("auditoria", "Admin vê os logs da própria empresa", s == 200 and r.get("totalItems", 0) > 0, f"{r.get('totalItems')} logs")
+idsA = {x["id"] for x in r.get("items", [])}
+s, r = call("GET", "/api/collections/auditoria/records?perPage=50", tB)
+check("auditoria", "Empresa B não vê logs da A", not ({x["id"] for x in r.get("items", [])} & idsA))
+if idsA:
+    s, r = call("DELETE", f"/api/collections/auditoria/records/{next(iter(idsA))}", tA)
+    check("auditoria", "Nem o admin apaga log de auditoria", s >= 400, f"status {s}")
+s, r = call("GET", "/api/collections/auditoria/records?perPage=1", tF)
+check("auditoria", "Funcionário comum não lê auditoria", r.get("totalItems", 0) == 0)
 
-print("\nRESUMO:", sum(1 for x in results if x[1]), "OK /", sum(1 for x in results if not x[1]), "FALHA")
+# ------------------------------------------------------------------ convite e conta mestre
+tok = str(uuid.uuid4())
+s, r = call("POST", "/api/collections/users/records", tA, {
+    "email": "conv@teste.local", "username": "conv", "password": "Tmp12345678", "passwordConfirm": "Tmp12345678",
+    "company_id": cA, "role": "Funcionário", "cargo": "Funcionário", "status": "Inativo", "id_unico": "05",
+    "password_reset_token": tok, "password_reset_expires": "2099-01-01 00:00:00.000Z"})
+check("telas", "Convite: admin cria acesso com link", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/custom/get-invite-details", None, {"token": tok})
+check("telas", "Convite: link abre os dados", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/custom/activate-invite", None, {"token": tok, "password": "Nova12345", "passwordConfirm": "Nova12345"})
+check("telas", "Convite: funcionário cria a própria senha", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "conv@teste.local", "password": "Nova12345"})
+check("telas", "Convite: login com a senha nova", s == 200)
+s, r = call("POST", "/api/custom/activate-invite", None, {"token": tok, "password": "Outra12345", "passwordConfirm": "Outra12345"})
+check("permissao", "Convite: link não pode ser reusado", s >= 400, f"status {s}")
+
+if tSU:
+    # A conta mestre pode já existir no banco de teste; o superusuário só
+    # define uma senha conhecida para o login.
+    s, r = call("GET", "/api/collections/users/records?filter=" + q('email="dnmltda@hotmail.com"'), tSU)
+    if r.get("items"):
+        s, r = call("PATCH", f"/api/collections/users/records/{r['items'][0]['id']}", tSU,
+                    {"password": "Senha12345", "passwordConfirm": "Senha12345", "status": "Ativo"})
+    else:
+        s, r = call("POST", "/api/collections/users/records", tSU, {
+            "email": "dnmltda@hotmail.com", "username": "dnmltda", "password": "Senha12345", "passwordConfirm": "Senha12345",
+            "company_id": cA, "role": "admin", "cargo": "Administrador", "status": "Ativo", "id_unico": "01"})
+    check("telas", "Conta mestre preparada para o teste", s == 200, err(r) if s >= 400 else "")
+    if s == 200:
+        tM, _ = login("dnmltda@hotmail.com")
+        s, r = call("GET", "/api/collections/companies/records?perPage=50", tM)
+        check("telas", "Conta mestre (dnmltda) continua vendo todas as empresas", r.get("totalItems", 0) >= 2, f"{r.get('totalItems')}")
+
+print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)

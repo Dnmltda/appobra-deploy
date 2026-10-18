@@ -1,0 +1,518 @@
+[
+ {
+  "grupo": "permissao",
+  "teste": "Admin cria funcionário na própria empresa",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Empresa só enxerga a si mesma em companies",
+  "ok": false,
+  "detalhe": "vê ['Default Company', 'Empresa Principal', 'Empresa A', 'Empresa B']"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Empresa B não lista usuários da A",
+  "ok": true,
+  "detalhe": "B vê 1 usuário(s)"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Admin A não cria usuário dentro da empresa B",
+  "ok": false,
+  "detalhe": "status 200"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[perdas_ganhos] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[perdas_ganhos] Empresa B não vê registros da A",
+  "ok": false,
+  "detalhe": "B vê 1"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[perdas_ganhos] Empresa B não apaga registro da A",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[perdas_ganhos] Empresa A continua vendo o próprio registro",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[veiculos] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[veiculos] Empresa B não vê registros da A",
+  "ok": false,
+  "detalhe": "B vê 1"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[veiculos] Empresa B não apaga registro da A",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[veiculos] Empresa A continua vendo o próprio registro",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_pagar] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_pagar] Empresa B não vê registros da A",
+  "ok": false,
+  "detalhe": "B vê 1"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_pagar] Empresa B não apaga registro da A",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_pagar] Empresa A continua vendo o próprio registro",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_receber] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_receber] Empresa B não vê registros da A",
+  "ok": false,
+  "detalhe": "B vê 1"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_receber] Empresa B não apaga registro da A",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_receber] Empresa A continua vendo o próprio registro",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[equipes] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[equipes] Empresa B não vê registros da A",
+  "ok": false,
+  "detalhe": "B vê 1"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[equipes] Empresa B não apaga registro da A",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[equipes] Empresa A continua vendo o próprio registro",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[documentos_central] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[documentos_central] servidor preenche a empresa quando a tela não manda",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[documentos_central] Empresa B não vê registros da A",
+  "ok": false,
+  "detalhe": "B vê 1"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[documentos_central] Empresa B não apaga registro da A",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[documentos_central] Empresa A continua vendo o próprio registro",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[qrcode_leituras] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[qrcode_leituras] servidor preenche a empresa quando a tela não manda",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[qrcode_leituras] Empresa B não vê registros da A",
+  "ok": false,
+  "detalhe": "B vê 1"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[qrcode_leituras] Empresa B não apaga registro da A",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[qrcode_leituras] Empresa A continua vendo o próprio registro",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Funcionário não se promove a Administrador",
+  "ok": false,
+  "detalhe": "status 200"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Funcionário não se dá role=admin",
+  "ok": false,
+  "detalhe": "status 200"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Funcionário não se move para outra empresa",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Funcionário altera o próprio telefone e nome",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Perfil reenviando os mesmos cargo/status (como a tela faz) é aceito",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Admin muda o cargo de funcionário da própria empresa",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Admin B cria obra",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Mesmo com role=admin, usuário da A não apaga obra da B",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Token de convite não aparece para outros usuários",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Admin edita os dados da própria empresa (Configurações)",
+  "ok": false,
+  "detalhe": "The requested resource wasn't found. {}"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Admin A não edita a empresa B",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Obras: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Fornecedores: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Materiais: empresa nova já nasce com catálogo",
+  "ok": true,
+  "detalhe": "91 materiais"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Materiais: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Compras: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "EPIs: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Equipamentos: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Financeiro: Administrador lança",
+  "ok": false,
+  "detalhe": "Failed to create record. {}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Fornecedores: segundo fornecedor da empresa",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"id_unico\": {\"code\": \"validation_not_unique\", \"message\": \"Value must be unique.\"}}"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Outra empresa cadastra fornecedor com o mesmo CNPJ",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"id_unico\": {\"code\": \"validation_not_unique\", \"message\": \"Value must be unique.\"}}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Compras: criar pela tela (compra 1)",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"fornecedorId\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}, \"numero\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}, \"valor\": {\"code\": \"v"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Compras: criar pela tela (compra 2)",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"fornecedorId\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}, \"numero\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}, \"valor\": {\"code\": \"v"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Equipamentos: criar pela tela (equipamento 1)",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"code\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}, \"name\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Equipamentos: criar pela tela (equipamento 2)",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"code\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}, \"name\": {\"code\": \"validation_required\", \"message\": \"Cannot be blank.\"}}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "EPIs: criar pela tela (EPI 1) guardando nome e estoque",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"id_unico\": {\"code\": \"validation_not_unique\", \"message\": \"Value must be unique.\"}}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "EPIs: criar pela tela (EPI 2) guardando nome e estoque",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"id_unico\": {\"code\": \"validation_not_unique\", \"message\": \"Value must be unique.\"}}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Veículos: cadastrar sem chassi/RENAVAM (veículo 1)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Veículos: cadastrar sem chassi/RENAVAM (veículo 2)",
+  "ok": false,
+  "detalhe": "Failed to create record. {\"renavam\": {\"code\": \"validation_not_unique\", \"message\": \"Value must be unique.\"}}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Admin cria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Administrador aprova",
+  "ok": false,
+  "detalhe": "The requested resource wasn't found. {}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Funcionário cria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Solicitações: Funcionário não aprova a própria",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Funcionário corrige a própria",
+  "ok": false,
+  "detalhe": "The requested resource wasn't found. {}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Funcionário cancela a própria",
+  "ok": false,
+  "detalhe": "The requested resource wasn't found. {}"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Estoque: registrar Entrada",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Saldo muda pelo servidor após Entrada (+10)",
+  "ok": false,
+  "detalhe": "antes 0 depois 0"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Servidor recusa Saída maior que o saldo",
+  "ok": false,
+  "detalhe": "status 200"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Movimentação registrada não pode ser editada",
+  "ok": false,
+  "detalhe": "status 200"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Usuário logado grava log de auditoria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Visitante sem login não grava log",
+  "ok": false,
+  "detalhe": "status 200"
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Admin vê os logs da própria empresa",
+  "ok": true,
+  "detalhe": "13 logs"
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Empresa B não vê logs da A",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Nem o admin apaga log de auditoria",
+  "ok": false,
+  "detalhe": "status 204"
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Funcionário comum não lê auditoria",
+  "ok": false,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: admin cria acesso com link",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: link abre os dados",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: funcionário cria a própria senha",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: login com a senha nova",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Convite: link não pode ser reusado",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Conta mestre preparada para o teste",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Conta mestre (dnmltda) continua vendo todas as empresas",
+  "ok": true,
+  "detalhe": "4"
+ }
+]
