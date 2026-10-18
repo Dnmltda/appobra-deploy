@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Search, AlertCircle, Eye, Download, ChevronLeft, ChevronRight,
   Package, Wrench, QrCode, Barcode, Copy, ArrowRightLeft, Archive, FileSpreadsheet, Printer, Filter, X, Truck, CheckCircle2,
-  TrendingDown, Boxes, AlertTriangle,
+  TrendingDown, Boxes, AlertTriangle, HandHelping, Undo2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -227,6 +227,14 @@ const EquipamentosPage = () => {
     status: 'Agendada', observacoes: '',
   });
 
+  // Empréstimo (Etapa 4.2): o servidor muda a situação do equipamento.
+  const [emprestimos, setEmprestimos] = useState([]);
+  const [empTarget, setEmpTarget] = useState(null);
+  const [empData, setEmpData] = useState({ funcionario_id: '', obra_id: '', expected_return_date: '', notes: '' });
+  const [devTarget, setDevTarget] = useState(null);
+  const [devData, setDevData] = useState({ estado_devolucao: '', observacao_devolucao: '' });
+  const [empSalvando, setEmpSalvando] = useState(false);
+
   const [baixaTarget, setBaixaTarget] = useState(null);
   const [baixaMotivo, setBaixaMotivo] = useState('');
 
@@ -304,6 +312,10 @@ const EquipamentosPage = () => {
 
   const fetchAllForDashboard = useCallback(async () => {
     if (!companyId) return;
+    pb.collection('emprestimos').getFullList({
+      filter: `company_id = "${companyId}" && status = "active"`, sort: 'expected_return_date',
+      expand: 'equipment_id,funcionario_id,obra_id', $autoCancel: false,
+    }).then(setEmprestimos).catch(() => setEmprestimos([]));
     try {
       const filter = perms.isFuncionario
         ? `company_id = "${companyId}" && (responsavel_id = "${currentUser.id}" || funcionario_id = "${currentUser.id}")`
@@ -746,6 +758,68 @@ const EquipamentosPage = () => {
     } catch (err) {
       console.error('Erro ao receber da obra:', err);
       toast.error('Erro ao receber da obra');
+    }
+  };
+
+  // ---------- Empréstimo e devolução ----------
+  const disponivel = (eq) => !eq.situacao || eq.situacao === 'Disponível';
+  const emprestimoDe = (eq) => emprestimos.find((l) => l.equipment_id === eq.id);
+  const atrasado = (l) => l.expected_return_date && new Date(l.expected_return_date) < new Date(new Date().toDateString());
+  const dataBR = (d) => (d ? new Date(d.replace(' ', 'T')).toLocaleDateString('pt-BR') : '');
+
+  const openEmprestar = (eq) => {
+    setEmpTarget(eq);
+    setEmpData({ funcionario_id: '', obra_id: eq.obra_atual_id || '', expected_return_date: '', notes: '' });
+  };
+
+  const handleEmprestar = async () => {
+    if (!empData.funcionario_id) { toast.error('Escolha quem vai levar o equipamento'); return; }
+    setEmpSalvando(true);
+    try {
+      await pb.collection('emprestimos').create({
+        equipment_id: empTarget.id, company_id: companyId, funcionario_id: empData.funcionario_id,
+        obra_id: empData.obra_id || '', notes: empData.notes,
+        expected_return_date: empData.expected_return_date ? `${empData.expected_return_date} 12:00:00` : '',
+      }, { $autoCancel: false });
+      toast.success(`${empTarget.nome} emprestado para ${funcionarioNome(empData.funcionario_id)}`);
+      setEmpTarget(null);
+      fetchEquipamentos(page);
+      fetchAllForDashboard();
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Não foi possível emprestar'));
+    } finally {
+      setEmpSalvando(false);
+    }
+  };
+
+  const openDevolver = (eq) => {
+    const l = emprestimoDe(eq);
+    if (!l) { toast.error('Empréstimo não encontrado. Atualize a página.'); return; }
+    setDevTarget({ eq, l });
+    setDevData({ estado_devolucao: '', observacao_devolucao: '' });
+  };
+
+  const handleDevolver = async () => {
+    if (!devData.estado_devolucao) { toast.error('Diga em que estado o equipamento voltou'); return; }
+    setEmpSalvando(true);
+    try {
+      await pb.collection('emprestimos').update(devTarget.l.id, {
+        status: 'returned', estado_devolucao: devData.estado_devolucao, observacao_devolucao: devData.observacao_devolucao,
+      }, { $autoCancel: false });
+      const msg = {
+        'Bom': 'voltou para o almoxarifado',
+        'Precisa de manutenção': 'foi para manutenção',
+        'Danificado': 'ficou marcado como danificado',
+        'Perdido': 'ficou marcado como extraviado',
+      }[devData.estado_devolucao];
+      toast.success(`Devolução registrada: ${devTarget.eq.nome} ${msg}`);
+      setDevTarget(null);
+      fetchEquipamentos(page);
+      fetchAllForDashboard();
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Não foi possível registrar a devolução'));
+    } finally {
+      setEmpSalvando(false);
     }
   };
 
@@ -1266,6 +1340,33 @@ const EquipamentosPage = () => {
           </CardContent>
         </Card>
 
+        {/* Emprestados agora */}
+        {emprestimos.length > 0 && (
+          <Card>
+            <CardContent className="p-4 space-y-2">
+              <p className="font-semibold">Emprestados agora ({emprestimos.length})</p>
+              {emprestimos.map((l) => (
+                <div key={l.id} data-testid="emprestimo-aberto" className="flex flex-wrap items-center justify-between gap-2 border rounded-md p-2 text-sm">
+                  <div>
+                    <strong>{l.expand?.equipment_id?.nome || 'Equipamento'}</strong>
+                    {' com '}{l.expand?.funcionario_id?.nome || '-'}
+                    {l.expand?.obra_id?.nome ? ` · ${l.expand.obra_id.nome}` : ''}
+                    <span className="text-muted-foreground"> · desde {dataBR(l.borrow_date)}</span>
+                    {l.expected_return_date && (
+                      atrasado(l)
+                        ? <Badge variant="destructive" className="ml-2">Atrasado (era até {dataBR(l.expected_return_date)})</Badge>
+                        : <span className="text-muted-foreground"> · devolver até {dataBR(l.expected_return_date)}</span>
+                    )}
+                  </div>
+                  {perms.canTransfer && l.expand?.equipment_id && (
+                    <Button size="sm" variant="outline" onClick={() => openDevolver(l.expand.equipment_id)}><Undo2 className="w-4 h-4 mr-1" />Receber de volta</Button>
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Tabela */}
         <Card>
           <CardContent className="p-0 overflow-x-auto">
@@ -1320,13 +1421,19 @@ const EquipamentosPage = () => {
                           <Button size="sm" variant="ghost" title="Visualizar" onClick={() => handleView(eq)}><Eye className="w-4 h-4" /></Button>
                           <Button size="sm" variant="ghost" title="QR Code / Códigos" onClick={() => openQR(eq)}><QrCode className="w-4 h-4" /></Button>
                           <Button size="sm" variant="ghost" title="Exportar Ficha PDF" onClick={() => handleExportPDF(eq)}><Download className="w-4 h-4" /></Button>
-                          {perms.canTransfer && eq.situacao !== 'Baixado' && (
+                          {perms.canTransfer && disponivel(eq) && (
+                            <Button size="sm" variant="outline" onClick={() => openEmprestar(eq)}><HandHelping className="w-4 h-4 mr-1" />Emprestar</Button>
+                          )}
+                          {perms.canTransfer && eq.situacao === 'Emprestado' && emprestimoDe(eq) && (
+                            <Button size="sm" variant="outline" onClick={() => openDevolver(eq)}><Undo2 className="w-4 h-4 mr-1" />Receber de volta</Button>
+                          )}
+                          {perms.canTransfer && eq.situacao !== 'Baixado' && eq.situacao !== 'Emprestado' && (
                             <Button size="sm" variant="ghost" title="Transferir" onClick={() => openTransfer(eq)}><ArrowRightLeft className="w-4 h-4" /></Button>
                           )}
-                          {perms.canTransfer && eq.situacao !== 'Baixado' && (
+                          {perms.canTransfer && eq.situacao !== 'Baixado' && eq.situacao !== 'Emprestado' && (
                             <Button size="sm" variant="ghost" title="Enviar para obra" onClick={() => openSendObra(eq)}><Truck className="w-4 h-4" /></Button>
                           )}
-                          {perms.canManutencao && eq.situacao !== 'Baixado' && (
+                          {perms.canManutencao && eq.situacao !== 'Baixado' && eq.situacao !== 'Emprestado' && (
                             <Button size="sm" variant="ghost" title="Manutenção" onClick={() => openManut(eq)}><Wrench className="w-4 h-4" /></Button>
                           )}
                           {perms.canCreate && (
@@ -1813,6 +1920,84 @@ const EquipamentosPage = () => {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setObraTarget(null)}>Cancelar</Button>
                 <Button onClick={handleSendObra}>Enviar para Obra</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- Emprestar ---------- */}
+      <Dialog open={!!empTarget} onOpenChange={(open) => { if (!open) setEmpTarget(null); }}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader><DialogTitle>Emprestar equipamento</DialogTitle></DialogHeader>
+          {empTarget && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">Quem vai levar <strong>{empTarget.nome}</strong>?</p>
+              <div className="space-y-1">
+                <Label htmlFor="emp_func">Com quem fica *</Label>
+                <Select value={empData.funcionario_id || 'none'} onValueChange={(v) => setEmpData({ ...empData, funcionario_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger id="emp_func"><SelectValue placeholder="Escolha a pessoa" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Escolha a pessoa...</SelectItem>
+                    {funcionarios.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="emp_obra">Para qual obra (opcional)</Label>
+                <Select value={empData.obra_id || 'none'} onValueChange={(v) => setEmpData({ ...empData, obra_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger id="emp_obra"><SelectValue placeholder="Sem obra" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem obra</SelectItem>
+                    {obras.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="emp_ate">Devolver até (opcional)</Label>
+                <Input id="emp_ate" type="date" value={empData.expected_return_date} onChange={(e) => setEmpData({ ...empData, expected_return_date: e.target.value })} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEmpTarget(null)}>Cancelar</Button>
+                <Button onClick={handleEmprestar} disabled={empSalvando}>Confirmar empréstimo</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- Receber de volta ---------- */}
+      <Dialog open={!!devTarget} onOpenChange={(open) => { if (!open) setDevTarget(null); }}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader><DialogTitle>Receber de volta</DialogTitle></DialogHeader>
+          {devTarget && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                <strong>{devTarget.eq.nome}</strong> estava com {devTarget.l.expand?.funcionario_id?.nome || funcionarioNome(devTarget.l.funcionario_id)}.
+                Confira o equipamento: como ele voltou?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ['Bom', 'Voltou bom'],
+                  ['Precisa de manutenção', 'Precisa de manutenção'],
+                  ['Danificado', 'Voltou quebrado'],
+                  ['Perdido', 'Não voltou (perdido)'],
+                ].map(([valor, texto]) => (
+                  <button key={valor} type="button" aria-pressed={devData.estado_devolucao === valor}
+                    className={`flex items-center justify-center gap-1 rounded-md border px-3 py-2 text-sm font-medium ${devData.estado_devolucao === valor
+                      ? 'border-[#1a3a52] bg-[#1a3a52] text-white' : 'bg-background hover:bg-muted'}`}
+                    onClick={() => setDevData({ ...devData, estado_devolucao: valor })}>
+                    {devData.estado_devolucao === valor && <CheckCircle2 className="w-4 h-4" />}{texto}
+                  </button>
+                ))}
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="dev_obs">O que aconteceu? (opcional)</Label>
+                <Textarea id="dev_obs" rows={2} value={devData.observacao_devolucao} onChange={(e) => setDevData({ ...devData, observacao_devolucao: e.target.value })} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setDevTarget(null)}>Cancelar</Button>
+                <Button onClick={handleDevolver} disabled={empSalvando || !devData.estado_devolucao}>Registrar devolução</Button>
               </div>
             </div>
           )}

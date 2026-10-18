@@ -1,7 +1,7 @@
 # Etapa 4 — Fluxos do documento mestre
 
 Data: 18/10/2026 · Feita pelo Claude Code · Sobre as Etapas 1 a 3
-Status: **4.1 testada localmente (servidor + navegador), ainda NÃO publicada**.
+Status: **4.1 e 4.2 testadas localmente (servidor + navegador), ainda NÃO publicadas**.
 
 ## 4.1 — Material de consumo: pedir → aprovar → separar → entregar → confirmar
 
@@ -68,8 +68,32 @@ e-mails pode cair no spam ou nem chegar. O profissional é enviar de um endereç
 `nao-responda@dnmltda.com.br`) autenticado no Brevo (DKIM/SPF). Quando tiver, basta pôr
 `SMTP_SENDER_EMAIL` nos Secrets do Fly.
 
+## 4.2 — Equipamento: emprestar → receber de volta conferindo o estado
+
+**Como fica para quem usa (tela Equipamentos)**
+- Equipamento disponível tem o botão **Emprestar**: escolhe **com quem fica** (lista de funcionários), a obra
+  (opcional) e até quando devolver (opcional).
+- No alto da lista aparece **Emprestados agora**: o quê, com quem, em qual obra, desde quando. Passou da
+  data combinada → etiqueta vermelha **Atrasado**.
+- **Receber de volta** pergunta como o equipamento voltou, com 4 botões grandes: **Voltou bom** (volta a ficar
+  disponível no almoxarifado), **Precisa de manutenção** (vai para manutenção e já abre uma manutenção
+  corretiva com o que aconteceu), **Voltou quebrado** (fica "Danificado"), **Não voltou (perdido)** (fica
+  "Extraviado").
+- Tudo fica no **Histórico** do equipamento (quem emprestou, para quem, quem recebeu, em que estado).
+- Quem empresta e recebe: Administrador, Diretoria, Gerência, Engenheiro, Mestre de Obras, Almoxarife.
+- O servidor garante: não empresta o que não está disponível, não empresta duas vezes, a devolução registrada
+  não muda depois, e equipamento emprestado só sai dessa situação pela devolução. Empresa A não vê nem
+  empresta equipamento da B.
+- Usa a tabela `emprestimos`, que já existia e nenhuma tela usava (não foi criada tabela nova).
+
+**Arquivos**: `pb_hooks/emprestimo-equipamento.pb.js` + `emprestimo-lib.js` (novos);
+`frontend/src/pages/EquipamentosPage.jsx`.
+
+**Testes**: servidor `audit_tests.py` → **162/0** (15 verificações novas de equipamento e isolamento),
+rodado a partir do `.zip`. Navegador `testes/navegador/equipamento.mjs` → 9/9; os outros 10 roteiros
+continuam OK (100 verificações no total).
+
 ## Próximos passos da Etapa 4
-- Empréstimo e devolução de equipamento (com inspeção na volta).
 - Divergência de estoque com motivo e autorização.
 - Ocorrências.
 - Alerta de estoque mínimo.

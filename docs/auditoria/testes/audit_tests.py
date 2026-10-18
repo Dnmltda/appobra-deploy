@@ -404,6 +404,63 @@ s_s, sol2 = call("GET", f"/api/collections/solicitacoes/records/{so2['id']}", tA
 check("fluxo", "Entrega sem saldo é recusada e nada muda", s >= 400 and "Saldo insuficiente" in r.get("message", "") and m3.get("quantity_in_stock") == 6
       and sol2.get("status") == "Em separação", r.get("message", "")[:90])
 
+# ------------------------------------------------------------------ empréstimo de equipamento (Etapa 4.2)
+cargo1 = (call("GET", "/api/collections/cargos/records?perPage=1", tA)[1].get("items") or [{}])[0].get("id", "")
+s, funE = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-EQ", "nome": "Pedreiro do Martelete",
+               "nome_completo": "Pedreiro do Martelete", "cargoId": cargo1, "company_id": cA})
+def novo_eq(nome, cid=None, tok=None):
+    s, eq = call("POST", "/api/collections/equipamentos/records", tok or tA, {"nome": nome, "codigo_interno": nome[:6].upper(),
+                 "situacao": "Disponível", "company_id": cid or cA})
+    return eq
+def emp(eq, tok=None, **extra):
+    return call("POST", "/api/collections/emprestimos/records", tok or tA, {"equipment_id": eq.get("id"), "funcionario_id": funE.get("id"),
+                "obra_id": obra.get("id"), "company_id": cA, "expected_return_date": "2026-12-31 12:00:00", **extra})
+def eqget(eq):
+    return call("GET", f"/api/collections/equipamentos/records/{eq.get('id')}", tA)[1]
+e1 = novo_eq("Martelete 1")
+s, r = emp(e1, tF)
+check("equip", "Funcionário comum não empresta equipamento", s >= 400, f"status {s}")
+s, l1 = emp(e1)
+x = eqget(e1)
+check("equip", "Gestão empresta: equipamento fica 'Emprestado' com a pessoa e a obra", s == 200 and x.get("situacao") == "Emprestado"
+      and x.get("funcionario_id") == funE.get("id") and x.get("obra_atual_id") == obra.get("id"), err(l1) if s >= 400 else x.get("situacao"))
+check("equip", "Empréstimo nasce aberto, com data e quem entregou", l1.get("status") == "active" and bool(l1.get("borrow_date")) and l1.get("entregue_por") == uA["id"])
+s, r = emp(e1)
+check("equip", "Não dá para emprestar o que já está emprestado", s >= 400 and "não está disponível" in r.get("message", ""), r.get("message", "")[:80])
+s, r = call("PATCH", f"/api/collections/equipamentos/records/{e1.get('id')}", tA, {"situacao": "Disponível"})
+check("equip", "Situação de equipamento emprestado não muda pela edição comum", s >= 400 and eqget(e1).get("situacao") == "Emprestado", f"status {s}")
+s, r = call("PATCH", f"/api/collections/emprestimos/records/{l1.get('id')}", tA, {"status": "returned"})
+check("equip", "Devolver exige dizer em que estado voltou", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/emprestimos/records/{l1.get('id')}", tF, {"status": "returned", "estado_devolucao": "Bom"})
+check("equip", "Funcionário comum não registra devolução", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/emprestimos/records/{l1.get('id')}", tA, {"status": "returned", "estado_devolucao": "Bom"})
+x = eqget(e1)
+check("equip", "Voltou bom: fica 'Disponível' no almoxarifado, sem pessoa nem obra", s == 200 and x.get("situacao") == "Disponível"
+      and not x.get("funcionario_id") and not x.get("obra_atual_id") and r.get("recebido_por") == uA["id"] and bool(r.get("return_date")),
+      err(r) if s >= 400 else x.get("situacao"))
+s, r = call("PATCH", f"/api/collections/emprestimos/records/{l1.get('id')}", tA, {"estado_devolucao": "Danificado"})
+check("equip", "Devolução registrada não se altera depois", s >= 400, f"status {s}")
+s, h = call("GET", "/api/collections/equipamentos_historico/records?filter=" + q(f'equipamento_id="{e1.get("id")}"'), tA)
+check("equip", "Empréstimo e devolução ficam no histórico do equipamento", h.get("totalItems") == 2, f"{h.get('totalItems')}")
+e2 = novo_eq("Betoneira 1")
+s, l2 = emp(e2)
+s, r = call("PATCH", f"/api/collections/emprestimos/records/{l2.get('id')}", tA, {"status": "returned", "estado_devolucao": "Precisa de manutenção",
+            "observacao_devolucao": "motor falhando"})
+s2, mm = call("GET", "/api/collections/equipamentos_manutencao/records?filter=" + q(f'equipamento_id="{e2.get("id")}"'), tA)
+check("equip", "Voltou precisando de manutenção: 'Em Manutenção' + manutenção corretiva agendada", s == 200 and eqget(e2).get("situacao") == "Em Manutenção"
+      and mm.get("totalItems") == 1 and "motor falhando" in mm["items"][0].get("descricao", ""), err(r) if s >= 400 else "")
+e3 = novo_eq("Furadeira 1")
+s, l3 = emp(e3)
+call("PATCH", f"/api/collections/emprestimos/records/{l3.get('id')}", tA, {"status": "returned", "estado_devolucao": "Perdido"})
+check("equip", "Perdido: equipamento fica 'Extraviado'", eqget(e3).get("situacao") == "Extraviado", eqget(e3).get("situacao"))
+eB = novo_eq("Martelete B", cB, tB)
+s, r = call("POST", "/api/collections/emprestimos/records", tA, {"equipment_id": eB.get("id"), "funcionario_id": funE.get("id"), "company_id": cA})
+check("permissao", "Empresa A não empresta equipamento da Empresa B", s >= 400, f"status {s}")
+s, r = call("GET", "/api/collections/emprestimos/records", tB)
+check("permissao", "Empresa B não vê os empréstimos da A", r.get("totalItems") == 0, f"{r.get('totalItems')}")
+s, r = call("GET", "/api/collections/emprestimos/records")
+check("permissao", "Sem login não vê empréstimos", r.get("totalItems", 0) == 0, f"status {s}")
+
 # ------------------------------------------------------------------ excluir vira arquivar
 s, fx = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor a arquivar", "cnpj": "99999999000199", "company_id": cA})
 s, r = call("DELETE", f"/api/collections/fornecedores/records/{fx.get('id')}", tF)

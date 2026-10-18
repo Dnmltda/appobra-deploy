@@ -26,8 +26,10 @@ segurança/integridade → comparação com o documento mestre → plano de corr
   formulário, login por ID/Usuário e "Esqueci minha senha" que nunca funcionaram, troca de senha no
   perfil, "Fale conosco" falso; excluir passou a arquivar.
 - **Etapa 4 — em andamento:** ver `etapa4-fluxos.md`. 4.1 feita e testada localmente (pedido de material
-  com itens → aprovar → separar → entregar com baixa no estoque → confirmar recebimento). Servidor 147/0.
-  Próximo: empréstimo e devolução de equipamento.
+  com itens → aprovar → separar → entregar com baixa no estoque → confirmar recebimento); 4.2 feita e
+  testada (emprestar equipamento → receber de volta conferindo o estado). E-mails com botão e link certo
+  (o convite de funcionário apontava para o endereço antigo). Servidor 162/0; navegador 100/100.
+  Próximo: divergência de estoque com motivo e autorização.
 
 ---
 

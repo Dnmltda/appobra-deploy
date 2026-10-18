@@ -762,6 +762,96 @@
   "detalhe": "Não foi possível entregar \"Argamassa AC-II\": Saldo insuficiente: há 6 em estoque e a movim"
  },
  {
+  "grupo": "equip",
+  "teste": "Funcionário comum não empresta equipamento",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Gestão empresta: equipamento fica 'Emprestado' com a pessoa e a obra",
+  "ok": true,
+  "detalhe": "Emprestado"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Empréstimo nasce aberto, com data e quem entregou",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "equip",
+  "teste": "Não dá para emprestar o que já está emprestado",
+  "ok": true,
+  "detalhe": "Este equipamento não está disponível (situação: Emprestado)."
+ },
+ {
+  "grupo": "equip",
+  "teste": "Situação de equipamento emprestado não muda pela edição comum",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Devolver exige dizer em que estado voltou",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Funcionário comum não registra devolução",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Voltou bom: fica 'Disponível' no almoxarifado, sem pessoa nem obra",
+  "ok": true,
+  "detalhe": "Disponível"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Devolução registrada não se altera depois",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Empréstimo e devolução ficam no histórico do equipamento",
+  "ok": true,
+  "detalhe": "2"
+ },
+ {
+  "grupo": "equip",
+  "teste": "Voltou precisando de manutenção: 'Em Manutenção' + manutenção corretiva agendada",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "equip",
+  "teste": "Perdido: equipamento fica 'Extraviado'",
+  "ok": true,
+  "detalhe": "Extraviado"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Empresa A não empresta equipamento da Empresa B",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Empresa B não vê os empréstimos da A",
+  "ok": true,
+  "detalhe": "0"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Sem login não vê empréstimos",
+  "ok": true,
+  "detalhe": "status 200"
+ },
+ {
   "grupo": "permissao",
   "teste": "Funcionário comum não exclui fornecedor",
   "ok": true,
@@ -819,25 +909,25 @@
   "grupo": "ids",
   "teste": "Funcionário novo recebe o próximo número, ignorando o que a tela mandou",
   "ok": true,
-  "detalhe": "05"
+  "detalhe": "06"
  },
  {
   "grupo": "ids",
   "teste": "Acesso ao sistema do mesmo funcionário usa o mesmo número",
   "ok": true,
-  "detalhe": "05 = 05"
+  "detalhe": "06 = 06"
  },
  {
   "grupo": "ids",
   "teste": "Ninguém troca o número depois (nem o administrador)",
   "ok": true,
-  "detalhe": "status 200 id 05"
+  "detalhe": "status 200 id 06"
  },
  {
   "grupo": "ids",
   "teste": "Número do funcionário também não muda",
   "ok": true,
-  "detalhe": "status 200 id 05"
+  "detalhe": "status 200 id 06"
  },
  {
   "grupo": "ids",
@@ -849,7 +939,7 @@
   "grupo": "ids",
   "teste": "Número de quem saiu não é reaproveitado",
   "ok": true,
-  "detalhe": "5 -> 06"
+  "detalhe": "6 -> 07"
  },
  {
   "grupo": "telas",
