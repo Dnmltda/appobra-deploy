@@ -287,7 +287,7 @@ const CompraDetalhesPage = () => {
                       <TableBody>
                         {itens.map((it) => (
                           <TableRow key={it.id}>
-                            <TableCell className="text-xs">{it.expand?.material_id?.nome || "-"}</TableCell>
+                            <TableCell className="text-xs">{it.expand?.material_id?.name || "-"}</TableCell>
                             <TableCell className="max-w-[200px] truncate">{it.descricao}</TableCell>
                             <TableCell>{it.unidade}</TableCell>
                             <TableCell className="text-right">{it.quantidade}</TableCell>
@@ -438,10 +438,10 @@ const CompraDetalhesPage = () => {
               <Label>Material *</Label>
               <Select value={itemForm.material_id} onValueChange={(v) => {
                 const m = h.materiais.find((x) => x.id === v);
-                setItemForm({ ...itemForm, material_id: v, descricao: m?.nome || itemForm.descricao, unidade: m?.unidade || itemForm.unidade, preco_unitario: m?.preco_unitario || m?.valor_unitario || itemForm.preco_unitario, codigo: m?.codigo || m?.id_unico || itemForm.codigo });
+                setItemForm({ ...itemForm, material_id: v, descricao: m?.name || itemForm.descricao, unidade: m?.unit || itemForm.unidade, preco_unitario: m?.unit_cost || itemForm.preco_unitario, codigo: m?.code || itemForm.codigo });
               }}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{h.materiais.map((m) => <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>)}</SelectContent>
+                <SelectContent>{h.materiais.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">

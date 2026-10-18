@@ -86,11 +86,17 @@ export const useCompras = () => {
     if (!currentUser?.company_id) return;
     const cid = currentUser.company_id;
     try {
+      // Cada lista carrega independente: antes, uma consulta com erro (materiais
+      // ordenados por "nome", que não existe) zerava as quatro e o formulário de
+      // compra abria sem fornecedor, obra, material nem usuário para escolher.
+      const lista = (col, sort) =>
+        pb.collection(col).getFullList({ filter: `company_id = "${cid}"`, sort, $autoCancel: false })
+          .catch((err) => { console.error(`Erro ao carregar ${col}:`, err); return []; });
       const [f, o, m, u] = await Promise.all([
-        pb.collection("fornecedores").getFullList({ filter: `company_id = "${cid}"`, sort: "nome", $autoCancel: false }),
-        pb.collection("obras").getFullList({ filter: `company_id = "${cid}"`, sort: "nome", $autoCancel: false }),
-        pb.collection("materiais").getFullList({ filter: `company_id = "${cid}"`, sort: "nome", $autoCancel: false }),
-        pb.collection("users").getFullList({ filter: `company_id = "${cid}"`, sort: "nome_completo", $autoCancel: false }),
+        lista("fornecedores", "nome"),
+        lista("obras", "nome"),
+        lista("materiais", "name"),
+        lista("users", "nome_completo"),
       ]);
       setFornecedores(f);
       setObras(o);
