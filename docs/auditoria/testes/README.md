@@ -37,3 +37,6 @@ Cada linha sai como `OK` ou `FALHA`. Resultados guardados:
 
 `limite_senha.py` (rodar num `pb_data` novo, com o `navegador/smtp_sink.py` ligado na porta 2525): limite de 2 trocas de senha por
 semana (perfil + "Esqueci minha senha") e troca de senha pelo administrador.
+
+`usuario_login.py <caminho do pb_data/data.db>` (num `pb_data` novo): login pela aba Usuário sem diferenciar maiúscula, ID "1" = "01",
+nome de usuário escolhido no perfil e no convite.

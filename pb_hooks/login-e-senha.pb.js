@@ -143,9 +143,14 @@ routerAdd("POST", "/api/custom/login-id", (e) => {
   const senha = String(data.password || "");
   if (!id || !senha) throw new BadRequestError("Informe o ID e a senha.");
 
+  // "1", "01" e "001" são o mesmo ID (o número é guardado com 2 dígitos).
+  const n = /^\d+$/.test(id) ? String(parseInt(id, 10)) : id;
   let candidatos = [];
   try {
-    candidatos = $app.findRecordsByFilter("users", "id_unico = {:id}", "", 50, 0, { id });
+    candidatos = $app.findRecordsByFilter(
+      "users", "id_unico = {:a} || id_unico = {:b} || id_unico = {:c}", "", 50, 0,
+      { a: id, b: n, c: n.padStart(2, "0") }
+    );
   } catch (_) {}
   const certos = [];
   for (let i = 0; i < candidatos.length; i++) {
@@ -160,3 +165,50 @@ routerAdd("POST", "/api/custom/login-id", (e) => {
 
   return $apis.recordAuthResponse(e, certo, "password", null);
 });
+
+// Login pela aba "Usuário". Não diferencia maiúscula de minúscula: contas
+// antigas foram gravadas com maiúscula ("Diego") e a tela manda minúsculo,
+// então o login nativo do PocketBase (comparação exata) não as achava.
+routerAdd("POST", "/api/custom/login-usuario", (e) => {
+  const data = new DynamicModel({ username: "", password: "" });
+  e.bindBody(data);
+  const lib = require(`${__hooks}/usuario-lib.js`);
+  const username = lib.normaliza(data.username);
+  const senha = String(data.password || "");
+  if (!username || !senha) throw new BadRequestError("Informe o usuário e a senha.");
+
+  let candidatos = [];
+  try {
+    candidatos = $app.findRecordsByFilter("users", "username ~ {:u}", "", 20, 0, { u: username });
+  } catch (_) {}
+  for (let i = 0; i < candidatos.length; i++) {
+    const u = candidatos[i];
+    if (lib.normaliza(u.get("username")) === username && u.validatePassword(senha)) {
+      return $apis.recordAuthResponse(e, u, "password", null);
+    }
+  }
+  throw new BadRequestError("Usuário ou senha incorretos.");
+});
+
+// Nome de usuário: sempre minúsculo, formato válido e sem repetir (sem
+// diferenciar maiúscula). Só confere quando o nome muda, para contas antigas
+// salvarem outros dados sem tropeçar no nome gravado antes desta regra.
+onRecordCreateRequest((e) => {
+  const lib = require(`${__hooks}/usuario-lib.js`);
+  const u = lib.normaliza(e.record.get("username"));
+  e.record.set("username", u);
+  lib.confere($app, u, "");
+  e.next();
+}, "users");
+
+onRecordUpdateRequest((e) => {
+  const lib = require(`${__hooks}/usuario-lib.js`);
+  const antes = String(e.record.original().get("username") || "");
+  const agora = String(e.record.get("username") || "");
+  if (agora !== antes) {
+    const u = lib.normaliza(agora);
+    e.record.set("username", u);
+    if (u !== lib.normaliza(antes)) lib.confere($app, u, e.record.id);
+  }
+  e.next();
+}, "users");

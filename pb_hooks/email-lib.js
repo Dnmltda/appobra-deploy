@@ -51,7 +51,7 @@ function mensagemConvite(username, idUnico, link) {
 `Olá,
 
 Um acesso ao APP OBRA foi criado para você.
-Usuário: ${username}${idUnico ? `\nSeu ID: ${idUnico}` : ""}
+Usuário: ${username} (você pode trocar ao criar a senha)${idUnico ? `\nSeu ID: ${idUnico}` : ""}
 
 Para começar, abra o endereço abaixo, confira seus dados e crie a sua senha:
 ${link}
@@ -64,7 +64,7 @@ Equipe DNM&LTDA OBRAS`,
       "Seu acesso ao APP OBRA",
       '<p style="margin:0 0 12px">Olá,</p>' +
         '<p style="margin:0 0 12px">Um acesso ao APP OBRA foi criado para você.</p>' +
-        `<p style="margin:0 0 16px">Usuário: <strong>${esc(username)}</strong>` +
+        `<p style="margin:0 0 16px">Usuário: <strong>${esc(username)}</strong> (você pode trocar ao criar a senha)` +
         (idUnico ? `<br>Seu ID: <strong>${esc(idUnico)}</strong>` : "") + "</p>" +
         '<p style="margin:0 0 8px">Toque no botão para conferir seus dados e criar a sua senha:</p>',
       "Criar minha senha",

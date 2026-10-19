@@ -82,6 +82,7 @@ routerAdd("POST", "/api/custom/get-invite-details", (e) => {
       name: user.get("name"),
       email: user.get("email"),
       username: user.get("username"),
+      id_unico: user.get("id_unico"),
       cargo: user.get("cargo"),
       telefone: user.get("telefone"),
       funcionario,
@@ -99,7 +100,7 @@ routerAdd("POST", "/api/custom/get-invite-details", (e) => {
 // invalida o token para não poder ser reusado.
 routerAdd("POST", "/api/custom/activate-invite", (e) => {
   try {
-    const data = new DynamicModel({ token: "", password: "", passwordConfirm: "" });
+    const data = new DynamicModel({ token: "", password: "", passwordConfirm: "", username: "" });
     e.bindBody(data);
 
     const password = String(data.password || "");
@@ -136,6 +137,14 @@ routerAdd("POST", "/api/custom/activate-invite", (e) => {
 
     if (!user) {
       throw new BadRequestError("Link de convite inválido ou expirado.");
+    }
+
+    // A pessoa escolhe o próprio nome de usuário (a sugestão veio do convite).
+    const ulib = require(`${__hooks}/usuario-lib.js`);
+    const username = ulib.normaliza(data.username);
+    if (username && username !== ulib.normaliza(user.get("username"))) {
+      ulib.confere($app, username, user.id);
+      user.set("username", username);
     }
 
     user.set("password", password);
