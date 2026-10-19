@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Users, Pencil } from 'lucide-react';
+import { Plus, Users, Pencil, Building2, UserMinus, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext.jsx';
@@ -158,6 +159,19 @@ const ProjectManagement = () => {
     }
   };
 
+  // Tirar da obra: o funcionário fica sem obra (pedido do Diego, 19/10/2026).
+  const tirarDaObra = async (employee) => {
+    try {
+      await pb.collection('funcionarios').update(employee.id, { obraId: '' }, { $autoCancel: false });
+      setSelectedProjectTeam((t) => t.filter((e) => e.id !== employee.id));
+      toast.success(`${employee.nome} saiu da obra`);
+      fetchData();
+    } catch (error) {
+      console.error('Error removing employee:', error);
+      toast.error('Não foi possível tirar o funcionário da obra');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       nome: '',
@@ -281,11 +295,18 @@ const ProjectManagement = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.length === 0 ? (
             <div className="col-span-full text-center py-12 text-muted-foreground">
-              No projects found. Create your first project to get started.
+              Nenhuma obra cadastrada ainda. Clique em "Nova Obra" para começar.
             </div>
           ) : (
             projects.map(project => (
-              <Card key={project.id}>
+              <Card key={project.id} className="overflow-hidden">
+                <Link to={`/obras/${project.id}`} className="block bg-muted aspect-[16/9]" aria-label={`Abrir obra ${project.nome}`}>
+                  {project.fotos?.length ? (
+                    <img src={pb.files.getURL(project, project.fotos[0])} alt={`Foto da obra ${project.nome}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="w-full h-full flex items-center justify-center text-muted-foreground"><Building2 className="w-10 h-10 opacity-40" /></span>
+                  )}
+                </Link>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
                     <span className="truncate">{project.nome}</span>
@@ -311,26 +332,29 @@ const ProjectManagement = () => {
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Team Size:</span>
+                      <span className="text-muted-foreground">Equipe:</span>
                       <span className="font-medium">{getTeamSize(project.id)} membros</span>
                     </div>
                     {project.dataInicio && (
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Start:</span>
-                        <span>{new Date(project.dataInicio).toLocaleDateString()}</span>
+                        <span className="text-muted-foreground">Início:</span>
+                        <span>{new Date(project.dataInicio).toLocaleDateString('pt-BR')}</span>
                       </div>
                     )}
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" className="flex-1" onClick={() => openAllocateDialog(project)}>
                       <Plus className="w-4 h-4 mr-1" />
-                      Allocate
+                      Colocar funcionário
                     </Button>
                     <Button size="sm" variant="outline" className="flex-1" onClick={() => viewTeam(project)}>
                       <Users className="w-4 h-4 mr-1" />
                       Ver Equipe
                     </Button>
                   </div>
+                  <Button asChild size="sm" className="w-full">
+                    <Link to={`/obras/${project.id}`}>Abrir obra: fotos e mural<ArrowRight className="w-4 h-4 ml-1" /></Link>
+                  </Button>
                 </CardContent>
               </Card>
             ))
@@ -352,11 +376,16 @@ const ProjectManagement = () => {
                       <p className="font-medium">{employee.nome}</p>
                       <p className="text-sm text-muted-foreground">{employee.expand?.cargoId?.nome || 'Cargo desconhecido'}</p>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      employee.status === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {employee.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        employee.status === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {employee.status}
+                      </span>
+                      <Button size="sm" variant="ghost" title="Tirar da obra" onClick={() => tirarDaObra(employee)}>
+                        <UserMinus className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
                   </div>
                 ))
               )}
@@ -367,7 +396,7 @@ const ProjectManagement = () => {
         <Dialog open={allocateDialogOpen} onOpenChange={setAllocateDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Alocar Funcionário em {selectedProject?.nome}</DialogTitle>
+              <DialogTitle>Colocar funcionário em {selectedProject?.nome}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleAllocate} className="space-y-4">
               <div className="space-y-2">
@@ -387,7 +416,7 @@ const ProjectManagement = () => {
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setAllocateDialogOpen(false)}>Cancelar</Button>
-                <Button type="submit">Alocar</Button>
+                <Button type="submit">Colocar na obra</Button>
               </div>
             </form>
           </DialogContent>

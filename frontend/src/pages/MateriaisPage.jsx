@@ -71,6 +71,7 @@ import {
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
 import { coresPara, corPorNome, nomeComCor } from '@/lib/coresMaterial.js';
+import { marcasPara } from '@/lib/marcasMaterial.js';
 
 const AUDIT_MODULE = 'Materiais';
 
@@ -331,19 +332,7 @@ const MateriaisPage = () => {
     }
   };
 
-  // Código vazio: o sistema gera. Com cor, o código ganha a cor no fim, para
-  // o mesmo fio em várias cores não repetir código.
-  const codigoAuto = useRef('');
-  const codigoFinal = () => {
-    let base = formData.code.trim();
-    if (!base) {
-      if (!codigoAuto.current) codigoAuto.current = `MAT-${Date.now().toString(36).toUpperCase()}`;
-      base = codigoAuto.current;
-    }
-    const sigla = String(formData.cor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
-    return sigla && !base.toUpperCase().endsWith(`-${sigla}`) ? `${base}-${sigla}` : base;
-  };
+  const [marcaOutra, setMarcaOutra] = useState(false);
 
   const validateForm = async () => {
     const errs = {};
@@ -386,11 +375,6 @@ const MateriaisPage = () => {
       setFormErrors((p) => ({ ...p, name: 'Já existe um material com este nome nesta empresa' }));
       return false;
     }
-    const dupCode = await checkDuplicate('code', codigoFinal(), editing?.id);
-    if (dupCode) {
-      setFormErrors((p) => ({ ...p, code: 'Já existe um material com este código/SKU nesta empresa' }));
-      return false;
-    }
     return true;
   };
 
@@ -413,7 +397,6 @@ const MateriaisPage = () => {
       const fd = new FormData();
       fd.append('name', nomeComCor(formData.name, formData.cor));
       fd.append('cor', formData.cor || '');
-      fd.append('code', codigoFinal());
       fd.append('description', formData.description.trim() || '');
       fd.append('category', formData.category.trim());
       fd.append('marca', formData.marca.trim());
@@ -515,7 +498,7 @@ const MateriaisPage = () => {
 
   const resetForm = () => {
     setFormData(emptyForm);
-    codigoAuto.current = '';
+    setMarcaOutra(false);
     setEditing(null);
     setFormErrors({});
     setCategoriaAtiva(null);
@@ -714,24 +697,39 @@ const MateriaisPage = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="mat_code">Código / SKU</Label>
-                    <Input
-                      id="mat_code"
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      placeholder="Deixe vazio que o sistema gera"
-                      className={formErrors.code ? 'border-destructive' : ''}
-                    />
-                    {formErrors.code && <p className="text-xs text-destructive">{formErrors.code}</p>}
+                    {/* Dado pelo sistema: prefixo da categoria + número (ELE-001). */}
+                    <Input id="mat_code" value={editing ? formData.code : 'Gerado pelo sistema ao salvar'} readOnly tabIndex={-1}
+                      className="bg-muted/40" />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="mat_marca">Marca</Label>
-                    <Input
-                      id="mat_marca"
-                      value={formData.marca}
-                      onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                      placeholder="Ex: Votoran, Tigre, Sherwin-Williams..."
-                    />
+                    {(() => {
+                      const lista = marcasPara(formData.category, formData.name);
+                      const outra = marcaOutra || (formData.marca && !lista.includes(formData.marca));
+                      return (
+                        <>
+                          <Select
+                            value={outra ? 'outra' : (formData.marca || 'nenhuma')}
+                            onValueChange={(v) => {
+                              setMarcaOutra(v === 'outra');
+                              setFormData({ ...formData, marca: v === 'outra' || v === 'nenhuma' ? '' : v });
+                            }}
+                          >
+                            <SelectTrigger id="mat_marca"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="nenhuma">Sem marca / não sei</SelectItem>
+                              {lista.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                              <SelectItem value="outra">Outra marca (digitar)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {outra && (
+                            <Input aria-label="Nome da marca" value={formData.marca} placeholder="Nome da marca"
+                              onChange={(e) => setFormData({ ...formData, marca: e.target.value })} />
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-2">

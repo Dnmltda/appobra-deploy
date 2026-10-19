@@ -10,7 +10,7 @@ export const CARGOS = [
   'Financeiro', 'RH', 'Funcionário', 'Cliente', 'Pedreiro', 'Servente', 'Encanador', 'Eletricista', 'Faxina',
 ];
 
-const OBRA = ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos', 'ocorrencias'];
+const OBRA = ['dashboard', 'minha_obra', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos', 'ocorrencias'];
 
 export const MODULOS_POR_CARGO = {
   'Diretoria': ['dashboard', 'materiais_obra', 'obras', 'financeiro', 'rh', 'documentos', 'auditoria', 'configuracoes', 'relatorios',
@@ -19,22 +19,22 @@ export const MODULOS_POR_CARGO = {
     'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos', 'solicitacoes', 'movimentacoes', 'equipamentos', 'ocorrencias'],
   'Engenheiro': ['dashboard', 'materiais_obra', 'obras', 'materiais', 'compras', 'documentos', 'equipamentos', 'relatorios', 'estoque', 'estoque_obras',
     'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos', 'solicitacoes', 'movimentacoes', 'ocorrencias'],
-  'Mestre de Obras': ['dashboard', 'materiais_obra', 'obras', 'materiais', 'funcionarios', 'equipamentos', 'epis', 'solicitacoes', 'estoque', 'estoque_obras',
+  'Mestre de Obras': ['dashboard', 'minha_obra', 'materiais_obra', 'obras', 'materiais', 'funcionarios', 'equipamentos', 'epis', 'solicitacoes', 'estoque', 'estoque_obras',
     'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos', 'ocorrencias'],
-  'Almoxarife': ['dashboard', 'materiais_obra', 'materiais', 'movimentacoes', 'compras', 'fornecedores', 'epis', 'equipamentos', 'solicitacoes',
+  'Almoxarife': ['dashboard', 'minha_obra', 'materiais_obra', 'materiais', 'movimentacoes', 'compras', 'fornecedores', 'epis', 'equipamentos', 'solicitacoes',
     'estoque', 'estoque_obras', 'saldo_funcionario', 'qrcode', 'perdas_ganhos', 'ocorrencias'],
   'Comprador': ['dashboard', 'compras', 'solicitacoes', 'fornecedores', 'estoque', 'ocorrencias'],
   'Financeiro': ['dashboard', 'materiais_obra', 'financeiro', 'compras', 'relatorios', 'ocorrencias'],
   'RH': ['dashboard', 'rh', 'funcionarios', 'epis', 'documentos', 'ocorrencias'],
   'Cliente': ['dashboard', 'obras'],
-  'Funcionário': ['dashboard', 'solicitacoes', 'ocorrencias'],
+  'Funcionário': ['dashboard', 'minha_obra', 'solicitacoes', 'ocorrencias'],
   // Execução de obra: painel, pedir material/EPI, ver o próprio saldo e os equipamentos.
   'Pedreiro': OBRA,
   'Servente': OBRA,
   'Encanador': OBRA,
   'Eletricista': OBRA,
   // Faxina: controla o material de limpeza e pode pedir reposição.
-  'Faxina': ['dashboard', 'solicitacoes', 'estoque', 'movimentacoes', 'ocorrencias'],
+  'Faxina': ['dashboard', 'minha_obra', 'solicitacoes', 'estoque', 'movimentacoes', 'ocorrencias'],
 };
 
 export const ehAdmin = (user) =>

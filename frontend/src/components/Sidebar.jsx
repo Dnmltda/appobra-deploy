@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Siren,
   Warehouse,
+  MessagesSquare,
 } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { ehAdmin, podeAcessar } from '@/lib/permissoes.js';
@@ -52,6 +53,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const menuItems = [
     { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'obras', path: '/projects', label: 'Obras', icon: Building2 },
+    { id: 'minha_obra', path: '/minha-obra', label: 'Minha Obra', icon: MessagesSquare },
     { id: 'ocorrencias', path: '/ocorrencias', label: 'Ocorrências', icon: Siren },
     { id: 'materiais', path: '/materiais', label: 'Materiais', icon: Package },
     { id: 'estoque', path: '/estoque', label: 'Estoque', icon: Boxes },
@@ -90,6 +92,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     documentos: 'GESTAO',
     auditoria: 'GESTAO',
     obras: 'GESTAO',
+    minha_obra: 'GESTAO',
     ocorrencias: 'GESTAO',
     materiais: 'SUPRIMENTOS',
     equipamentos: 'SUPRIMENTOS',
@@ -108,7 +111,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     configuracoes: 'EMPRESA',
   };
 
-  const visibleItems = menuItems.filter(item => hasPermission(item.id));
+  // "Minha Obra" só para quem tem cadastro de funcionário (é por ele que se sabe a obra).
+  const visibleItems = menuItems.filter(item => hasPermission(item.id) && (item.id !== 'minha_obra' || !!currentUser?.funcionario_id));
 
   // Pick only the longest (most specific) matching path as active,
   // so a parent route never lights up together with a more specific

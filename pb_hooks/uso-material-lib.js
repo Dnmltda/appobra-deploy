@@ -27,13 +27,13 @@ function saldoEmPosse(app, funcionarioId, materialId) {
 }
 
 // Aviso no sininho. Nunca derruba a operação principal.
-function notificar(app, usuarioId, mensagem, referencia) {
+function notificar(app, usuarioId, mensagem, referencia, tipo) {
   if (!usuarioId) return;
   try {
     const agora = new Date();
     const n = new Record(app.findCollectionByNameOrId("notificacoes"));
     n.set("usuarioId", usuarioId);
-    n.set("tipo", "solicitacao");
+    n.set("tipo", tipo || "solicitacao");
     n.set("mensagem", mensagem);
     n.set("lida", false);
     n.set("data", agora.toISOString().replace("T", " "));
