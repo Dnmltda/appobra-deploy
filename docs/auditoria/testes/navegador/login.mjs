@@ -56,7 +56,7 @@ check("Conta 'Ativo' entra mesmo com is_active falso (contas antigas)", t.ok, t.
   await page.locator('button[type="submit"]').first().click();
   await page.waitForTimeout(3000);
   const txt = await page.locator("body").innerText();
-  check("Conta 'Inativo' é barrada com mensagem clara", !/dashboard/.test(page.url()) && /inativ/i.test(txt));
+  check("Conta 'Inativo' é barrada com mensagem clara", !/dashboard/.test(page.url()) && /inativ|não está ativa/i.test(txt));
   await page.close();
 }
 

@@ -70,7 +70,29 @@ routerAdd("POST", "/api/custom/esqueci-senha", (e) => {
     // ID curto repetido em empresas diferentes: não dá para saber quem é.
     if (users.length === 1) {
       const u = users[0];
-      if (u.get("status") !== "Bloqueado" && u.get("email")) {
+      const conviteToken = String(u.get("password_reset_token") || "");
+      if (u.get("status") === "Inativo" && conviteToken && u.get("email")) {
+        // Convite ainda não aceito: trocar a senha não ativa a conta (quem
+        // ativa é o "Criar minha senha" do convite) e a pessoa ficava presa em
+        // "Conta inativa". Manda o convite de novo, com link novo de 7 dias.
+        try {
+          const lib = require(`${__hooks}/email-lib.js`);
+          const token = $security.randomString(40);
+          u.set("password_reset_token", token);
+          u.set("password_reset_expires", new Date(Date.now() + 7 * 86400000).toISOString().replace("T", " "));
+          $app.save(u);
+          const m = lib.mensagemConvite(u.get("username"), u.get("id_unico"), `${lib.enderecoApp()}/ativar-conta?token=${token}`);
+          $app.newMailClient().send(new MailerMessage({
+            from: { address: $app.settings().meta.senderAddress, name: lib.REMETENTE },
+            to: [{ address: u.get("email") }],
+            subject: m.subject,
+            text: m.text,
+            html: m.html,
+          }));
+        } catch (err) {
+          console.log("[login-e-senha] Erro ao reenviar convite:", err);
+        }
+      } else if (u.get("status") !== "Bloqueado" && u.get("email")) {
         try {
           $mails.sendRecordPasswordReset($app, u);
         } catch (err) {

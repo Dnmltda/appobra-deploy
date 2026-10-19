@@ -453,7 +453,13 @@ onRecordDeleteRequest((e) => {
   };
   if (col.name !== "users") r.set("deleted_at", new Date().toISOString().replace("T", " "));
   if (INATIVO[col.name]) r.set("status", INATIVO[col.name]);
-  if (col.name === "users") r.set("is_active", false);
+  if (col.name === "users") {
+    r.set("is_active", false);
+    // Convite pendente deixa de valer: quem foi excluído não reativa a conta
+    // pelo link antigo nem pelo "Esqueci minha senha".
+    r.set("password_reset_token", "");
+    r.set("password_reset_expires", "");
+  }
   $app.saveNoValidate(r);
   return e.noContent(204);
 }, "materiais", "funcionarios", "empresas", "epis", "equipamentos", "fornecedores", "clientes", "veiculos",

@@ -2,7 +2,14 @@
 // Recuperação antiga (campo password_reset_token). O "Esqueci minha senha"
 // das telas usa o envio nativo (login-e-senha.pb.js); este continua para
 // quem ainda grava o token direto. Padrão visual: email-lib.js.
+// Desativado em 19/10/2026: o campo password_reset_token hoje só guarda o
+// CONVITE (activate-invite.pb.js). "Esqueci minha senha" usa o envio nativo
+// do PocketBase (login-e-senha.pb.js), e quem tem convite pendente recebe o
+// convite de novo. Este hook mandava um e-mail de "Criar nova senha" com o
+// token do convite, para uma tela que não aceita esse token.
 onRecordUpdate((e) => {
+  return e.next();
+  // eslint-disable-next-line no-unreachable
   const resetToken = e.record.get("password_reset_token");
   const email = e.record.get("email");
   const username = e.record.get("username");

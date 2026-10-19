@@ -37,4 +37,5 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `ocorrencias.mjs` | ocorrência com foto e gravidade alta, e-mail para a chefia, resolver com o que foi feito |
 | `estoque-minimo.mjs` | material chega no mínimo: painel, sininho, e-mail, pedir compra sem duplicar |
 | `funcionario-acesso.mjs` | convite de funcionário: novo, recadastrado com o mesmo e-mail, criar acesso/reenviar convite na edição |
+| `convite-esqueci.mjs` | convite pendente + "Esqueci minha senha": reenvia o convite, ativa e entra; excluído não reativa |
 | `fluxo-material.mjs` | pedido de material com itens: pedir → aprovar → separar → entregar (baixa) → confirmar |
