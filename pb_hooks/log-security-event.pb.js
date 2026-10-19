@@ -124,10 +124,14 @@ onBootstrap((e) => {
 
   try {
     const materiais = $app.findCollectionByNameOrId("materiais");
-    materiais.listRule = "@request.auth.company_id = company_id";
-    materiais.viewRule = "@request.auth.company_id = company_id";
-    materiais.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
-    materiais.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    // 18/10/2026: só corrige se ainda não houver isolamento por empresa —
+    // senão desfazia o filtro de arquivados (seguranca-etapa1.pb.js).
+    if (!String(materiais.listRule || "").includes("company_id")) {
+      materiais.listRule = "@request.auth.company_id = company_id";
+      materiais.viewRule = "@request.auth.company_id = company_id";
+      materiais.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+      materiais.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    }
     $app.save(materiais);
     console.log("[fix-tenant-to-company] materiais: regras atualizadas.");
   } catch (err) {
@@ -136,10 +140,14 @@ onBootstrap((e) => {
 
   try {
     const equipamentos = $app.findCollectionByNameOrId("equipamentos");
-    equipamentos.listRule = "@request.auth.company_id = company_id";
-    equipamentos.viewRule = "@request.auth.company_id = company_id";
-    equipamentos.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
-    equipamentos.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    // 18/10/2026: só corrige se ainda não houver isolamento por empresa —
+    // senão desfazia o filtro de arquivados (seguranca-etapa1.pb.js).
+    if (!String(equipamentos.listRule || "").includes("company_id")) {
+      equipamentos.listRule = "@request.auth.company_id = company_id";
+      equipamentos.viewRule = "@request.auth.company_id = company_id";
+      equipamentos.createRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+      equipamentos.updateRule = '@request.auth.company_id = company_id && @request.auth.role != "viewer"';
+    }
     if (equipamentos.fields.getByName("company_id_new")) {
       equipamentos.fields.removeByName("company_id_new");
     }
@@ -159,13 +167,26 @@ onBootstrap((e) => {
 // para bater com a lista real de perfis selecionáveis no app.
 // "Supervisor" foi deixado de fora de propósito (perfil ainda
 // não definido, congelado por enquanto).
+//
+// CORREÇÃO (18/10/2026): este hook rodava a CADA boot e
+// SUBSTITUÍA a lista inteira de valores, apagando os cargos de
+// execução de obra (Servente, Pedreiro, Encanador, Eletricista,
+// Faxina) que a migration 1792300000_add_novos_cargos_e_faxina.js
+// já tinha adicionado antes. Resultado: "Criar acesso ao sistema"
+// para qualquer funcionário de obra falhava com
+// "Invalid value Servente" (ou outro cargo de obra), sempre, em
+// todo boot, mesmo a migration estando correta — porque esse
+// hook reescrevia o campo por cima logo em seguida. Trocado para
+// SOMAR (nunca remover) valores já existentes em vez de
+// substituir a lista inteira, para não voltar a apagar cargos
+// adicionados por outro lugar do código.
 onBootstrap((e) => {
   e.next();
   try {
     const users = $app.findCollectionByNameOrId("users");
     const cargoField = users.fields.getByName("cargo");
     if (cargoField) {
-      cargoField.values = [
+      const obrigatorios = [
         "Administrador",
         "Gerência",
         "Engenheiro",
@@ -176,9 +197,19 @@ onBootstrap((e) => {
         "RH",
         "Funcionário",
         "Cliente",
+        "Pedreiro",
+        "Servente",
+        "Encanador",
+        "Eletricista",
+        "Faxina",
       ];
-      $app.save(users);
-      console.log("[fix-cargo-values] users.cargo: valores atualizados.");
+      const atuais = cargoField.values || [];
+      const combinados = [...atuais, ...obrigatorios.filter((v) => !atuais.includes(v))];
+      if (combinados.length !== atuais.length) {
+        cargoField.values = combinados;
+        $app.save(users);
+        console.log("[fix-cargo-values] users.cargo: valores atualizados (somados, nada removido).");
+      }
     }
   } catch (err) {
     console.log("[fix-cargo-values] Erro ao atualizar users.cargo:", err);
@@ -251,6 +282,10 @@ onBootstrap((e) => {
 // Roda a cada início do servidor; é IDEMPOTENTE.
 onBootstrap((e) => {
   e.next();
+  // Desativado em 18/10/2026: substituído por seguranca-etapa1.pb.js, que
+  // define TODAS as regras de users. Este hook regravava as regras a cada
+  // boot e desfazia a correção (funcionário podia virar administrador).
+  return;
   try {
     const users = $app.findCollectionByNameOrId("users");
     users.createRule = '@request.auth.role = "Administrador"';
@@ -436,6 +471,10 @@ onBootstrap((e) => {
 // Idempotente: só altera se detectar o valor antigo "admin".
 onBootstrap((e) => {
   e.next();
+  // Desativado em 18/10/2026: substituído por seguranca-etapa1.pb.js, que
+  // define TODAS as regras de users. Este hook regravava as regras a cada
+  // boot e desfazia a correção (funcionário podia virar administrador).
+  return;
   try {
     const users = $app.findCollectionByNameOrId("users");
     let changed = false;
@@ -487,6 +526,10 @@ onBootstrap((e) => {
 // Idempotente: só altera se detectar o valor antigo "admin".
 onBootstrap((e) => {
   e.next();
+  // Desativado em 18/10/2026: substituído por seguranca-etapa1.pb.js, que
+  // define TODAS as regras de users. Este hook regravava as regras a cada
+  // boot e desfazia a correção (funcionário podia virar administrador).
+  return;
   try {
     const users = $app.findCollectionByNameOrId("users");
     let changed = false;

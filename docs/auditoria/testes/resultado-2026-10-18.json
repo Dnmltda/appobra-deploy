@@ -1,0 +1,157 @@
+[
+ [
+  "Empresa A NAO enxerga dados de outras empresas (companies)",
+  false,
+  "A ve: ['Default Company', 'Empresa Principal', 'Empresa A', 'Empresa B']"
+ ],
+ [
+  "Empresa A NAO lista usuarios da B",
+  true,
+  "A ve 1 usuarios"
+ ],
+ [
+  "Admin A NAO consegue criar usuario dentro da empresa B",
+  false,
+  "status 200 criado id ehjoaur0nypc0ve"
+ ],
+ [
+  "Admin A cria funcionario na propria empresa",
+  true,
+  "status 200 "
+ ],
+ [
+  "Funcionario NAO consegue se promover a Administrador",
+  false,
+  "status 200 role agora=Administrador cargo=Administrador"
+ ],
+ [
+  "Funcionario NAO consegue se mover para a empresa B",
+  true,
+  "status 400 company_id agora=A"
+ ],
+ [
+  "Admin A cria obra",
+  true,
+  ""
+ ],
+ [
+  "Empresa nova ja nasce com catalogo de materiais",
+  true,
+  "91 materiais"
+ ],
+ [
+  "Admin A registra movimentacao de Entrada",
+  true,
+  ""
+ ],
+ [
+  "Saldo do material muda pelo servidor apos Entrada (+10)",
+  false,
+  "antes 0 depois 0"
+ ],
+ [
+  "Servidor recusa Saida maior que o saldo",
+  false,
+  "status 200 (aceitou saida de 999999)"
+ ],
+ [
+  "Movimentacao registrada NAO pode ser editada (historico imutavel)",
+  false,
+  "status 200"
+ ],
+ [
+  "Admin A consegue inativar/excluir material (regra de delete)",
+  false,
+  "status 404 The requested resource wasn't found. {}"
+ ],
+ [
+  "Admin A cria solicitacao",
+  true,
+  ""
+ ],
+ [
+  "Admin A (role Administrador) consegue aprovar solicitacao",
+  false,
+  "status 404 The requested resource wasn't found. {}"
+ ],
+ [
+  "Funcionario cria solicitacao",
+  true,
+  ""
+ ],
+ [
+  "Funcionario NAO aprova solicitacao",
+  true,
+  "status 404"
+ ],
+ [
+  "[pedidos_compra] Empresa B NAO ve registros da A",
+  true,
+  "B ve 0 registro(s)"
+ ],
+ [
+  "[perdas_ganhos] Empresa B NAO ve registros da A",
+  false,
+  "B ve 1 registro(s)"
+ ],
+ [
+  "[perdas_ganhos] Empresa B NAO apaga registro da A",
+  false,
+  "status 204"
+ ],
+ [
+  "[veiculos] Empresa B NAO ve registros da A",
+  false,
+  "B ve 1 registro(s)"
+ ],
+ [
+  "[veiculos] Empresa B NAO apaga registro da A",
+  false,
+  "status 204"
+ ],
+ [
+  "[contas_pagar] Empresa B NAO ve registros da A",
+  false,
+  "B ve 1 registro(s)"
+ ],
+ [
+  "[contas_pagar] Empresa B NAO apaga registro da A",
+  false,
+  "status 204"
+ ],
+ [
+  "[auditoria] Empresa B NAO ve registros da A",
+  false,
+  "B ve 12 registro(s)"
+ ],
+ [
+  "[equipes] Empresa B NAO ve registros da A",
+  false,
+  "B ve 1 registro(s)"
+ ],
+ [
+  "[equipes] Empresa B NAO apaga registro da A",
+  false,
+  "status 204"
+ ],
+ [
+  "[documentos_central] Empresa B NAO ve registros da A",
+  false,
+  "B ve 1 registro(s)"
+ ],
+ [
+  "[documentos_central] Empresa B NAO apaga registro da A",
+  false,
+  "status 204"
+ ],
+ [
+  "Log de auditoria NAO pode ser apagado por usuario comum",
+  false,
+  "status 204"
+ ],
+ [
+  "Visitante sem login NAO grava em audit_logs",
+  false,
+  "status 200"
+ ]
+]

@@ -1,0 +1,17 @@
+import { abrir, apiLogin, check, OUT, FRONT } from "./lib.mjs";
+const { browser, page, erros } = await abrir("b@teste.local");
+await page.goto(FRONT + "/profile");
+await page.getByRole("button", { name: /Alterar Senha/ }).click();
+await page.locator("#current-password").fill("Senha12345");
+await page.locator("#new-password").fill("TrocaPerfil@2026");
+await page.locator("#confirm-password").fill("TrocaPerfil@2026");
+await page.getByRole("dialog").locator('button[type="submit"]').click();
+await page.waitForTimeout(2500);
+await page.screenshot({ path: OUT + "perfil-senha.png" });
+const ainda = await page.url();
+const nova = await apiLogin("b@teste.local", "TrocaPerfil@2026");
+check("Perfil: trocar a própria senha funciona", !!nova.token);
+await page.goto(FRONT + "/dashboard"); await page.waitForTimeout(1500);
+check("Perfil: continua logado depois de trocar a senha", /dashboard/.test(page.url()), page.url());
+console.log(erros.filter((e) => !/Failed to fetch/.test(e)).slice(0, 4));
+await browser.close();

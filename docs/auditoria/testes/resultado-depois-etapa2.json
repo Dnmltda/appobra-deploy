@@ -1,0 +1,650 @@
+[
+ {
+  "grupo": "permissao",
+  "teste": "Admin cria funcionário na própria empresa",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Empresa só enxerga a si mesma em companies",
+  "ok": true,
+  "detalhe": "vê ['Empresa A']"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Empresa B não lista usuários da A",
+  "ok": true,
+  "detalhe": "B vê None usuário(s)"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Admin A não cria usuário dentro da empresa B",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[perdas_ganhos] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[perdas_ganhos] Empresa B não vê registros da A",
+  "ok": true,
+  "detalhe": "B vê 0"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[perdas_ganhos] Empresa B não apaga registro da A",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[perdas_ganhos] Empresa A continua vendo o próprio registro",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[veiculos] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[veiculos] Empresa B não vê registros da A",
+  "ok": true,
+  "detalhe": "B vê 0"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[veiculos] Empresa B não apaga registro da A",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[veiculos] Empresa A continua vendo o próprio registro",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_pagar] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_pagar] Empresa B não vê registros da A",
+  "ok": true,
+  "detalhe": "B vê 0"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_pagar] Empresa B não apaga registro da A",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_pagar] Empresa A continua vendo o próprio registro",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_receber] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_receber] Empresa B não vê registros da A",
+  "ok": true,
+  "detalhe": "B vê 0"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[contas_receber] Empresa B não apaga registro da A",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[contas_receber] Empresa A continua vendo o próprio registro",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[equipes] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[equipes] Empresa B não vê registros da A",
+  "ok": true,
+  "detalhe": "B vê 0"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[equipes] Empresa B não apaga registro da A",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[equipes] Empresa A continua vendo o próprio registro",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[documentos_central] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[documentos_central] servidor preenche a empresa quando a tela não manda",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[documentos_central] Empresa B não vê registros da A",
+  "ok": true,
+  "detalhe": "B vê 0"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[documentos_central] Empresa B não apaga registro da A",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[documentos_central] Empresa A continua vendo o próprio registro",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "[qrcode_leituras] Admin A cria registro (payload da tela)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[qrcode_leituras] servidor preenche a empresa quando a tela não manda",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[qrcode_leituras] Empresa B não vê registros da A",
+  "ok": true,
+  "detalhe": "B vê 0"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "[qrcode_leituras] Empresa B não apaga registro da A",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "[qrcode_leituras] Empresa A continua vendo o próprio registro",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Funcionário não se promove a Administrador",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Funcionário não se dá role=admin",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Funcionário não se move para outra empresa",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Funcionário altera o próprio telefone e nome",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Perfil reenviando os mesmos cargo/status (como a tela faz) é aceito",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Usuário antigo com role vazio salva o perfil (tela manda role = cargo)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Admin muda o cargo de funcionário da própria empresa",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Admin B cria obra",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Mesmo com role=admin, usuário da A não apaga obra da B",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Token de convite não aparece para outros usuários",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Admin edita os dados da própria empresa (Configurações)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Admin A não edita a empresa B",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Obras: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Fornecedores: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Materiais: empresa nova já nasce com catálogo",
+  "ok": true,
+  "detalhe": "91 materiais"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Materiais: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Compras: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "EPIs: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Equipamentos: criar",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Financeiro: Administrador lança",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Fornecedores: segundo fornecedor da empresa",
+  "ok": true,
+  "detalhe": "FOR-000002"
+ },
+ {
+  "grupo": "isolamento",
+  "teste": "Outra empresa cadastra fornecedor com o mesmo CNPJ",
+  "ok": true,
+  "detalhe": "FOR-000001"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Compras: criar pela tela (compra 1)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Compras: criar pela tela (compra 2)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Equipamentos: criar pela tela (equipamento 1)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Equipamentos: dar baixa",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Equipamentos: criar pela tela (equipamento 2)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "EPIs: criar pela tela (EPI 1) guardando nome e estoque",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "EPIs: criar pela tela (EPI 2) guardando nome e estoque",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Veículos: cadastrar sem chassi/RENAVAM (veículo 1)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Veículos: cadastrar sem chassi/RENAVAM (veículo 2)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Admin cria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Administrador aprova",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Funcionário cria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Solicitações: Funcionário não aprova a própria",
+  "ok": true,
+  "detalhe": "status 404"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Funcionário corrige a própria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Solicitações: Funcionário cancela a própria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Material novo com saldo inicial 50",
+  "ok": true,
+  "detalhe": "saldo 50"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Saldo inicial fica registrado como movimentação",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Entrada +10 muda o saldo pelo servidor (50 -> 60)",
+  "ok": true,
+  "detalhe": "saldo 60"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Movimentação guarda saldo anterior e posterior",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Tela Estoque sincronizando o saldo após a movimentação continua funcionando",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Editar o saldo direto no cadastro do material não muda o estoque",
+  "ok": true,
+  "detalhe": "saldo 60"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Servidor recusa Saída maior que o saldo",
+  "ok": true,
+  "detalhe": "status 400 Saldo insuficiente: há 60 em estoque e a movimentação pede 999999."
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Saída -20 (60 -> 40)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Retirada por funcionário -3 (40 -> 37)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Devolução de funcionário +3 (37 -> 40)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Movimentação Pendente não mexe no saldo",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Movimentação Pendente ainda pode ser corrigida",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Aprovar a Pendente lança no saldo (40 -> 36)",
+  "ok": true,
+  "detalhe": "saldo 36"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Finalizar não lança de novo (continua 36)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Movimentação lançada não pode ser editada",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Movimentação lançada não pode ser excluída",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Cancelar a saída de 20 estorna o saldo (36 -> 56)",
+  "ok": true,
+  "detalhe": "saldo 56"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Cancelada não pode ser reaprovada",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Transferência não muda o saldo",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Inventário: saldo passa a ser o contado (56 -> 30)",
+  "ok": true,
+  "detalhe": "saldo 30 diferença -26"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Cancelar a entrada de 10 com saldo 30 estorna (30 -> 20)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Compras: adicionar item",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Compra recebida entra no estoque (+7: 20 -> 27)",
+  "ok": true,
+  "detalhe": "saldo 27"
+ },
+ {
+  "grupo": "estoque",
+  "teste": "Editar a compra recebida não lança de novo (continua 27)",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Usuário logado grava log de auditoria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Visitante sem login não grava log",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Admin vê os logs da própria empresa",
+  "ok": true,
+  "detalhe": "3 logs"
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Empresa B não vê logs da A",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Nem o admin apaga log de auditoria",
+  "ok": true,
+  "detalhe": "status 403"
+ },
+ {
+  "grupo": "auditoria",
+  "teste": "Funcionário comum não lê auditoria",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: admin cria acesso com link",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: link abre os dados",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: funcionário cria a própria senha",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Convite: login com a senha nova",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "permissao",
+  "teste": "Convite: link não pode ser reusado",
+  "ok": true,
+  "detalhe": "status 400"
+ },
+ {
+  "grupo": "telas",
+  "teste": "Conta mestre preparada para o teste",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "telas",
+  "teste": "Conta mestre (dnmltda) continua vendo todas as empresas",
+  "ok": true,
+  "detalhe": "4"
+ }
+]

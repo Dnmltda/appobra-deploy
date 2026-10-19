@@ -79,6 +79,11 @@ routerAdd("POST", "/api/custom/self-register-company", (e) => {
     throw new BadRequestError("Erro ao criar administrador: " + err.message);
   }
 
+  // A empresa nova começa SEM materiais (estoque real desde o início). O
+  // catálogo padrão virou lista de sugestões na tela de Materiais
+  // (catalogo-lib.js + catalogo.pb.js).
+
+
   return e.json(200, {
     success: true,
     companyId: company.id,
