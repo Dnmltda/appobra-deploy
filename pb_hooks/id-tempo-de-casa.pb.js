@@ -10,7 +10,10 @@
 //    ignorado (ninguém escolhe nem digita ID);
 //  - é o mesmo número no cadastro de funcionário e no acesso ao sistema
 //    (users.funcionario_id, ou o mesmo e-mail na mesma empresa);
-//  - nunca muda depois e nunca é reaproveitado (quem saiu continua contando).
+//  - nunca muda depois e nunca é reaproveitado (quem saiu continua contando);
+//  - quem volta (mesmo e-mail ou CPF de um cadastro arquivado) recupera o
+//    número antigo; só o número de quem foi apagado de vez fica livre
+//    (atualização de 19/10/2026).
 //
 // Substitui generate-user-id.pb.js (que só numerava os acessos) e o
 // generateNextId das telas para funcionários ("FUN-000001").
@@ -24,12 +27,17 @@ onRecordCreate((e) => {
     r.set("id_unico", String(Date.now()).slice(-6));
     return e.next();
   }
-  const { proximoIdDaEmpresa, idDaMesmaPessoa } = require(`${__hooks}/id-lib.js`);
+  const lib = require(`${__hooks}/id-lib.js`);
   const ehUsuario = r.collection().name === "users";
   const mesmo = ehUsuario
-    ? idDaMesmaPessoa(e.app, "funcionarios", companyId, r.get("email"), r.get("funcionario_id"))
-    : idDaMesmaPessoa(e.app, "users", companyId, r.get("email"), "");
-  r.set("id_unico", mesmo || proximoIdDaEmpresa(e.app, companyId));
+    ? lib.idDaMesmaPessoa(e.app, "funcionarios", companyId, r.get("email"), r.get("funcionario_id"))
+    : lib.idDaMesmaPessoa(e.app, "users", companyId, r.get("email"), "");
+  const numero = mesmo || lib.idDeQuemJaFoiDaEmpresa(e.app, companyId, r.get("email"), r.get("cpf")) ||
+    lib.proximoIdDaEmpresa(e.app, companyId);
+  if (ehUsuario) lib.liberarNumeroDeAcessoAntigo(e.app, companyId, numero, r.id);
+  r.set("id_unico", numero);
+  // "ID do Funcionário" (matrícula) não se digita mais: é o mesmo número.
+  if (!ehUsuario && !String(r.get("matricula") || "").trim()) r.set("matricula", numero);
   e.next();
 }, "users", "funcionarios");
 

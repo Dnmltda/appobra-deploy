@@ -728,8 +728,8 @@ call("DELETE", f"/api/collections/funcionarios/records/{fR.get('id')}", tA)
 s, fR3 = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-REC2", "nome": "Recontratado", "nome_completo": "Recontratado",
               "cargoId": fun.get("cargoId", ""), "company_id": cA, "email": "recontratado@teste.local"})
 s, uR3 = convite("recontratado@teste.local", fR3.get("id"))
-check("acesso", "Excluído e recontratado com o mesmo e-mail: acesso criado (antes 'Failed to create record')", s == 200
-      and uR3.get("id_unico") == fR3.get("id_unico") and fR3.get("id_unico") != fR.get("id_unico"), err(uR3) if s >= 400 else uR3.get("id_unico"))
+check("acesso", "Excluído e recontratado com o mesmo e-mail: acesso criado e volta com o número antigo", s == 200
+      and uR3.get("id_unico") == fR3.get("id_unico") and fR3.get("id_unico") == fR.get("id_unico"), err(uR3) if s >= 400 else uR3.get("id_unico"))
 s, r = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-REC3", "nome": "Outro", "nome_completo": "Outro",
             "cargoId": fun.get("cargoId", ""), "company_id": cA, "email": "recontratado@teste.local"})
 check("acesso", "Outro funcionário com o mesmo e-mail: mensagem clara", s >= 400 and "Já existe um funcionário com este e-mail" in r.get("message", ""), r.get("message", "")[:80])

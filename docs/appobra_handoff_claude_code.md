@@ -32,9 +32,17 @@
 - **Pedido de material com aceite na retirada**: estoque confirma que recebeu → separa → "Pronto para retirada"
   → **quem pediu aceita** (só aí baixa o estoque; se tem cadastro de funcionário, vai para o saldo dele) ou
   **recusa com o motivo** (volta para separação). Avisos no sininho em cada passo.
-- Testes: servidor 224/0 (`audit_tests.py`), navegador `fluxo-material.mjs` 15/0.
+- **ID automático (01, 02...)**: o campo ID saiu do cadastro de funcionário e de acesso (aparece só para ler,
+  na edição). O servidor dá o primeiro número livre da empresa; quem já foi da empresa continua dono do seu.
+  **Quem volta** (mesmo e-mail ou CPF de um cadastro arquivado/inativo) **recupera o número antigo**; o acesso
+  antigo solta o número (`ARQ-<id>`). Só fica livre o número de quem for **apagado de vez**, e isso só quando o
+  Diego disser que a pessoa não volta mais (`pb_hooks/id-lib.js`).
+- Testes: servidor 224/0 (`audit_tests.py`), navegador `fluxo-material.mjs` 15/0, `funcionario-acesso.mjs` 20/0.
 
 **Pendente / ideias do Diego**
+- dn-moraes ficou **10** em produção porque 07 (dn-moraes antigo, arquivado), 08 e 09 (testes "TESTE DIAGNOSTICO
+  APAGAR") e um acesso de teste 08 ainda ocupam números. Para virar 02: backup, apagar esses 4 de vez e
+  renumerar o acesso e o funcionário dele (só com o sim do Diego).
 - **Estoque geral + estoque por obra** (comprar tudo no geral e transferir para cada obra): muda a base do saldo;
   PR separado depois deste.
 - Câmera no almoxarifado: foto ou vídeo curto na entrega do material (futuro).

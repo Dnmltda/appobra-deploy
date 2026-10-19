@@ -33,6 +33,7 @@ check("Estoque: saída maior que o saldo é barrada com aviso claro", /insuficie
 await preencher(page, "Quantidade *", 10, d);
 await d.locator('button[type="submit"]').click();
 msg = await toast(page);
+for (let i = 0; i < 10 && (await saldo(mat.id)) !== 20; i++) await page.waitForTimeout(500);
 check("Estoque: saída de 10 pela tela (30 -> 20)", (await saldo(mat.id)) === 20, `${msg} | saldo ${await saldo(mat.id)}`);
 await page.screenshot({ path: OUT + "estoque.png" });
 
