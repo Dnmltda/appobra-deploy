@@ -303,6 +303,11 @@ onBootstrap((e) => {
       ` || (@request.auth.id = id && ${protegidos})` +
       ` || ${SEG_MASTER}`;
     col.deleteRule = `(${SEG_ADMIN} && ${SEG_SAME}) || ${SEG_MASTER}`;
+    // Administrador troca a senha de quem é da sua empresa sem saber a senha
+    // atual (Gestão de Acessos: "Resetar senha"). Sem manageRule o PocketBase
+    // exigia oldPassword e o reset falhava. A conta Master fica de fora.
+    col.manageRule =
+      `(${SEG_ADMIN} && ${SEG_SAME} && email != "dnmltda@hotmail.com") || ${SEG_MASTER}`;
     // Os tokens NÃO podem ser "hidden": campo hidden não é gravável pela API,
     // e a tela de convite grava o token ao criar o acesso. Eles ficam
     // visíveis no schema e são escondidos pelos hooks no fim deste arquivo.

@@ -718,6 +718,7 @@ const AtivarContaPageInline = () => {
 
   const [step, setStep] = useState('loading'); // loading | invalid | confirm | password | done
   const [invite, setInvite] = useState(null);
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -735,6 +736,7 @@ const AtivarContaPageInline = () => {
     getInviteDetails(token)
       .then((data) => {
         setInvite(data);
+        setUsername(data?.username || '');
         setStep('confirm');
       })
       .catch(() => setStep('invalid'));
@@ -745,6 +747,9 @@ const AtivarContaPageInline = () => {
   const handleCreatePassword = async (e) => {
     e.preventDefault();
     const newErrors = {};
+    if (!/^[a-z0-9][a-z0-9._-]{2,39}$/.test(username)) {
+      newErrors.username = 'Use de 3 a 40 letras sem acento, números, ponto, hífen ou sublinhado, sem espaços.';
+    }
     const pwdResult = validatePasswordStrength(password);
     if (!pwdResult.valid) newErrors.password = pwdResult.message;
     if (!passwordsMatch(password, confirmPassword)) newErrors.confirmPassword = 'As senhas não conferem.';
@@ -754,10 +759,16 @@ const AtivarContaPageInline = () => {
     }
     setAcLoading(true);
     try {
-      await activateInvite(token, password, confirmPassword);
+      await activateInvite(token, password, confirmPassword, username);
       toast.success('Conta ativada com sucesso!');
       setStep('done');
     } catch (err) {
+      const msg = err?.response?.message || err?.data?.message || '';
+      // Problema no nome de usuário (já em uso / inválido): corrige e tenta de novo.
+      if (/nome de usuário/i.test(msg)) {
+        setAcErrors({ username: msg });
+        return;
+      }
       toast.error(err?.data?.message || err?.message || 'Link inválido ou expirado. Peça ao administrador para gerar um novo convite.');
       setStep('invalid');
     } finally {
@@ -879,11 +890,25 @@ const AtivarContaPageInline = () => {
           <CardContent className="p-8">
             <div className="flex items-center gap-2 mb-2">
               <KeyRound className="w-6 h-6 text-[#d4af37]" />
-              <h1 className="text-xl font-bold text-[#1a3a52]">Crie sua senha</h1>
+              <h1 className="text-xl font-bold text-[#1a3a52]">Crie seu usuário e senha</h1>
             </div>
-            <p className="text-sm text-muted-foreground mb-6">Essa será a sua senha de acesso ao sistema.</p>
+            <p className="text-sm text-muted-foreground mb-6">
+              Para entrar no sistema você vai poder usar o seu e-mail{invite?.id_unico ? `, o seu ID (${invite.id_unico})` : ''} ou o nome de usuário abaixo.
+            </p>
 
             <form onSubmit={handleCreatePassword} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="ac-username">Nome de usuário</Label>
+                <Input
+                  id="ac-username"
+                  value={username}
+                  autoComplete="username"
+                  onChange={(e) => { setUsername(e.target.value.toLowerCase().replace(/\s/g, '')); setAcErrors((p) => ({ ...p, username: undefined })); }}
+                />
+                {acErrors.username
+                  ? <p className="text-xs text-destructive">{acErrors.username}</p>
+                  : <p className="text-xs text-muted-foreground">Sugerimos um nome, mas você pode trocar.</p>}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="ac-password">Senha</Label>
                 <div className="relative">

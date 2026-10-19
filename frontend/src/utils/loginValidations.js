@@ -12,13 +12,13 @@ export const isValidEmail = (email) => {
 // Validação de nome de usuário (mínimo 3 caracteres, alfanumérico + _ . -)
 export const isValidUsername = (username) => {
   if (!username) return false;
-  return /^[a-z0-9_.-]{3,30}$/i.test(String(username).trim());
+  return /^[a-z0-9][a-z0-9_.-]{2,39}$/i.test(String(username).trim());
 };
 
-// Validação de ID único do funcionário (formato livre, mínimo 2 caracteres)
+// Validação de ID único do funcionário (formato livre; "1" vale como "01")
 export const isValidEmployeeId = (id) => {
   if (!id) return false;
-  return String(id).trim().length >= 2;
+  return String(id).trim().length >= 1;
 };
 
 // Política de senha forte:
@@ -151,9 +151,11 @@ export const validateIdentifier = (method, value) => {
         ? { valid: true }
         : { valid: false, message: 'Informe um email válido.' };
     case 'username':
-      return isValidUsername(value)
+      // No login só exige preenchido: contas antigas podem ter usuário fora do
+      // formato atual, e o servidor é quem confere.
+      return String(value || '').trim()
         ? { valid: true }
-        : { valid: false, message: 'Usuário deve ter 3 a 30 caracteres (letras, números, _ . -).' };
+        : { valid: false, message: 'Informe o seu usuário.' };
     case 'id':
       return isValidEmployeeId(value)
         ? { valid: true }
@@ -177,7 +179,7 @@ export const validateCreateAccountForm = (data) => {
   const errors = {};
   if (!data.name || data.name.trim().length < 3) errors.name = 'Nome completo é obrigatório (mínimo 3 caracteres).';
   if (!isValidEmail(data.email)) errors.email = 'Email inválido.';
-  if (!isValidUsername(data.username)) errors.username = 'Usuário inválido (3 a 30 caracteres alfanuméricos).';
+  if (!isValidUsername(data.username)) errors.username = 'Usuário inválido: 3 a 40 letras sem acento, números, ponto, hífen ou sublinhado.';
   if (data.cpfCnpj && !isValidCpfCnpj(data.cpfCnpj)) errors.cpfCnpj = 'CPF ou CNPJ inválido.';
   const pwdResult = validatePasswordStrength(data.password);
   if (!pwdResult.valid) errors.password = pwdResult.message;
