@@ -39,4 +39,4 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `funcionario-acesso.mjs` | convite de funcionário: novo, recadastrado com o mesmo e-mail, criar acesso/reenviar convite na edição |
 | `convite-esqueci.mjs` | convite pendente + "Esqueci minha senha": reenvia o convite, ativa e entra; excluído não reativa |
 | `usuario.mjs` | aba ID aceita "1", aba Usuário sem diferenciar maiúscula, pessoa troca o próprio usuário no perfil |
-| `fluxo-material.mjs` | pedido de material com itens: pedir → aprovar → separar → entregar (baixa) → confirmar |
+| `fluxo-material.mjs` | pedido de material: pedir → estoque confirma que recebeu → separa → pronto para retirada → quem pediu recusa (material errado) ou aceita (baixa no estoque, vai para o saldo dele) → registra o uso na obra → Materiais por Obra |

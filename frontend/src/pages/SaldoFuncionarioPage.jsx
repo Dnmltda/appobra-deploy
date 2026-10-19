@@ -23,7 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Search, AlertCircle, Users, Package, Wallet, Boxes,
-  Undo2, Eye, Download, X,
+  Undo2, Eye, Download, X, Hammer,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
@@ -61,6 +61,14 @@ const usePermissions = (currentUser) => {
   };
 };
 
+const emptyUsoForm = {
+  material_id: '',
+  quantidade: '',
+  obra_id: '',
+  local_uso: '',
+  observacoes: '',
+};
+
 const emptyDevolucaoForm = {
   material_id: '',
   quantidade: '',
@@ -95,6 +103,11 @@ const SaldoFuncionarioPage = () => {
   const [devolucaoForm, setDevolucaoForm] = useState(emptyDevolucaoForm);
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
+
+  // Registrar uso (material usado na obra: sai do saldo, não volta ao estoque)
+  const [usoOpen, setUsoOpen] = useState(false);
+  const [usoFunc, setUsoFunc] = useState(null);
+  const [usoForm, setUsoForm] = useState(emptyUsoForm);
 
   // ---------- Carregar dados ----------
   const fetchAll = useCallback(async () => {
@@ -153,7 +166,7 @@ const SaldoFuncionarioPage = () => {
   }, [companyId, fetchAll]);
 
   // ---------- Cálculo de saldo por funcionário/material ----------
-  // Retirada soma, Devolução subtrai.
+  // Retirada soma; Devolução e Utilização (uso na obra) subtraem.
   const saldoPorFuncionario = useMemo(() => {
     const map = new Map();
     lancamentos.forEach((l) => {
@@ -162,7 +175,7 @@ const SaldoFuncionarioPage = () => {
       if (!funcId || !matId) return;
       if (!map.has(funcId)) map.set(funcId, new Map());
       const mats = map.get(funcId);
-      const sinal = l.tipo_operacao === 'Devolução' ? -1 : 1;
+      const sinal = l.tipo_operacao === 'Retirada' ? 1 : -1;
       mats.set(matId, (mats.get(matId) || 0) + sinal * Number(l.quantidade || 0));
     });
     return map;
@@ -234,11 +247,12 @@ const SaldoFuncionarioPage = () => {
     const valorTotal = comSaldo.reduce((s, l) => s + l.valorTotal, 0);
     const retiradas = lancamentos.filter((l) => l.tipo_operacao === 'Retirada').length;
     const devolucoes = lancamentos.filter((l) => l.tipo_operacao === 'Devolução').length;
+    const usos = lancamentos.filter((l) => l.tipo_operacao === 'Utilização').length;
     return {
       funcionariosComSaldo: comSaldo.length,
       totalItens,
       valorTotal,
-      operacoes: retiradas + devolucoes,
+      operacoes: retiradas + devolucoes + usos,
     };
   }, [linhasFuncionarios, lancamentos]);
 
@@ -270,6 +284,71 @@ const SaldoFuncionarioPage = () => {
     if (!devolucaoFunc) return [];
     return linhaDoFuncionario(devolucaoFunc.id)?.itens || [];
   }, [devolucaoFunc, linhaDoFuncionario]);
+
+  // A gestão registra o uso de qualquer funcionário; o funcionário, o seu.
+  const podeRegistrarUso = (func) => perms.canMove || (!!currentUser?.funcionario_id && currentUser.funcionario_id === func.id);
+
+  const openUso = (linha) => {
+    setUsoFunc(linha.funcionario);
+    setUsoForm(emptyUsoForm);
+    setFormErrors({});
+    setUsoOpen(true);
+  };
+
+  const materiaisEmPosseUso = useMemo(() => {
+    if (!usoFunc) return [];
+    return linhaDoFuncionario(usoFunc.id)?.itens || [];
+  }, [usoFunc, linhaDoFuncionario]);
+
+  // ---------- Registrar Uso ----------
+  const handleUso = async (e) => {
+    e?.preventDefault();
+    if (!companyId || !usoFunc) return;
+    const errs = {};
+    if (!usoForm.material_id) errs.material_id = 'Selecione um material';
+    const qtd = Number(usoForm.quantidade);
+    if (!usoForm.quantidade || Number.isNaN(qtd) || qtd <= 0) errs.quantidade = 'Quantidade deve ser maior que zero';
+    const emPosse = materiaisEmPosseUso.find((i) => i.material_id === usoForm.material_id);
+    if (usoForm.material_id && emPosse && qtd > emPosse.quantidade) {
+      errs.quantidade = `Mais do que está em posse: ${formatNumber(emPosse.quantidade)} ${emPosse.unidade}`;
+    }
+    if (!usoForm.obra_id) errs.obra_id = 'Escolha a obra';
+    if (!usoForm.local_uso.trim()) errs.local_uso = 'Diga onde foi usado';
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setSaving(true);
+    try {
+      const material = materialById(usoForm.material_id);
+      // O servidor confere o saldo em posse e calcula o valor (uso-material.pb.js).
+      await pb.collection('saldo_funcionario').create({
+        company_id: companyId,
+        funcionario_id: usoFunc.id,
+        material_id: usoForm.material_id,
+        tipo_operacao: 'Utilização',
+        quantidade: qtd,
+        data_operacao: todayISO(),
+        hora_operacao: nowTime(),
+        obra_id: usoForm.obra_id,
+        local_uso: usoForm.local_uso.trim(),
+        observacoes: usoForm.observacoes || null,
+      }, { $autoCancel: false });
+      const obra = obras.find((o) => o.id === usoForm.obra_id);
+      toast.success(`Uso registrado: ${formatNumber(qtd)} ${material?.unit || ''} de ${material?.name || 'material'} em ${obra?.nome || 'obra'} (${usoForm.local_uso.trim()})`);
+      await auditLog(
+        AUDIT_ACTIONS.RECORD_CREATED,
+        AUDIT_MODULE,
+        `Uso: ${usoFunc.nome} usou ${formatNumber(qtd)} ${material?.unit || ''} de ${material?.name || ''} em ${obra?.nome || ''} (${usoForm.local_uso.trim()})`,
+      );
+      setUsoOpen(false);
+      fetchAll();
+    } catch (err) {
+      console.error('Erro ao registrar uso:', err);
+      toast.error(mensagemErro(err, 'Erro ao registrar uso'));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // ---------- Gerar número de movimentação ----------
   const generateNumero = useCallback(async () => {
@@ -517,7 +596,7 @@ const SaldoFuncionarioPage = () => {
           <KpiCard icon={Users} label="Funcionários com saldo" value={kpis.funcionariosComSaldo} sub="com materiais em posse" color="text-primary" />
           <KpiCard icon={Package} label="Itens em posse" value={formatNumber(kpis.totalItens)} sub="quantidade total" color="text-amber-600" />
           <KpiCard icon={Wallet} label="Valor em posse" value={formatCurrency(kpis.valorTotal)} sub="valor total" color="text-blue-600" />
-          <KpiCard icon={Boxes} label="Operações" value={kpis.operacoes} sub="retiradas + devoluções" color="text-green-600" />
+          <KpiCard icon={Boxes} label="Operações" value={kpis.operacoes} sub="retiradas, devoluções e usos" color="text-green-600" />
         </div>
 
         {/* Filtros */}
@@ -615,6 +694,18 @@ const SaldoFuncionarioPage = () => {
                           <Button size="sm" variant="ghost" title="Ver histórico" onClick={() => openDetalhe(l)}>
                             <Eye className="w-4 h-4" />
                           </Button>
+                          {podeRegistrarUso(l.funcionario) && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Registrar uso na obra"
+                              className="text-amber-700 hover:bg-amber-500/10"
+                              disabled={l.itens.length === 0}
+                              onClick={() => openUso(l)}
+                            >
+                              <Hammer className="w-4 h-4" />
+                            </Button>
+                          )}
                           {perms.canMove && (
                             <Button
                               size="sm"
@@ -653,6 +744,7 @@ const SaldoFuncionarioPage = () => {
               <TabsTrigger value="saldo">Saldo atual</TabsTrigger>
               <TabsTrigger value="retiradas">Retiradas</TabsTrigger>
               <TabsTrigger value="devolucoes">Devoluções</TabsTrigger>
+              <TabsTrigger value="usos">Usos na obra</TabsTrigger>
             </TabsList>
 
             <TabsContent value="saldo">
@@ -684,11 +776,11 @@ const SaldoFuncionarioPage = () => {
               )}
             </TabsContent>
 
-            {['Retirada', 'Devolução'].map((tipo) => (
-              <TabsContent key={tipo} value={tipo === 'Retirada' ? 'retiradas' : 'devolucoes'}>
+            {['Retirada', 'Devolução', 'Utilização'].map((tipo) => (
+              <TabsContent key={tipo} value={{ Retirada: 'retiradas', 'Devolução': 'devolucoes', 'Utilização': 'usos' }[tipo]}>
                 {detalheHistorico.filter((h) => h.tipo_operacao === tipo).length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    Nenhuma {tipo.toLowerCase()} registrada.
+                    {tipo === 'Utilização' ? 'Nenhum uso registrado.' : `Nenhuma ${tipo.toLowerCase()} registrada.`}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -706,11 +798,13 @@ const SaldoFuncionarioPage = () => {
                             </span>
                             <span className="block text-xs text-muted-foreground">
                               Obra: {h.expand?.obra_id?.nome || '-'}
+                              {h.local_uso ? ` · Local: ${h.local_uso}` : ''}
+                              {h.tipo_operacao === 'Utilização' ? ` · ${formatCurrency(h.valor_total)}` : ''}
                               {h.observacoes ? ` · ${h.observacoes}` : ''}
                             </span>
                           </div>
-                          <span className={`font-semibold shrink-0 ${tipo === 'Retirada' ? 'text-red-600' : 'text-green-600'}`}>
-                            {tipo === 'Retirada' ? '-' : '+'}{formatNumber(h.quantidade)}
+                          <span className={`font-semibold shrink-0 ${tipo === 'Retirada' ? 'text-red-600' : tipo === 'Utilização' ? 'text-amber-700' : 'text-green-600'}`}>
+                            {tipo === 'Retirada' ? '-' : tipo === 'Utilização' ? '' : '+'}{formatNumber(h.quantidade)}
                           </span>
                         </div>
                       ))}
@@ -719,6 +813,94 @@ const SaldoFuncionarioPage = () => {
               </TabsContent>
             ))}
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- Modal Registrar Uso ---------- */}
+      <Dialog open={usoOpen} onOpenChange={(open) => { setUsoOpen(open); if (!open) setFormErrors({}); }}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Registrar uso na obra — {usoFunc?.nome || ''}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-2">
+            O material sai do saldo do funcionário, não volta para o estoque e entra como gasto da obra.
+          </p>
+          <form onSubmit={handleUso} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="uso_material">Material *</Label>
+              <Select
+                value={usoForm.material_id || 'none'}
+                onValueChange={(v) => setUsoForm({ ...usoForm, material_id: v === 'none' ? '' : v })}
+              >
+                <SelectTrigger id="uso_material" className={formErrors.material_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione um material em posse" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Selecione...</SelectItem>
+                  {materiaisEmPosseUso.map((i) => (
+                    <SelectItem key={i.material_id} value={i.material_id}>
+                      {i.nome} — em posse: {formatNumber(i.quantidade)} {i.unidade}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {formErrors.material_id && <p className="text-xs text-destructive">{formErrors.material_id}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="uso_qtd">Quantidade usada *</Label>
+              <Input
+                id="uso_qtd" type="number" step="0.01" min="0"
+                value={usoForm.quantidade}
+                onChange={(e) => setUsoForm({ ...usoForm, quantidade: e.target.value })}
+                className={formErrors.quantidade ? 'border-destructive' : ''}
+              />
+              {formErrors.quantidade && <p className="text-xs text-destructive">{formErrors.quantidade}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="uso_obra">Obra *</Label>
+              <Select
+                value={usoForm.obra_id || 'none'}
+                onValueChange={(v) => setUsoForm({ ...usoForm, obra_id: v === 'none' ? '' : v })}
+              >
+                <SelectTrigger id="uso_obra" className={formErrors.obra_id ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione a obra" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Selecione...</SelectItem>
+                  {obras.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {formErrors.obra_id && <p className="text-xs text-destructive">{formErrors.obra_id}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="uso_local">Onde foi usado *</Label>
+              <Input
+                id="uso_local" placeholder="Ex.: 3º andar, apartamento 302"
+                value={usoForm.local_uso}
+                onChange={(e) => setUsoForm({ ...usoForm, local_uso: e.target.value })}
+                className={formErrors.local_uso ? 'border-destructive' : ''}
+              />
+              {formErrors.local_uso && <p className="text-xs text-destructive">{formErrors.local_uso}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="uso_obs">Observações</Label>
+              <Textarea
+                id="uso_obs" rows={2} value={usoForm.observacoes}
+                onChange={(e) => setUsoForm({ ...usoForm, observacoes: e.target.value })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setUsoOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Salvando...' : 'Confirmar uso'}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
 

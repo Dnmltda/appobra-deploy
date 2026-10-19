@@ -10,7 +10,7 @@ export const PRIORIDADES = ["Baixa", "Normal", "Alta", "Urgente", "Emergencial"]
 
 export const STATUS_SOLICITACAO = [
   "Aberta", "Em análise", "Aguardando aprovação", "Aprovada",
-  "Em execução", "Concluída", "Cancelada", "Rejeitada",
+  "Em separação", "Pronto para retirada", "Em execução", "Concluída", "Cancelada", "Rejeitada",
 ];
 
 export const NIVEIS_APROVACAO = [
@@ -46,7 +46,10 @@ export const statusColor = (status) => {
     case "Concluída":
       return "bg-green-500/10 text-green-700 border-green-500/20";
     case "Em execução":
+    case "Em separação":
       return "bg-blue-500/10 text-blue-700 border-blue-500/20";
+    case "Pronto para retirada":
+      return "bg-purple-500/10 text-purple-700 border-purple-500/20";
     case "Em análise":
     case "Aguardando aprovação":
       return "bg-amber-500/10 text-amber-700 border-amber-500/20";

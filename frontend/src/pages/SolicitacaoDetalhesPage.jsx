@@ -24,16 +24,20 @@ import {
 } from "lucide-react";
 import { podeGerirSolicitacoes, podeGerirEstoque, cargoDe } from "@/lib/permissoes.js";
 
-// Fluxo do material de consumo (documento mestre): cada passo e quem pode dar.
+// Fluxo do material de consumo: o estoque confirma que recebeu o pedido,
+// separa e avisa; quem pediu confere e aceita na retirada (só aí o material
+// sai do estoque) ou recusa dizendo o que está errado.
 const PASSOS = [
   { status: "Aberta", rotulo: "Pedido" },
-  { status: "Aprovada", rotulo: "Aprovado" },
+  { status: "Aprovada", rotulo: "Recebido pelo estoque" },
   { status: "Em separação", rotulo: "Separando" },
-  { status: "Entregue", rotulo: "Entregue" },
-  { status: "Concluída", rotulo: "Recebido" },
+  { status: "Pronto para retirada", rotulo: "Pronto para retirada" },
+  { status: "Concluída", rotulo: "Retirado e aceito" },
 ];
 const ABERTOS = ["Aberta", "Em análise", "Aguardando aprovação", "draft", "pending"];
-const passoAtual = (status) => (ABERTOS.includes(status) ? 0 : PASSOS.findIndex((p) => p.status === status));
+// "Entregue" é de pedidos antigos (entregues antes do aceite na retirada).
+const passoAtual = (status) => (ABERTOS.includes(status) ? 0
+  : status === "Entregue" ? 3 : PASSOS.findIndex((p) => p.status === status));
 const nivelDoCargo = (cargo) => ({ Administrador: "Administrador", Diretoria: "Administrador", "Gerência": "Gerente", Engenheiro: "Engenheiro" }[cargo] || "Supervisor");
 
 const SolicitacaoDetalhesPage = () => {
@@ -142,14 +146,14 @@ const SolicitacaoDetalhesPage = () => {
     if (res.success) setItens(await h.fetchItens(id)); else toast.error(res.error);
   };
 
-  const avancar = async (status, mensagem) => {
+  const avancar = async (status, mensagem, extra) => {
     setMudando(true);
     const res = status === "Aprovada" || status === "Rejeitada"
       ? await h.addAprovacao(id, {
           nivel_aprovacao: nivelDoCargo(cargoDe(currentUser)), usuario_id: currentUser.id, status_aprovacao: status === "Aprovada" ? "Aprovado" : "Rejeitado",
           data_aprovacao: new Date().toISOString().split("T")[0], hora_aprovacao: new Date().toTimeString().slice(0, 5), observacao: "",
         }).then((r) => (r.success ? r : { success: false, error: r.errors?._form }))
-      : await h.mudarStatus(solicitacao, status);
+      : await h.mudarStatus(solicitacao, status, extra);
     setMudando(false);
     setConfirmarEntrega(false);
     if (res.success) { toast.success(mensagem); loadAll(); } else toast.error(res.error || "Não foi possível mudar o passo.");
@@ -224,7 +228,8 @@ const SolicitacaoDetalhesPage = () => {
           {temFluxo && (
             <FluxoMaterial
               solicitacao={solicitacao} itens={itens} materiais={materiais} aberta={aberta}
-              podeEditarItens={aberta && (souSolicitante || gestao)} gestao={gestao} estoque={estoque} souSolicitante={souSolicitante}
+              podeEditarItens={aberta && (souSolicitante || gestao)} gestao={gestao} estoque={estoque}
+              podeAceitar={souSolicitante}
               novoItem={novoItem} setNovoItem={setNovoItem} incluirItem={incluirItem} tirarItem={tirarItem}
               avancar={avancar} mudando={mudando} confirmarEntrega={confirmarEntrega} setConfirmarEntrega={setConfirmarEntrega}
             />
@@ -401,10 +406,12 @@ const SolicitacaoDetalhesPage = () => {
 // Andamento + materiais pedidos: o "próximo passo" aparece como um botão só,
 // para quem pode dar aquele passo.
 const FluxoMaterial = ({
-  solicitacao, itens, materiais, podeEditarItens, gestao, estoque, souSolicitante, aberta,
+  solicitacao, itens, materiais, podeEditarItens, gestao, estoque, podeAceitar, aberta,
   novoItem, setNovoItem, incluirItem, tirarItem, avancar, mudando, confirmarEntrega, setConfirmarEntrega,
 }) => {
   const st = solicitacao.status;
+  const [recusando, setRecusando] = useState(false);
+  const [motivo, setMotivo] = useState("");
   const atual = passoAtual(st);
   const encerrada = ["Cancelada", "Rejeitada"].includes(st);
   return (
@@ -465,7 +472,7 @@ const FluxoMaterial = ({
           <div className="flex flex-wrap gap-2 pt-1">
             {aberta && gestao && (
               <>
-                <Button disabled={mudando || itens.length === 0} onClick={() => avancar("Aprovada", "Pedido aprovado")}><CheckCircle2 className="w-4 h-4 mr-2" />Aprovar pedido</Button>
+                <Button disabled={mudando || itens.length === 0} onClick={() => avancar("Aprovada", "Pedido recebido pelo estoque")}><CheckCircle2 className="w-4 h-4 mr-2" />Confirmar que recebi o pedido</Button>
                 <Button variant="outline" disabled={mudando} onClick={() => avancar("Rejeitada", "Pedido recusado")}><XCircle className="w-4 h-4 mr-2" />Recusar</Button>
               </>
             )}
@@ -473,20 +480,44 @@ const FluxoMaterial = ({
               <Button disabled={mudando} onClick={() => avancar("Em separação", "Separação iniciada")}><Package className="w-4 h-4 mr-2" />Começar a separar</Button>
             )}
             {st === "Em separação" && estoque && (
+              <Button disabled={mudando} onClick={() => avancar("Pronto para retirada", "Material separado. Quem pediu foi avisado.")}><Package className="w-4 h-4 mr-2" />Material separado, avisar quem pediu</Button>
+            )}
+            {st === "Pronto para retirada" && podeAceitar && !recusando && (
               confirmarEntrega ? (
                 <div className="flex flex-wrap items-center gap-2 p-3 border rounded-lg bg-amber-50 text-sm">
-                  <span>Confirmar a entrega? Os materiais saem do estoque agora.</span>
-                  <Button size="sm" disabled={mudando} onClick={() => avancar("Entregue", "Entregue — estoque atualizado")}>Sim, entregar</Button>
+                  <span>Conferiu tudo? Ao aceitar, o material sai do estoque e passa a ficar com você.</span>
+                  <Button size="sm" disabled={mudando} onClick={() => avancar("Concluída", "Material aceito. Retirada registrada.")}>Sim, aceitar</Button>
                   <Button size="sm" variant="outline" onClick={() => setConfirmarEntrega(false)}>Voltar</Button>
                 </div>
               ) : (
-                <Button onClick={() => setConfirmarEntrega(true)}><Truck className="w-4 h-4 mr-2" />Entregar</Button>
+                <>
+                  <Button onClick={() => setConfirmarEntrega(true)}><Truck className="w-4 h-4 mr-2" />Conferir e aceitar o material</Button>
+                  <Button variant="outline" onClick={() => setRecusando(true)}><XCircle className="w-4 h-4 mr-2" />Material errado</Button>
+                </>
               )
             )}
-            {st === "Entregue" && (souSolicitante || gestao) && (
+            {st === "Pronto para retirada" && podeAceitar && recusando && (
+              <div className="w-full space-y-2 p-3 border rounded-lg bg-red-50 text-sm">
+                <Label htmlFor="motivo-recusa">O que está errado?</Label>
+                <Textarea id="motivo-recusa" rows={2} value={motivo} onChange={(e) => setMotivo(e.target.value)}
+                  placeholder="Ex.: pedi fio azul de 2,5 mm e veio de 1,5 mm" />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="destructive" disabled={mudando || !motivo.trim()}
+                    onClick={() => avancar("Em separação", "Material recusado. O estoque vai corrigir.", { retirada_recusa_motivo: motivo.trim() }).then(() => { setRecusando(false); setMotivo(""); })}>
+                    Recusar e devolver para o estoque
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setRecusando(false)}>Voltar</Button>
+                </div>
+              </div>
+            )}
+            {st === "Pronto para retirada" && !podeAceitar && <p className="text-sm text-muted-foreground">Aguardando quem pediu conferir e aceitar o material na retirada.</p>}
+            {st === "Entregue" && (podeAceitar || gestao) && (
               <Button disabled={mudando} onClick={() => avancar("Concluída", "Recebimento confirmado")}><CheckCircle2 className="w-4 h-4 mr-2" />Confirmar que recebi</Button>
             )}
-            {aberta && !gestao && <p className="text-sm text-muted-foreground">Aguardando aprovação.</p>}
+            {st === "Em separação" && solicitacao.retirada_recusa_motivo && (
+              <p className="w-full text-sm text-red-700">Material recusado na retirada: {solicitacao.retirada_recusa_motivo}</p>
+            )}
+            {aberta && !gestao && <p className="text-sm text-muted-foreground">Aguardando o estoque confirmar que recebeu o pedido.</p>}
             {["Aprovada", "Em separação"].includes(st) && !estoque && <p className="text-sm text-muted-foreground">O almoxarifado está preparando o seu pedido.</p>}
           </div>
         )}

@@ -502,27 +502,104 @@ check("fluxo", "Depois de aprovada a quantidade não muda", s >= 400, f"status {
 s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Em separação"})
 check("fluxo", "Almoxarifado começa a separar", s == 200, err(r) if s >= 400 else "")
 s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Entregue"})
+check("fluxo", "Não entrega sem o aceite de quem pediu (Em separação -> Entregue)", s >= 400 and "fora de ordem" in r.get("message", ""), r.get("message", "")[:80])
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Pronto para retirada"})
+check("fluxo", "Quem pediu não marca como separado", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Pronto para retirada"})
 s_m, m2 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
-check("fluxo", "Entregar dá baixa no estoque (10 -> 6)", s == 200 and m2.get("quantity_in_stock") == 6, err(r) if s >= 400 else f"saldo {m2.get('quantity_in_stock')}")
+check("fluxo", "Almoxarifado marca 'Pronto para retirada' e o estoque ainda não baixa", s == 200 and r.get("separado_por") == uA["id"]
+      and m2.get("quantity_in_stock") == 10, err(r) if s >= 400 else f"saldo {m2.get('quantity_in_stock')}")
+s, ns = call("GET", "/api/collections/notificacoes/records?filter=" + q(f'usuarioId="{uF["id"]}" && referencia="solicitacao:{so["id"]}"'), tF)
+check("fluxo", "Quem pediu é avisado no sininho que o material está separado", ns.get("totalItems", 0) >= 1, f"{ns.get('totalItems')}")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Em separação"})
+check("fluxo", "Recusar o material exige dizer o que está errado", s >= 400 and "errado" in r.get("message", ""), r.get("message", "")[:80])
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Em separação", "retirada_recusa_motivo": "veio argamassa AC-I"})
+s_m, m2 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
+check("fluxo", "Quem pediu recusa o material errado: volta para separação, estoque não muda", s == 200 and r.get("status") == "Em separação"
+      and m2.get("quantity_in_stock") == 10, err(r) if s >= 400 else "")
+call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Pronto para retirada"})
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tAlm, {"status": "Concluída"})
+check("fluxo", "Outra pessoa (almoxarife) não aceita no lugar de quem pediu", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Concluída"})
+s_m, m2 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
+check("fluxo", "Quem pediu aceita na retirada e o estoque baixa (10 -> 6)", s == 200 and m2.get("quantity_in_stock") == 6,
+      err(r) if s >= 400 else f"saldo {m2.get('quantity_in_stock')}")
 s, movs = call("GET", "/api/collections/movimentacoes/records?filter=" + q(f'solicitacao_id="{so["id"]}"'), tA)
-check("fluxo", "A saída fica ligada à solicitação (Consumo de Obra)", movs.get("totalItems") == 1 and movs["items"][0].get("tipo") == "Consumo de Obra")
+check("fluxo", "A saída fica ligada à solicitação (Consumo de Obra, quem pediu não tem cadastro de funcionário)",
+      movs.get("totalItems") == 1 and movs["items"][0].get("tipo") == "Consumo de Obra" and movs["items"][0].get("responsavel_id") == uA["id"])
 s, it2 = call("GET", f"/api/collections/solicitacoes_itens/records/{it['id']}", tA)
 check("fluxo", "Item registra a quantidade entregue", it2.get("quantidade_entregue") == 4 and bool(it2.get("movimentacao_id")))
 s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Cancelada"})
-check("fluxo", "Depois de entregue não dá para cancelar", s >= 400, f"status {s}")
-s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Concluída"})
-check("fluxo", "Quem pediu confirma o recebimento (Concluída)", s == 200, err(r) if s >= 400 else "")
+check("fluxo", "Depois de retirado não dá para cancelar", s >= 400, f"status {s}")
 s, sx = call("POST", "/api/collections/solicitacoes/records", tF, {"company_id": cA, "numero_solicitacao": "SOL-ESPERTO", "tipo": "Material",
              "solicitante_id": uF["id"], "descricao": "tentando pular", "status": "Aprovada"})
 check("fluxo", "Funcionário que cria pedido já 'Aprovada' fica 'Aberta'", s == 200 and sx.get("status") == "Aberta", sx.get("status"))
+s, ns = call("GET", "/api/collections/notificacoes/records?filter=" + q(f'usuarioId="{uA["id"]}" && referencia="solicitacao:{sx["id"]}"'), tA)
+check("fluxo", "Pedido de material novo avisa o estoque no sininho", ns.get("totalItems", 0) >= 1, f"{ns.get('totalItems')}")
 so2, s2, it3 = nova_sol("SOL-FLX-2", 999)
-for st in ("Aprovada", "Em separação"):
+for st in ("Aprovada", "Em separação", "Pronto para retirada"):
     call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tA, {"status": st})
-s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tA, {"status": "Entregue"})
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tF, {"status": "Concluída"})
 s_m, m3 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
 s_s, sol2 = call("GET", f"/api/collections/solicitacoes/records/{so2['id']}", tA)
-check("fluxo", "Entrega sem saldo é recusada e nada muda", s >= 400 and "Saldo insuficiente" in r.get("message", "") and m3.get("quantity_in_stock") == 6
-      and sol2.get("status") == "Em separação", r.get("message", "")[:90])
+check("fluxo", "Aceite sem saldo é recusado e nada muda", s >= 400 and "Saldo insuficiente" in r.get("message", "") and m3.get("quantity_in_stock") == 6
+      and sol2.get("status") == "Pronto para retirada", r.get("message", "")[:90])
+
+# ------------------------------------------------------------------ saldo do funcionário e uso na obra (19/10/2026)
+cargoU = (call("GET", "/api/collections/cargos/records?perPage=1", tA)[1].get("items") or [{}])[0].get("id", "")
+s, funU = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-USO", "nome": "Eletricista do Fio",
+               "nome_completo": "Eletricista do Fio", "cargoId": cargoU, "email": "eletricista@teste.local", "company_id": cA})
+check("uso", "Cadastro do eletricista (funcionário)", s == 200, err(funU) if s >= 400 else "")
+call("POST", "/api/collections/users/records", tA, {"email": "eletricista@teste.local", "username": "eletricista", "password": "Senha12345",
+     "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Eletricista", "role": "Eletricista", "status": "Ativo",
+     "funcionario_id": funU.get("id"), "name": "Eletricista do Fio"})
+tEl, uEl = login("eletricista@teste.local")
+s, fio = call("POST", "/api/collections/materiais/records", tA, {"name": "Fio flexível azul 2,5mm (rolo 100m)", "code": "USO-FIO", "unit": "rl",
+              "quantity_in_stock": 10, "unit_cost": 250, "status": "active", "company_id": cA})
+check("uso", "Material do teste (fio, rolo)", s == 200, err(fio) if s >= 400 else "")
+s, so3 = call("POST", "/api/collections/solicitacoes/records", tEl, {"company_id": cA, "numero_solicitacao": "SOL-USO-1", "tipo": "Material",
+              "solicitante_id": uEl["id"], "descricao": "fio", "status": "Aberta", "obra_id": obra.get("id")})
+call("POST", "/api/collections/solicitacoes_itens/records", tEl, {"solicitacao_id": so3.get("id"), "material_id": fio.get("id"), "quantidade": 3})
+for st in ("Aprovada", "Em separação", "Pronto para retirada"):
+    call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tAlm, {"status": st})
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tEl, {"status": "Concluída"})
+s, movs = call("GET", "/api/collections/movimentacoes/records?filter=" + q(f'solicitacao_id="{so3["id"]}"'), tA)
+s_sf, sf = call("GET", "/api/collections/saldo_funcionario/records?filter=" + q(f'funcionario_id="{funU["id"]}"'), tA)
+check("uso", "Aceite de quem tem cadastro de funcionário vira Retirada por Funcionário e entra no saldo dele",
+      movs.get("totalItems") == 1 and movs["items"][0].get("tipo") == "Retirada por Funcionário" and sf.get("totalItems") == 1
+      and sf["items"][0].get("tipo_operacao") == "Retirada" and sf["items"][0].get("quantidade") == 3,
+      f"mov {[x.get('tipo') for x in movs.get('items', [])]} saldo {sf.get('totalItems')}")
+def uso(tok, qtd, **extra):
+    body = {"company_id": cA, "funcionario_id": funU.get("id"), "material_id": fio.get("id"), "tipo_operacao": "Utilização",
+            "quantidade": qtd, "data_operacao": "2026-10-19", "obra_id": obra.get("id"), "local_uso": "3º andar"}
+    body.update(extra)
+    return call("POST", "/api/collections/saldo_funcionario/records", tok, body)
+s, r = uso(tEl, 2, local_uso="  ")
+check("uso", "Registrar uso exige dizer onde foi usado", s >= 400 and "onde" in r.get("message", ""), r.get("message", "")[:80])
+s, r = uso(tEl, 2, obra_id="")
+check("uso", "Registrar uso exige a obra", s >= 400, f"status {s}")
+s, r = uso(tEl, 5)
+check("uso", "Não dá para usar mais do que está em posse (3)", s >= 400 and "em posse" in r.get("message", ""), r.get("message", "")[:80])
+s, r = uso(tEl, 2)
+s_m, fio2 = call("GET", f"/api/collections/materiais/records/{fio.get('id')}", tA)
+check("uso", "Eletricista registra o uso de 2 rolos no 3º andar: vale 2 x 250 e o estoque não muda (7)",
+      s == 200 and r.get("valor_total") == 500 and r.get("responsavel_id") == uEl["id"] and fio2.get("quantity_in_stock") == 7,
+      err(r) if s >= 400 else f"valor {r.get('valor_total')} estoque {fio2.get('quantity_in_stock')}")
+s, r2 = uso(tEl, 1.5)
+check("uso", "Sobrou 1 em posse: usar 1,5 é recusado", s >= 400, f"status {s}")
+s, outroF = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-OUT", "nome": "Outro", "nome_completo": "Outro",
+                 "cargoId": cargoU, "company_id": cA})
+s, r2 = uso(tEl, 1, funcionario_id=outroF.get("id"))
+check("uso", "Funcionário não registra uso no saldo de outra pessoa", s == 403, f"status {s}")
+s, r2 = call("POST", "/api/collections/saldo_funcionario/records", tEl, {"company_id": cA, "funcionario_id": funU.get("id"), "material_id": fio.get("id"),
+             "tipo_operacao": "Retirada", "quantidade": 50, "data_operacao": "2026-10-19"})
+check("uso", "Funcionário não inventa retirada para aumentar o próprio saldo", s == 403, f"status {s}")
+s, r2 = call("PATCH", f"/api/collections/saldo_funcionario/records/{r.get('id')}", tEl, {"quantidade": 0.1})
+check("uso", "Funcionário não altera um uso já lançado", s >= 400, f"status {s}")
+s, r2 = uso(tAlm, 1, local_uso="Térreo, quadro de luz")
+check("uso", "Almoxarifado registra o uso no saldo do funcionário", s == 200, err(r2) if s >= 400 else "")
+s, r2 = call("GET", "/api/collections/saldo_funcionario/records?filter=" + q('tipo_operacao="Utilização"'), tB)
+check("isolamento", "Empresa B não vê os usos da A", s == 200 and r2.get("totalItems") == 0, f"{r2.get('totalItems')}")
 
 # ------------------------------------------------------------------ empréstimo de equipamento (Etapa 4.2)
 cargo1 = (call("GET", "/api/collections/cargos/records?perPage=1", tA)[1].get("items") or [{}])[0].get("id", "")

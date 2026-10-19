@@ -6,15 +6,41 @@
 
 ## TL;DR
 
-- Repositório: **`Dnmltda/appobra-deploy`**. Todo o trabalho do Code está na branch
-  **`ccr-6751e2d4-oj4p0r`** (19 commits à frente do `main`, sem conflito). **Nada foi publicado ainda.**
-- Foi feita a **auditoria completa** (pedida pela documentação mestre) e executadas as **Etapas 1 a 4** do
-  plano dela, todas testadas num PocketBase local isolado: servidor **199/0**, telas (Playwright) **118/118**.
-- O código-fonte das telas agora está no GitHub em **`frontend/`** (veio de `~\Documents\appobra-app\apps\web`).
-  **Daqui para frente as telas mudam no GitHub, não no Hostinger Horizons**, senão as duas cópias se separam.
-- **Próximo passo é da Cowork: publicar.** Roteiro e prompt prontos em **`docs/PUBLICAR-COWORK.md`**
-  (snapshot → Brevo → Secrets → merge → deploy → logs → Hostinger → teste rápido).
-- Depois de publicado e usado alguns dias, o Code segue para a **Etapa 5 (limpeza)**.
+- Repositório: **`Dnmltda/appobra-deploy`**, branch `main`. **Em produção (Fly v17)**: tudo até o PR #7 (Etapas 1 a 4,
+  login, convite, limite de troca de senha). As telas também estão na **Hostinger**
+  (`midnightblue-chamois-688707.hostingersite.com`), que é o endereço que o Diego usa; o Fly
+  (`appobra-backend.fly.dev`) mostra o mesmo app.
+- **A cada deploy com mudança de tela, reenviar `pb_public/` para a Hostinger** (ver seção 00).
+- O código das telas fica em **`frontend/`** (GitHub), não no Hostinger Horizons.
+- Próximo: PR "uso de material / Materiais por Obra / aceite na retirada" (seção 00) e depois estoque por obra.
+
+## 00. Atualização 19/10/2026, noite (Claude Code)
+
+**Feito em produção (com pedido do Diego)**
+- Telas novas enviadas para a Hostinger (`pb_public/` da `main`, pela API da Hostinger; cópia das antigas guardada).
+- Acesso `dn-moraes@hotmail.com` apagado para o Diego recriar do zero: estava **arquivado pela limpeza inicial**
+  (por isso não aparecia em Gestão de Acessos) e havia 14 cadastros de funcionário com o mesmo e-mail. Mantido
+  arquivado 1 cadastro com retirada de teste no histórico. Backup antes: `/data/backups/` no volume.
+
+**PR desta etapa (não publicado até o Diego pedir)**
+- **Saldo por Funcionário → "Registrar uso"**: a pessoa diz material, quantidade, obra e local (ex.: "3º andar");
+  sai do saldo dela, **não volta ao estoque** e vira gasto da obra. Servidor: `pb_hooks/uso-material.pb.js`
+  (confere o que está em posse, calcula o valor; funcionário só no próprio saldo; só a gestão lança
+  retirada/devolução ou altera lançamentos).
+- **Materiais por Obra** (`/materiais-por-obra`): por obra, material usado e valor gasto (Consumo de Obra +
+  usos registrados).
+- **Pedido de material com aceite na retirada**: estoque confirma que recebeu → separa → "Pronto para retirada"
+  → **quem pediu aceita** (só aí baixa o estoque; se tem cadastro de funcionário, vai para o saldo dele) ou
+  **recusa com o motivo** (volta para separação). Avisos no sininho em cada passo.
+- Testes: servidor 224/0 (`audit_tests.py`), navegador `fluxo-material.mjs` 15/0.
+
+**Pendente / ideias do Diego**
+- **Estoque geral + estoque por obra** (comprar tudo no geral e transferir para cada obra): muda a base do saldo;
+  PR separado depois deste.
+- Câmera no almoxarifado: foto ou vídeo curto na entrega do material (futuro).
+- Hierarquia: já existe em todos os cargos, sem limite por nível; pergunta aberta se cargos de obra também usam
+  Júnior/Pleno/Sênior.
+- E-mails no spam: Diego aceita por enquanto (domínio próprio no futuro).
 
 ## 0. Atualização 19/10/2026 (Claude Code) — o que aconteceu depois da primeira versão deste documento
 
