@@ -634,6 +634,32 @@ s, n2 = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": 
              "cargoId": fun.get("cargoId", ""), "company_id": cA})
 check("ids", "Número de quem saiu não é reaproveitado", s == 200 and int(n2.get("id_unico") or 0) > ult, err(n2) if s >= 400 else f"{ult} -> {n2.get('id_unico')}")
 
+# ------------------------------------------------------------------ acesso com e-mail já usado (19/10/2026)
+def convite(email, func_id, tok=None):
+    return call("POST", "/api/collections/users/records", tok or tA, {"email": email, "username": "u" + uuid.uuid4().hex[:8],
+                "password": "Descartavel123!", "passwordConfirm": "Descartavel123!", "company_id": cA, "cargo": "Pedreiro",
+                "role": "Pedreiro", "status": "Inativo", "funcionario_id": func_id, "password_reset_token": str(uuid.uuid4())})
+s, fR = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-REC", "nome": "Recontratado", "nome_completo": "Recontratado",
+             "cargoId": fun.get("cargoId", ""), "company_id": cA, "email": "recontratado@teste.local"})
+s, uR = convite("recontratado@teste.local", fR.get("id"))
+check("acesso", "Convite normal para funcionário novo", s == 200 and uR.get("id_unico") == fR.get("id_unico"), err(uR) if s >= 400 else "")
+s, uR2 = convite("recontratado@teste.local", fR.get("id"))
+check("acesso", "Reenviar convite (mesmo funcionário, convite não aceito): cria de novo com o mesmo número",
+      s == 200 and uR2.get("id_unico") == fR.get("id_unico"), err(uR2) if s >= 400 else uR2.get("id_unico"))
+call("DELETE", f"/api/collections/users/records/{uR2.get('id')}", tA)
+call("DELETE", f"/api/collections/funcionarios/records/{fR.get('id')}", tA)
+s, fR3 = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-REC2", "nome": "Recontratado", "nome_completo": "Recontratado",
+              "cargoId": fun.get("cargoId", ""), "company_id": cA, "email": "recontratado@teste.local"})
+s, uR3 = convite("recontratado@teste.local", fR3.get("id"))
+check("acesso", "Excluído e recontratado com o mesmo e-mail: acesso criado (antes 'Failed to create record')", s == 200
+      and uR3.get("id_unico") == fR3.get("id_unico") and fR3.get("id_unico") != fR.get("id_unico"), err(uR3) if s >= 400 else uR3.get("id_unico"))
+s, r = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-REC3", "nome": "Outro", "nome_completo": "Outro",
+            "cargoId": fun.get("cargoId", ""), "company_id": cA, "email": "recontratado@teste.local"})
+check("acesso", "Outro funcionário com o mesmo e-mail: mensagem clara", s >= 400 and "Já existe um funcionário com este e-mail" in r.get("message", ""), r.get("message", "")[:80])
+s, r = call("POST", "/api/collections/users/records", tB, {"email": "recontratado@teste.local", "username": "outraempresa", "password": "Senha12345",
+            "passwordConfirm": "Senha12345", "company_id": cB, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Ativo"})
+check("acesso", "E-mail usado em outra empresa: recusado sem dizer qual", s >= 400 and "outra empresa" in r.get("message", ""), r.get("message", "")[:80])
+
 # ------------------------------------------------------------------ login e recuperação de senha
 s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "adminb", "password": "Senha12345"})
 check("telas", "Login pelo nome de usuário", s == 200 and r.get("record", {}).get("company_id") == cB, f"status {s}")

@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import Header from '@/components/Header.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { auditLog, AUDIT_ACTIONS, AUDIT_MODULES } from '@/lib/auditLogger.js';
+import { mensagemErro } from '@/lib/erros.js';
 
 // A collection "users" (login) só aceita estes valores no campo cargo (SelectField
 // definido em pb_migrations/..._add_cargo_to_users.js e expandido em
@@ -161,6 +162,8 @@ const EmployeeManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [criarAcesso, setCriarAcesso] = useState(false);
+  // Na edição: o funcionário já tem acesso ativo? (null = ainda verificando)
+  const [temAcessoAtivo, setTemAcessoAtivo] = useState(null);
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
   const fileInputRef = useRef(null);
@@ -237,20 +240,6 @@ const EmployeeManagement = () => {
   };
 
   // Verifica unicidade do email na collection users (login).
-  const isEmailUniqueInUsers = async (email) => {
-    const clean = String(email || '').trim().toLowerCase();
-    if (!clean) return true;
-    try {
-      const res = await pb.collection('users').getList(1, 1, {
-        filter: `email = "${clean}"`,
-        $autoCancel: false,
-      });
-      return res.totalItems === 0;
-    } catch {
-      return true;
-    }
-  };
-
   const criarAcessoParaFuncionario = async (funcionario, cargoNome) => {
     if (!funcionario.email) {
       toast.error('Não foi possível criar o acesso: o funcionário não tem email cadastrado.');
@@ -261,11 +250,6 @@ const EmployeeManagement = () => {
       return false;
     }
 
-    const emailUnique = await isEmailUniqueInUsers(funcionario.email);
-    if (!emailUnique) {
-      toast.error('Funcionário salvo, mas o acesso não pôde ser criado: já existe um usuário com este email.');
-      return false;
-    }
 
     const descartavel = generateTempPassword();
     const username = await generateUsernameFromName(funcionario.nome);
@@ -309,8 +293,8 @@ const EmployeeManagement = () => {
       return true;
     } catch (error) {
       console.error('Error creating login for employee:', error);
-      const msg = error.data?.message || error.message || 'Erro ao criar acesso do funcionário';
-      toast.error(`Funcionário salvo, mas o acesso ao sistema não pôde ser criado: ${msg}`);
+      const msg = mensagemErro(error, 'Erro ao criar acesso do funcionário');
+      toast.error(`Funcionário salvo, mas o acesso ao sistema não pôde ser criado: ${msg}`, { duration: 12000 });
       return false;
     }
   };
@@ -371,14 +355,6 @@ const EmployeeManagement = () => {
       return;
     }
 
-    // Unicidade do email no login (se for criar acesso)
-    if (criarAcesso && formData.email) {
-      const emailOk = await isEmailUniqueInUsers(formData.email);
-      if (!emailOk) {
-        toast.error('Já existe um usuário com este email. Não é possível criar o acesso.');
-        return;
-      }
-    }
 
     setSubmitting(true);
     try {
@@ -409,6 +385,12 @@ const EmployeeManagement = () => {
       if (editingEmployee) {
         novoFuncionario = await pb.collection('funcionarios').update(editingEmployee.id, fd, { $autoCancel: false });
         toast.success('Funcionário atualizado com sucesso');
+        // Sem acesso ativo: cria o acesso ou reenvia o convite (o servidor
+        // aproveita o e-mail de um convite antigo não aceito).
+        if (criarAcesso) {
+          const cargoNome = cargos.find(c => c.id === formData.cargoId)?.nome;
+          await criarAcessoParaFuncionario(novoFuncionario, cargoNome);
+        }
         await auditLog(
           AUDIT_ACTIONS.RECORD_UPDATED,
           AUDIT_MODULES.EMPLOYEES,
@@ -436,8 +418,7 @@ const EmployeeManagement = () => {
       refreshEmployeeList();
     } catch (error) {
       console.error('Error saving employee:', error);
-      const msg = error.data?.message || error.message || 'Erro ao salvar funcionário';
-      toast.error(msg);
+      toast.error(mensagemErro(error, 'Erro ao salvar funcionário'));
     } finally {
       setSubmitting(false);
     }
@@ -445,6 +426,11 @@ const EmployeeManagement = () => {
 
   const handleEdit = (employee) => {
     setEditingEmployee(employee);
+    setCriarAcesso(false);
+    setTemAcessoAtivo(null);
+    pb.collection('users').getList(1, 1, {
+      filter: `funcionario_id = "${employee.id}" && status = "Ativo"`, $autoCancel: false,
+    }).then((r) => setTemAcessoAtivo(r.totalItems > 0)).catch(() => setTemAcessoAtivo(false));
     setFormData({
       matricula: employee.matricula || '',
       nome: employee.nome || '',
@@ -764,7 +750,10 @@ const EmployeeManagement = () => {
                       className="text-foreground"
                     />
                   </div>
-                  {!editingEmployee && (
+                  {editingEmployee && temAcessoAtivo && (
+                    <p className="text-xs text-muted-foreground">Este funcionário já tem acesso ao sistema.</p>
+                  )}
+                  {(!editingEmployee || temAcessoAtivo === false) && (
                     <div className="flex items-start gap-2 rounded-md border p-3">
                       <Checkbox
                         id="criarAcesso"
@@ -772,7 +761,11 @@ const EmployeeManagement = () => {
                         onCheckedChange={(checked) => setCriarAcesso(checked === true)}
                       />
                       <div>
-                        <Label htmlFor="criarAcesso" className="cursor-pointer">Criar acesso ao sistema (login) para este funcionário</Label>
+                        <Label htmlFor="criarAcesso" className="cursor-pointer">
+                          {editingEmployee
+                            ? 'Criar acesso ao sistema e enviar convite (ou reenviar, se o convite não chegou)'
+                            : 'Criar acesso ao sistema (login) para este funcionário'}
+                        </Label>
                         <p className="text-xs text-muted-foreground mt-1">
                           Requer email preenchido. Será gerado um username automático (baseado no nome) e enviado um
                           convite por email: o próprio funcionário confirma os dados e cria a sua senha pelo link recebido.

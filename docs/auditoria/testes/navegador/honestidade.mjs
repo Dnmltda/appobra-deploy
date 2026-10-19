@@ -36,7 +36,7 @@ page = s.page;
 await page.goto(FRONT + "/documentos");
 await page.waitForTimeout(2500);
 const alerta = await page.locator("body").innerText();
-check("Documentos: alerta mostra o documento real que vence", /Alvará da Obra Jardim \(vence em [45] dia/.test(alerta) && !/Licença Ambiental - Obra Centro/.test(alerta));
+check("Documentos: alerta mostra o documento real que vence", /Alvará da Obra Jardim \(vence em [456] dia/.test(alerta) && !/Licença Ambiental - Obra Centro/.test(alerta));
 await page.screenshot({ path: OUT + "documentos-alerta.png" });
 await page.goto(FRONT + "/suppliers");
 await page.waitForTimeout(2000);

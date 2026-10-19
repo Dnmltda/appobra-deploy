@@ -274,10 +274,9 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     try {
 
-      if (userData.email) {
-        const existingEmail = await pb.collection('users').getFullList({ filter: `email="${userData.email}"`, $autoCancel: false });
-        if (existingEmail.length > 0) throw new Error('Já existe um usuário com este email.');
-      }
+      // E-mail repetido: quem decide é o servidor (pb_hooks/acesso-email-reuso.pb.js),
+      // que reaproveita o e-mail de um acesso excluído/convite não aceito e dá
+      // mensagem clara nos outros casos.
       if (userData.username) {
         const existingUsername = await pb.collection('users').getFullList({ filter: `username="${String(userData.username).trim().toLowerCase()}"`, $autoCancel: false });
         if (existingUsername.length > 0) throw new Error('Já existe um usuário com este nome de usuário.');

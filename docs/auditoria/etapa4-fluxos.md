@@ -173,6 +173,25 @@ depois de repor, quem recebe, material sem mínimo, mínimo aumentado), rodado a
 `estoque-minimo.mjs` → 9/9 (painel, sininho, e-mail, pedir compra sem duplicar). Todos os 14 roteiros OK
 (118 verificações).
 
+## Correção 19/10/2026 — convite de funcionário com e-mail já usado
+
+**Problema (produção):** "Funcionário salvo, mas o acesso ao sistema não pôde ser criado: Failed to create record."
+e o convite não saía. Excluir um acesso só o inativa (para manter o histórico) e ele continuava com o e-mail;
+o PocketBase não aceita dois acessos com o mesmo e-mail. Acontecia ao recadastrar quem foi excluído e ao tentar
+de novo quando o convite não chegou. No reenvio, o número da pessoa (`id_unico`) também colidia
+("Value must be unique" em `company_id`/`id_unico`).
+
+**Correção:**
+- `pb_hooks/acesso-email-reuso.pb.js` (novo): acesso inativo da mesma empresa libera o e-mail (o histórico fica);
+  se era do mesmo funcionário, o número passa para o acesso novo; acesso ativo / outra empresa / outro funcionário
+  com o mesmo e-mail → mensagem clara. Tudo em transação.
+- Tela Funcionários: na edição, quem não tem acesso ativo ganha **"Criar acesso ao sistema e enviar convite (ou
+  reenviar, se o convite não chegou)"**; a mensagem de erro real aparece (antes "Failed to create record.").
+- `lib/erros.js`: "Value must be unique" vira "<campo> já está em uso".
+- Removidas as checagens de e-mail feitas na tela (o servidor decide).
+
+**Testes:** servidor 204/0 (5 novos em `[acesso]`); navegador `funcionario-acesso.mjs` 14/14; todos os 15 roteiros OK.
+
 ## Etapa 4 concluída — o que vem depois
 
 Pelo plano da auditoria, a próxima é a **Etapa 5 — Limpeza**: unificar tabelas duplicadas e campos
