@@ -1164,6 +1164,36 @@
   "detalhe": "9 -> 10"
  },
  {
+  "grupo": "acesso",
+  "teste": "Convite normal para funcionário novo",
+  "ok": true,
+  "detalhe": ""
+ },
+ {
+  "grupo": "acesso",
+  "teste": "Reenviar convite (mesmo funcionário, convite não aceito): cria de novo com o mesmo número",
+  "ok": true,
+  "detalhe": "11"
+ },
+ {
+  "grupo": "acesso",
+  "teste": "Excluído e recontratado com o mesmo e-mail: acesso criado (antes 'Failed to create record')",
+  "ok": true,
+  "detalhe": "12"
+ },
+ {
+  "grupo": "acesso",
+  "teste": "Outro funcionário com o mesmo e-mail: mensagem clara",
+  "ok": true,
+  "detalhe": "Já existe um funcionário com este e-mail (Recontratado). Use outro e-mail."
+ },
+ {
+  "grupo": "acesso",
+  "teste": "E-mail usado em outra empresa: recusado sem dizer qual",
+  "ok": true,
+  "detalhe": "Este e-mail já é usado em outra empresa no APP OBRA. Use outro e-mail."
+ },
+ {
   "grupo": "telas",
   "teste": "Login pelo nome de usuário",
   "ok": true,
