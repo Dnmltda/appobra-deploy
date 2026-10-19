@@ -34,3 +34,6 @@ Cada linha sai como `OK` ou `FALHA`. Resultados guardados:
 - `resultado-antes-etapa1.json` / `resultado-depois-etapa1.json` — Etapa 1 (36/50 → 85/3);
 - `resultado-depois-etapa2.json` — Etapas 1 e 2 (108/0). O teste cria registros e altera o funcionário de teste, então rode sempre num
 `pb_data` novo.
+
+`limite_senha.py` (rodar num `pb_data` novo, com o `navegador/smtp_sink.py` ligado na porta 2525): limite de 2 trocas de senha por
+semana (perfil + "Esqueci minha senha") e troca de senha pelo administrador.
