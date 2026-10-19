@@ -37,6 +37,10 @@ onBootstrap((e) => {
 
     const users = app.findCollectionByNameOrId("users");
     users.passwordAuth.identityFields = ["email", "username"];
+    // Datas das últimas trocas de senha (senha-limite-lib.js).
+    if (!users.fields.getByName("trocas_senha")) {
+      users.fields.add(new TextField({ name: "trocas_senha", hidden: true }));
+    }
     users.resetPasswordTemplate.subject = "Criar nova senha - DNM&LTDA OBRAS";
     users.resetPasswordTemplate.body = lib.corpo(
       "Criar nova senha",
@@ -70,8 +74,14 @@ routerAdd("POST", "/api/custom/esqueci-senha", (e) => {
     // ID curto repetido em empresas diferentes: não dá para saber quem é.
     if (users.length === 1) {
       const u = users[0];
+      const limite = require(`${__hooks}/senha-limite-lib.js`);
       const conviteToken = String(u.get("password_reset_token") || "");
-      if (u.get("status") === "Inativo" && conviteToken && u.get("email")) {
+      if (!limite.podeTrocar(u)) {
+        // Já pediu o limite da semana: não manda nada. A resposta continua a
+        // mesma (não revela se a conta existe); o administrador ainda pode
+        // trocar a senha pela Gestão de Acessos.
+        console.log("[login-e-senha] Limite de trocas de senha atingido:", u.id);
+      } else if (u.get("status") === "Inativo" && conviteToken && u.get("email")) {
         // Convite ainda não aceito: trocar a senha não ativa a conta (quem
         // ativa é o "Criar minha senha" do convite) e a pessoa ficava presa em
         // "Conta inativa". Manda o convite de novo, com link novo de 7 dias.
@@ -80,6 +90,7 @@ routerAdd("POST", "/api/custom/esqueci-senha", (e) => {
           const token = $security.randomString(40);
           u.set("password_reset_token", token);
           u.set("password_reset_expires", new Date(Date.now() + 7 * 86400000).toISOString().replace("T", " "));
+          limite.registrar(u);
           $app.save(u);
           const m = lib.mensagemConvite(u.get("username"), u.get("id_unico"), `${lib.enderecoApp()}/ativar-conta?token=${token}`);
           $app.newMailClient().send(new MailerMessage({
@@ -94,6 +105,8 @@ routerAdd("POST", "/api/custom/esqueci-senha", (e) => {
         }
       } else if (u.get("status") !== "Bloqueado" && u.get("email")) {
         try {
+          limite.registrar(u);
+          $app.save(u);
           $mails.sendRecordPasswordReset($app, u);
         } catch (err) {
           console.log("[login-e-senha] Erro ao enviar e-mail de recuperação:", err);
@@ -104,6 +117,24 @@ routerAdd("POST", "/api/custom/esqueci-senha", (e) => {
   // Mesma resposta sempre: não revela se a conta existe.
   return e.json(200, { success: true });
 });
+
+// Troca de senha pelo perfil (a própria pessoa): no máximo 2 por semana,
+// somando com o "Esqueci minha senha" (senha-limite-lib.js). O administrador
+// trocando a senha de outra pessoa não conta.
+onRecordUpdateRequest((e) => {
+  const body = e.requestInfo().body || {};
+  if (body.password && e.auth && !e.auth.isSuperuser() && e.auth.id === e.record.id) {
+    const limite = require(`${__hooks}/senha-limite-lib.js`);
+    if (!limite.podeTrocar(e.record)) {
+      throw new BadRequestError(
+        `Você já trocou a senha ${limite.LIMITE} vezes nos últimos ${limite.JANELA_DIAS} dias. ` +
+        `Tente de novo a partir de ${limite.liberaEm(e.record)} ou fale com o administrador.`
+      );
+    }
+    limite.registrar(e.record);
+  }
+  e.next();
+}, "users");
 
 routerAdd("POST", "/api/custom/login-id", (e) => {
   const data = new DynamicModel({ id_unico: "", password: "" });
