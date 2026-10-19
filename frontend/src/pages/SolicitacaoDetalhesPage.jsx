@@ -412,6 +412,23 @@ const FluxoMaterial = ({
   const st = solicitacao.status;
   const [recusando, setRecusando] = useState(false);
   const [motivo, setMotivo] = useState("");
+  // De qual estoque sai: geral ou o da obra do pedido (quem separa escolhe).
+  const obraPedido = solicitacao.obra_id || "";
+  const [saldoObra, setSaldoObra] = useState(null); // { material_id: quantidade }
+  const [origem, setOrigem] = useState("geral");
+  useEffect(() => {
+    if (!(st === "Em separação" && estoque && obraPedido)) return;
+    pb.collection("estoque_obra").getFullList({ filter: `obra_id = "${obraPedido}"`, $autoCancel: false })
+      .then((rs) => {
+        const map = Object.fromEntries(rs.map((r) => [r.material_id, Number(r.quantidade || 0)]));
+        setSaldoObra(map);
+        const temTudo = itens.length > 0 && itens.every((it) => (map[it.material_id] || 0) >= Number(it.quantidade));
+        setOrigem(temTudo ? "obra" : "geral");
+      })
+      .catch(() => setSaldoObra({}));
+  }, [st, estoque, obraPedido, itens]);
+  const faltaNaObra = saldoObra ? itens.filter((it) => (saldoObra[it.material_id] || 0) < Number(it.quantidade)) : [];
+  const nomeObraPedido = solicitacao.expand?.obra_id?.nome || "obra";
   const atual = passoAtual(st);
   const encerrada = ["Cancelada", "Rejeitada"].includes(st);
   return (
@@ -479,8 +496,33 @@ const FluxoMaterial = ({
             {st === "Aprovada" && estoque && (
               <Button disabled={mudando} onClick={() => avancar("Em separação", "Separação iniciada")}><Package className="w-4 h-4 mr-2" />Começar a separar</Button>
             )}
+            {st === "Em separação" && estoque && obraPedido && (
+              <div className="w-full space-y-1">
+                <Label htmlFor="origem-estoque">Separar de qual estoque</Label>
+                <Select value={origem} onValueChange={setOrigem}>
+                  <SelectTrigger id="origem-estoque" aria-label="Separar de qual estoque" className="sm:w-80"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="geral">Estoque geral</SelectItem>
+                    <SelectItem value="obra">Estoque da obra {nomeObraPedido}</SelectItem>
+                  </SelectContent>
+                </Select>
+                {origem === "obra" && faltaNaObra.length > 0 && (
+                  <p className="text-xs text-amber-700">
+                    Falta no estoque da obra: {faltaNaObra.map((it) => `${it.expand?.material_id?.name || "material"} (tem ${saldoObra?.[it.material_id] || 0})`).join(", ")}.
+                  </p>
+                )}
+              </div>
+            )}
             {st === "Em separação" && estoque && (
-              <Button disabled={mudando} onClick={() => avancar("Pronto para retirada", "Material separado. Quem pediu foi avisado.")}><Package className="w-4 h-4 mr-2" />Material separado, avisar quem pediu</Button>
+              <Button disabled={mudando} onClick={() => avancar("Pronto para retirada", "Material separado. Quem pediu foi avisado.",
+                { estoque_obra_id: obraPedido && origem === "obra" ? obraPedido : "" })}>
+                <Package className="w-4 h-4 mr-2" />Material separado, avisar quem pediu
+              </Button>
+            )}
+            {["Pronto para retirada", "Concluída"].includes(st) && obraPedido && (
+              <p className="w-full text-sm text-muted-foreground">
+                Sai do {solicitacao.estoque_obra_id ? `estoque da obra ${nomeObraPedido}` : "estoque geral"}.
+              </p>
             )}
             {st === "Pronto para retirada" && podeAceitar && !recusando && (
               confirmarEntrega ? (

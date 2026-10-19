@@ -39,12 +39,20 @@
   Diego disser que a pessoa não volta mais (`pb_hooks/id-lib.js`).
 - Testes: servidor 224/0 (`audit_tests.py`), navegador `fluxo-material.mjs` 15/0, `funcionario-acesso.mjs` 20/0.
 
+- **Estoque geral + estoque por obra**: a compra entra no estoque geral (`materiais.quantity_in_stock`, como antes)
+  e a tela **Estoque por Obra** (`/estoque-obras`) transfere para cada obra, registra consumo e devolve ao geral.
+  Saldo de cada obra na coleção `estoque_obra` (só o servidor grava, `pb_hooks/estoque-obra.pb.js` +
+  `estoque-lib.js`). Tipos novos: "Transferência para Obra" e "Devolução da Obra"; qualquer movimentação com
+  `estoque_obra_id` mexe no estoque daquela obra. No pedido de material, quem separa escolhe "Separar de qual
+  estoque" (vem marcado o da obra quando ela tem tudo). Alerta de estoque mínimo continua só no geral.
+  Testes: servidor 236/0, `estoque-obra.mjs` 12/0.
+
+**Feito em produção depois (com o sim do Diego, 19/10 22:58 UTC)**
+- dn-moraes passou para **02** (acesso e funcionário). Apagados de vez os testes 08/09 e o acesso de teste 08; o
+  cadastro antigo arquivado do dn-moraes ficou com `ARQ-w0o3c940sf1are9` (guarda histórico de teste) e soltou o 07.
+  Backup: `/data/backups/antes-id02-20261019-225828.db`.
+
 **Pendente / ideias do Diego**
-- dn-moraes ficou **10** em produção porque 07 (dn-moraes antigo, arquivado), 08 e 09 (testes "TESTE DIAGNOSTICO
-  APAGAR") e um acesso de teste 08 ainda ocupam números. Para virar 02: backup, apagar esses 4 de vez e
-  renumerar o acesso e o funcionário dele (só com o sim do Diego).
-- **Estoque geral + estoque por obra** (comprar tudo no geral e transferir para cada obra): muda a base do saldo;
-  PR separado depois deste.
 - Câmera no almoxarifado: foto ou vídeo curto na entrega do material (futuro).
 - Hierarquia: já existe em todos os cargos, sem limite por nível; pergunta aberta se cargos de obra também usam
   Júnior/Pleno/Sênior.

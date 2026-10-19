@@ -36,7 +36,8 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `divergencia.mjs` | conferir estoque: diferença com motivo, aguarda autorização, administrador autoriza |
 | `ocorrencias.mjs` | ocorrência com foto e gravidade alta, e-mail para a chefia, resolver com o que foi feito |
 | `estoque-minimo.mjs` | material chega no mínimo: painel, sininho, e-mail, pedir compra sem duplicar |
-| `funcionario-acesso.mjs` | convite de funcionário: novo, recadastrado com o mesmo e-mail, criar acesso/reenviar convite na edição |
+| `funcionario-acesso.mjs` | convite de funcionário: novo, recadastrado com o mesmo e-mail, criar acesso/reenviar convite na edição; ID automático (sem campo, quem volta recupera o número, gente nova não pega número de quem saiu) |
 | `convite-esqueci.mjs` | convite pendente + "Esqueci minha senha": reenvia o convite, ativa e entra; excluído não reativa |
 | `usuario.mjs` | aba ID aceita "1", aba Usuário sem diferenciar maiúscula, pessoa troca o próprio usuário no perfil |
 | `fluxo-material.mjs` | pedido de material: pedir → estoque confirma que recebeu → separa → pronto para retirada → quem pediu recusa (material errado) ou aceita (baixa no estoque, vai para o saldo dele) → registra o uso na obra → Materiais por Obra |
+| `estoque-obra.mjs` | estoque geral + estoque por obra: transferir do geral, consumir e devolver na tela Estoque por Obra; pedido de material separado do estoque da obra; gasto em Materiais por Obra |

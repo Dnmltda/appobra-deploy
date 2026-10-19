@@ -24,6 +24,7 @@ import {
   Settings, 
   ShieldCheck,
   Siren,
+  Warehouse,
 } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { ehAdmin, podeAcessar } from '@/lib/permissoes.js';
@@ -54,6 +55,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     { id: 'ocorrencias', path: '/ocorrencias', label: 'Ocorrências', icon: Siren },
     { id: 'materiais', path: '/materiais', label: 'Materiais', icon: Package },
     { id: 'estoque', path: '/estoque', label: 'Estoque', icon: Boxes },
+    { id: 'estoque_obras', path: '/estoque-obras', label: 'Estoque por Obra', icon: Warehouse },
     { id: 'movimentacoes', path: '/movimentacoes', label: 'Movimentações', icon: ArrowRightLeft },
     { id: 'saldo_funcionario', path: '/saldo-funcionario', label: 'Saldo por Funcionário', icon: PackageCheck },
     { id: 'materiais_obra', path: '/materiais-por-obra', label: 'Materiais por Obra', icon: Construction },
@@ -96,6 +98,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     solicitacoes: 'FLUXO_COMPRA',
     compras: 'FLUXO_COMPRA',
     estoque: 'SUPRIMENTOS',
+    estoque_obras: 'SUPRIMENTOS',
     saldo_funcionario: 'SUPRIMENTOS',
     materiais_obra: 'SUPRIMENTOS',
     movimentacoes: 'SUPRIMENTOS',

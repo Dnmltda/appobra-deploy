@@ -545,6 +545,55 @@ s_s, sol2 = call("GET", f"/api/collections/solicitacoes/records/{so2['id']}", tA
 check("fluxo", "Aceite sem saldo é recusado e nada muda", s >= 400 and "Saldo insuficiente" in r.get("message", "") and m3.get("quantity_in_stock") == 6
       and sol2.get("status") == "Pronto para retirada", r.get("message", "")[:90])
 
+# ------------------------------------------------------------------ estoque geral + estoque por obra (19/10/2026)
+s, me = call("POST", "/api/collections/materiais/records", tA, {"name": "Tijolo 8 furos", "code": "EOB-1", "unit": "un",
+             "quantity_in_stock": 100, "unit_cost": 1.5, "status": "active", "company_id": cA})
+def geral():
+    return call("GET", f"/api/collections/materiais/records/{me.get('id')}", tA)[1].get("quantity_in_stock")
+def na_obra(tok=tA):
+    s, r = call("GET", "/api/collections/estoque_obra/records?filter=" + q(f'obra_id="{obra.get("id")}" && material_id="{me.get("id")}"'), tok)
+    return (r.get("items") or [{}])[0].get("quantidade", 0)
+def mov(tipo, qtd, **extra):
+    body = {"company_id": cA, "material_id": me.get("id"), "tipo": tipo, "quantidade": qtd, "status": "Aprovado"}
+    body.update(extra)
+    return call("POST", "/api/collections/movimentacoes/records", tA, body)
+s, t1 = mov("Transferência para Obra", 40, estoque_obra_id=obra.get("id"), obra_id=obra.get("id"))
+check("estoque_obra", "Transferir 40 do geral para a obra: geral 100 -> 60, obra 0 -> 40", s == 200 and geral() == 60 and na_obra() == 40,
+      err(t1) if s >= 400 else f"geral {geral()} obra {na_obra()}")
+s, r = mov("Transferência para Obra", 5)
+check("estoque_obra", "Transferência sem obra é recusada", s >= 400 and "obra" in r.get("message", ""), r.get("message", "")[:80])
+s, r = mov("Transferência para Obra", 500, estoque_obra_id=obra.get("id"))
+check("estoque_obra", "Transferir mais do que tem no geral é recusado", s >= 400 and "insuficiente" in r.get("message", "") and geral() == 60, r.get("message", "")[:80])
+s, r = mov("Consumo de Obra", 15, estoque_obra_id=obra.get("id"), obra_id=obra.get("id"))
+check("estoque_obra", "Consumo da obra sai do estoque da obra (40 -> 25) e o geral não muda (60)", s == 200 and na_obra() == 25 and geral() == 60,
+      err(r) if s >= 400 else f"geral {geral()} obra {na_obra()}")
+s, r = mov("Consumo de Obra", 30, estoque_obra_id=obra.get("id"))
+check("estoque_obra", "Consumo maior do que o estoque da obra é recusado", s >= 400 and "estoque da obra" in r.get("message", "") and na_obra() == 25, r.get("message", "")[:90])
+s, r = mov("Inventário", 22, estoque_obra_id=obra.get("id"), motivo_divergencia="Contagem diferente do sistema")
+check("estoque_obra", "Inventário da obra: saldo da obra passa a ser 22, geral não muda", s == 200 and na_obra() == 22 and geral() == 60,
+      err(r) if s >= 400 else f"geral {geral()} obra {na_obra()}")
+s, dv = mov("Devolução da Obra", 2, estoque_obra_id=obra.get("id"))
+check("estoque_obra", "Devolver 2 da obra ao geral: obra 22 -> 20, geral 60 -> 62", s == 200 and na_obra() == 20 and geral() == 62,
+      err(dv) if s >= 400 else f"geral {geral()} obra {na_obra()}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{dv.get('id')}", tA, {"status": "Cancelado", "motivo_cancelamento": "teste"})
+check("estoque_obra", "Cancelar a devolução estorna os dois estoques (obra 20, geral 60)", s == 200 and na_obra() == 22 and geral() == 60,
+      err(r) if s >= 400 else f"geral {geral()} obra {na_obra()}")
+s, r = call("POST", "/api/collections/estoque_obra/records", tA, {"company_id": cA, "obra_id": obra.get("id"), "material_id": me.get("id"), "quantidade": 999})
+check("estoque_obra", "Ninguém grava o estoque da obra direto pela API", s >= 400, f"status {s}")
+s, r = call("GET", "/api/collections/estoque_obra/records", tB)
+check("isolamento", "Outra empresa não vê o estoque das obras", s == 200 and r.get("totalItems") == 0, f"{r.get('totalItems')}")
+check("estoque_obra", "Funcionário da empresa vê o estoque da obra", na_obra(tF) == 22)
+# pedido de material separado do estoque da obra
+s, so3 = call("POST", "/api/collections/solicitacoes/records", tF, {"company_id": cA, "numero_solicitacao": "SOL-EOB-1", "tipo": "Material",
+              "solicitante_id": uF["id"], "descricao": "tijolo da obra", "status": "Aberta", "obra_id": obra.get("id")})
+call("POST", "/api/collections/solicitacoes_itens/records", tF, {"solicitacao_id": so3.get("id"), "material_id": me.get("id"), "quantidade": 10})
+for st in ("Aprovada", "Em separação"):
+    call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tA, {"status": st})
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tA, {"status": "Pronto para retirada", "estoque_obra_id": obra.get("id")})
+s2, r2 = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tF, {"status": "Concluída", "estoque_obra_id": ""})
+check("estoque_obra", "Pedido separado do estoque da obra: no aceite sai da obra (22 -> 12), geral fica 60", s == 200 and s2 == 200
+      and na_obra() == 12 and geral() == 60, (err(r) if s >= 400 else err(r2) if s2 >= 400 else f"geral {geral()} obra {na_obra()}"))
+
 # ------------------------------------------------------------------ saldo do funcionário e uso na obra (19/10/2026)
 cargoU = (call("GET", "/api/collections/cargos/records?perPage=1", tA)[1].get("items") or [{}])[0].get("id", "")
 s, funU = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-USO", "nome": "Eletricista do Fio",

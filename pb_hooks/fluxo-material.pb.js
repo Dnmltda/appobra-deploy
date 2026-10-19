@@ -149,6 +149,11 @@ onRecordUpdateRequest((e) => {
       r.set("retirada_recusa_motivo", "");
     }
   }
+  // De qual estoque sai (geral ou da obra): quem separa escolhe ao marcar
+  // "Pronto para retirada"; depois disso ninguém troca.
+  if (a && !a.isSuperuser() && !(antes !== depois && depois === "Pronto para retirada")) {
+    r.set("estoque_obra_id", r.original().get("estoque_obra_id"));
+  }
   e.app.runInTransaction((txApp) => {
     e.app = txApp;
     e.next();
@@ -207,7 +212,8 @@ onRecordUpdateExecute((e) => {
       mov.set("valor_unitario", mat.get("unit_cost") || 0);
       mov.set("valor_total", Number(((mat.get("unit_cost") || 0) * it.get("quantidade")).toFixed(2)));
       mov.set("obra_id", r.get("obra_id") || "");
-      mov.set("origem", "Almoxarifado");
+      mov.set("estoque_obra_id", r.get("estoque_obra_id") || "");
+      mov.set("origem", r.get("estoque_obra_id") ? "Estoque da obra" : "Almoxarifado");
       mov.set("destino", funcId || !r.get("obra_id") ? "Funcionário" : "Obra");
       mov.set("funcionario_id", funcId);
       mov.set("solicitante_id", r.get("solicitante_id") || "");
