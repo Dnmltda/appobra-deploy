@@ -18,6 +18,13 @@ function proximoIdDaEmpresa(app, companyId) {
   return String(max + 1).padStart(2, "0");
 }
 
+// Mesma pessoa na outra coleção (para dar o MESMO id_unico): por id direto
+// (funcionario_id, sempre confiável) ou, na falta dele, pelo e-mail — mas SÓ
+// entre candidatos que ainda estão ativos. Sem isso, um cadastro antigo já
+// excluído "trava" o número pra sempre: o e-mail bate, devolve o id_unico
+// dele, e esse número nunca mais pode ser salvo por ninguém, porque o
+// registro excluído continua ocupando o lugar no índice único mesmo
+// escondido da tela. Corrigido em 19/10/2026.
 function idDaMesmaPessoa(app, outraColecao, companyId, email, idDireto) {
   try {
     if (idDireto) {
@@ -27,10 +34,15 @@ function idDaMesmaPessoa(app, outraColecao, companyId, email, idDireto) {
   } catch (_) {}
   if (!email) return "";
   try {
-    const r = app.findRecordsByFilter(outraColecao, "company_id = {:c} && email = {:e}", "", 1, 0,
+    const candidatos = app.findRecordsByFilter(outraColecao, "company_id = {:c} && email = {:e}", "", 10, 0,
       { c: companyId, e: String(email).toLowerCase() });
-    const v = r.length ? String(r[0].get("id_unico") || "") : "";
-    if (/^\d+$/.test(v)) return v;
+    for (let i = 0; i < candidatos.length; i++) {
+      const rec = candidatos[i];
+      const arquivado = !!rec.getString("deleted_at") || rec.get("is_active") === false;
+      if (arquivado) continue;
+      const v = String(rec.get("id_unico") || "");
+      if (/^\d+$/.test(v)) return v;
+    }
   } catch (_) {}
   return "";
 }
