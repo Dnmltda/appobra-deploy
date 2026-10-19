@@ -145,11 +145,16 @@ export const AuthProvider = ({ children }) => {
       'E-mail ou senha incorretos.',
     );
 
+  // Pelo servidor: acha o usuário sem diferenciar maiúscula (contas antigas
+  // gravadas como "Diego") — pb_hooks/login-e-senha.pb.js.
   const loginWithUsername = (username, password) =>
-    entrar(
-      () => pb.collection('users').authWithPassword(String(username).trim().toLowerCase(), password, { $autoCancel: false }),
-      'Usuário ou senha incorretos.',
-    );
+    entrar(async () => {
+      const r = await pb.send('/api/custom/login-usuario', {
+        method: 'POST', body: { username: String(username).trim().toLowerCase(), password }, $autoCancel: false,
+      });
+      pb.authStore.save(r.token, r.record);
+      return r;
+    }, 'Usuário ou senha incorretos.');
 
   // O ID curto (01, 02...) é por empresa; o servidor testa a senha em cada
   // usuário com aquele ID (pb_hooks/login-e-senha.pb.js).
@@ -187,10 +192,10 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
-  const activateInvite = async (token, password, passwordConfirm) => {
+  const activateInvite = async (token, password, passwordConfirm, username) => {
     return await pb.send('/api/custom/activate-invite', {
       method: 'POST',
-      body: { token, password, passwordConfirm: passwordConfirm || password },
+      body: { token, password, passwordConfirm: passwordConfirm || password, username: username || '' },
       $autoCancel: false
     });
   };

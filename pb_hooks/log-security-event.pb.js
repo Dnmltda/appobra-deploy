@@ -254,12 +254,25 @@ onBootstrap((e) => {
 // — mesmo id_unico pode repetir entre empresas diferentes, mas
 // nunca dentro da mesma empresa. Roda a cada início do servidor;
 // é IDEMPOTENTE.
+//
+// Ajuste 19/10/2026: seguranca-etapa1.pb.js deixa este índice PARCIAL
+// (... WHERE deleted_at = ''), para funcionário excluído não travar o
+// número. Este hook regravava a versão sem o WHERE a cada boot; como a
+// ordem dos onBootstrap entre arquivos é aleatória, quando existia um
+// excluído e um ativo com o mesmo número o boot logava
+// "UNIQUE constraint failed: funcionarios.company_id, funcionarios.id_unico"
+// (a troca era desfeita e o índice parcial continuava). Agora só age se o
+// índice ainda for o antigo, sem company_id, e já cria a versão parcial.
 onBootstrap((e) => {
   e.next();
   try {
     const funcionarios = $app.findCollectionByNameOrId("funcionarios");
-    funcionarios.indexes = funcionarios.indexes.filter((idx) => !idx.includes("idx_funcionarios_id_unico"));
-    funcionarios.indexes.push("CREATE UNIQUE INDEX idx_funcionarios_id_unico ON funcionarios (company_id, id_unico)");
+    const atuais = [];
+    for (let i = 0; i < funcionarios.indexes.length; i++) atuais.push(String(funcionarios.indexes[i]));
+    const atual = atuais.find((idx) => idx.includes("idx_funcionarios_id_unico"));
+    if (atual && atual.includes("company_id")) return; // já é por empresa
+    funcionarios.indexes = atuais.filter((idx) => !idx.includes("idx_funcionarios_id_unico"));
+    funcionarios.indexes.push("CREATE UNIQUE INDEX idx_funcionarios_id_unico ON funcionarios (company_id, id_unico) WHERE deleted_at = ''");
     $app.save(funcionarios);
     console.log("[fix-funcionarios-id-unico] indice agora e por empresa.");
   } catch (err) {

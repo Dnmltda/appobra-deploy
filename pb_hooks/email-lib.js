@@ -42,4 +42,36 @@ function corpo(titulo, paragrafos, frase, link, rodape) {
     "</div>";
 }
 
-module.exports = { REMETENTE, enderecoApp, esc, botao, corpo };
+// Convite de acesso (send-welcome-email.pb.js e "Esqueci minha senha" de quem
+// ainda não aceitou o convite, em login-e-senha.pb.js).
+function mensagemConvite(username, idUnico, link) {
+  return {
+    subject: "Seu acesso ao APP OBRA - DNM&LTDA OBRAS",
+    text:
+`Olá,
+
+Um acesso ao APP OBRA foi criado para você.
+Usuário: ${username} (você pode trocar ao criar a senha)${idUnico ? `\nSeu ID: ${idUnico}` : ""}
+
+Para começar, abra o endereço abaixo, confira seus dados e crie a sua senha:
+${link}
+
+O convite vale por 7 dias. Se tiver dúvidas, fale com o administrador da sua empresa.
+
+Atenciosamente,
+Equipe DNM&LTDA OBRAS`,
+    html: corpo(
+      "Seu acesso ao APP OBRA",
+      '<p style="margin:0 0 12px">Olá,</p>' +
+        '<p style="margin:0 0 12px">Um acesso ao APP OBRA foi criado para você.</p>' +
+        `<p style="margin:0 0 16px">Usuário: <strong>${esc(username)}</strong> (você pode trocar ao criar a senha)` +
+        (idUnico ? `<br>Seu ID: <strong>${esc(idUnico)}</strong>` : "") + "</p>" +
+        '<p style="margin:0 0 8px">Toque no botão para conferir seus dados e criar a sua senha:</p>',
+      "Criar minha senha",
+      link,
+      "O convite vale por 7 dias. Se tiver dúvidas, fale com o administrador da sua empresa."
+    ),
+  };
+}
+
+module.exports = { REMETENTE, enderecoApp, esc, botao, corpo, mensagemConvite };

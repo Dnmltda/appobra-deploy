@@ -1,6 +1,6 @@
 # APP OBRA — Retomada do projeto (Claude Code → Cowork)
 
-> Versão atualizada pelo **Claude Code em 18/10/2026**, seguindo o protocolo de transição. A versão anterior
+> Versão atualizada pelo **Claude Code em 18/10/2026 e 19/10/2026 (seção 0)**, seguindo o protocolo de transição. A versão anterior
 > (Cowork → Code) continua valendo no que não foi alterado aqui — as seções 4 a 7 dela foram mantidas
 > resumidas no fim. Leia o TL;DR e a seção 2 antes de mexer em produção.
 
@@ -15,6 +15,55 @@
 - **Próximo passo é da Cowork: publicar.** Roteiro e prompt prontos em **`docs/PUBLICAR-COWORK.md`**
   (snapshot → Brevo → Secrets → merge → deploy → logs → Hostinger → teste rápido).
 - Depois de publicado e usado alguns dias, o Code segue para a **Etapa 5 (limpeza)**.
+
+## 0. Atualização 19/10/2026 (Claude Code) — o que aconteceu depois da primeira versão deste documento
+
+**Publicado em produção**
+- Etapas 1 a 4 (PR #3) e as correções abaixo (PRs #4 e #5) estão no ar: **deploy v16** no Fly feito pela Cowork
+  logo após o merge do PR #5 ("Released v16 ... Complete, took 71s"). Conferido de fora: as telas servidas pelo
+  Fly são as da `main` e `/api/health` responde.
+- **PR #4** — `pb_hooks/id-lib.js`: ao procurar "a mesma pessoa" pelo e-mail, ignora cadastros excluídos
+  (`deleted_at` lido com `getString()`, `is_active = false`); antes reaproveitava o `id_unico` de um excluído e
+  dava "Value must be unique" em `company_id`/`id_unico`. `.zip` regerado.
+- **PR #5** — `pb_hooks/acesso-email-reuso.pb.js` (novo): criar acesso com e-mail que já esteve num acesso
+  excluído/convite não aceito libera o e-mail do antigo (vira `arquivado.<id>@arquivado.invalid`) e, se era do
+  mesmo funcionário, passa o número para o novo; mensagens claras para acesso ativo, outra empresa e outro
+  funcionário com o mesmo e-mail. Tela Funcionários: na edição, "Criar acesso ao sistema e enviar convite (ou
+  reenviar…)"; erro real na tela ("<campo> já está em uso").
+
+**Login do Diego (`dn-moraes@hotmail.com`) — causa raiz encontrada (PR #6)**
+- Sintoma: convite e "Esqueci minha senha" chegam (no spam do Hotmail), a senha é trocada, mas o login diz
+  "Conta inativa".
+- Causa: o convite cria o acesso como **Inativo**; quem ativa é o botão **"Criar minha senha"** do convite
+  (`activate-invite.pb.js`). O "Esqueci minha senha" só trocava a senha — a conta continuava Inativa.
+- Correção (PR #6): para convite pendente, "Esqueci minha senha" **reenvia o convite** (link novo de 7 dias; o
+  anterior deixa de valer); excluir um acesso apaga o convite pendente (não reativa); a tela de login explica o
+  que fazer; desligado o hook antigo `send-password-reset.pb.js` (mandaria um 2º e-mail errado). Teste
+  `testes/navegador/convite-esqueci.mjs` 9/9.
+- Para o Diego entrar **antes** do PR #6: abrir o e-mail "Seu acesso ao APP OBRA" (spam) e usar "Criar minha
+  senha" (o link do convite continua valendo 7 dias; o "Esqueci minha senha" não o invalidou). Depois do PR #6
+  publicado, basta usar "Esqueci minha senha" que chega o convite.
+
+**Erro no boot do v16 — `[fix-funcionarios-id-unico] ... UNIQUE constraint failed` (explicado e corrigido no PR #6)**
+- Dois hooks disputavam o mesmo índice, em ordem aleatória a cada boot: `seguranca-etapa1.pb.js` deixa
+  `idx_funcionarios_id_unico` **parcial** (`WHERE deleted_at = ''`, de propósito: excluído não trava o número) e
+  o hook antigo em `log-security-event.pb.js` tentava trocar pela versão sem o `WHERE`. Com um funcionário
+  excluído e um ativo com o mesmo número, a troca falha e é desfeita — **a proteção (índice parcial) continua**;
+  o erro era só barulho. Ele também mostra que existe em produção um funcionário **excluído** com ID "10"
+  (a API esconde os excluídos; por isso a Cowork só via um).
+- Correção: o hook antigo só age se o índice ainda não for por empresa. Reproduzido localmente: versão antiga
+  6/6 boots com o erro; nova, 0/5, índice parcial mantido.
+- Consulta só-leitura para conferir no banco (via `fly ssh console`): ver a mensagem do Code de 19/10 —
+  `sqlite3 -readonly /data/data.db` com as seções users / funcionarios / IDs repetidos / índices.
+
+**Pendente**
+- Roteiro de testes manuais (9 itens, `docs/PUBLICAR-COWORK.md` passo 9) — fazer com o Diego, item por item.
+- Remetente dos e-mails: `dnmltda@hotmail.com` cai no spam do Hotmail; o profissional é domínio próprio
+  autenticado no Brevo e `SMTP_SENDER_EMAIL` nos Secrets do Fly.
+- Hierarquia (Júnior/Pleno/Sênior) "sumiu" segundo o Diego: localmente aparece no cadastro e na lista de
+  Funcionários; falta ele dizer em qual tela.
+- O Code não tem acesso ao Fly nem à Brevo nesta sessão: diagnósticos em produção dependem do Diego/Cowork
+  (ou de um `FLY_API_TOKEN` de leitura nas variáveis do ambiente do Claude Code).
 
 ## 1. Papéis (sem mudança)
 

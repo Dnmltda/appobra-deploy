@@ -128,7 +128,10 @@ export const getSafeAuthErrorMessage = (error) => {
     return error.message; // ID repetido entre empresas: orienta a usar e-mail ou usuário
   }
   if (msg.includes('inativo')) {
-    return 'Conta inativa. Entre em contato com o administrador do sistema.';
+    // Só aparece depois da senha certa (não revela se a conta existe).
+    return 'Sua conta ainda não está ativa. Se você recebeu o convite por e-mail (veja também o spam), toque em '
+      + '"Criar minha senha". Não achou o convite? Use "Esqueci minha senha" que enviamos de novo. '
+      + 'Se a conta foi desativada, fale com o administrador.';
   }
   if (msg.includes('tentativas') || msg.includes('restantes')) {
     return error.message; // mensagens de tentativas restantes são informativas

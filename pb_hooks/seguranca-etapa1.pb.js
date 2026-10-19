@@ -303,6 +303,11 @@ onBootstrap((e) => {
       ` || (@request.auth.id = id && ${protegidos})` +
       ` || ${SEG_MASTER}`;
     col.deleteRule = `(${SEG_ADMIN} && ${SEG_SAME}) || ${SEG_MASTER}`;
+    // Administrador troca a senha de quem é da sua empresa sem saber a senha
+    // atual (Gestão de Acessos: "Resetar senha"). Sem manageRule o PocketBase
+    // exigia oldPassword e o reset falhava. A conta Master fica de fora.
+    col.manageRule =
+      `(${SEG_ADMIN} && ${SEG_SAME} && email != "dnmltda@hotmail.com") || ${SEG_MASTER}`;
     // Os tokens NÃO podem ser "hidden": campo hidden não é gravável pela API,
     // e a tela de convite grava o token ao criar o acesso. Eles ficam
     // visíveis no schema e são escondidos pelos hooks no fim deste arquivo.
@@ -453,7 +458,13 @@ onRecordDeleteRequest((e) => {
   };
   if (col.name !== "users") r.set("deleted_at", new Date().toISOString().replace("T", " "));
   if (INATIVO[col.name]) r.set("status", INATIVO[col.name]);
-  if (col.name === "users") r.set("is_active", false);
+  if (col.name === "users") {
+    r.set("is_active", false);
+    // Convite pendente deixa de valer: quem foi excluído não reativa a conta
+    // pelo link antigo nem pelo "Esqueci minha senha".
+    r.set("password_reset_token", "");
+    r.set("password_reset_expires", "");
+  }
   $app.saveNoValidate(r);
   return e.noContent(204);
 }, "materiais", "funcionarios", "empresas", "epis", "equipamentos", "fornecedores", "clientes", "veiculos",

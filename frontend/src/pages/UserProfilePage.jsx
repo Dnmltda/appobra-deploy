@@ -21,7 +21,8 @@ const UserProfilePage = () => {
   const [formData, setFormData] = useState({
     name: currentUser?.name || '',
     telefone: currentUser?.telefone || '',
-    email: currentUser?.email || ''
+    email: currentUser?.email || '',
+    username: currentUser?.username || ''
   });
 
   const handleSave = async () => {
@@ -31,7 +32,8 @@ const UserProfilePage = () => {
       toast.success('Perfil atualizado com sucesso');
       setIsEditing(false);
     } catch (error) {
-      toast.error('Erro ao atualizar perfil');
+      // Ex.: nome de usuário já em uso ou inválido (mensagem do servidor).
+      toast.error(error?.response?.message || error?.data?.message || 'Erro ao atualizar perfil');
     } finally {
       setLoading(false);
     }
@@ -226,7 +228,21 @@ const UserProfilePage = () => {
                       <Shield className="w-4 h-4 text-muted-foreground" />
                       Nome de Usuário
                     </Label>
-                    <p className="text-foreground py-2">{currentUser?.username || '-'}</p>
+                    {isEditing ? (
+                      <>
+                        <Input
+                          value={formData.username}
+                          onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s/g, '') })}
+                          autoComplete="username"
+                          className="bg-background"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Usado na aba "Usuário" do login. Letras sem acento, números, ponto, hífen ou sublinhado.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-foreground py-2">{currentUser?.username || '-'}</p>
+                    )}
                   </div>
                 </div>
               </CardContent>

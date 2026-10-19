@@ -25,32 +25,7 @@ onRecordAfterCreateSuccess((e) => {
     let subject, text, html;
 
     if (inviteToken) {
-      const link = `${base}/ativar-conta?token=${inviteToken}`;
-      subject = "Seu acesso ao APP OBRA - DNM&LTDA OBRAS";
-      text =
-`Olá,
-
-Um acesso ao APP OBRA foi criado para você.
-Usuário: ${username}${idUnico ? `\nSeu ID: ${idUnico}` : ""}
-
-Para começar, abra o endereço abaixo, confira seus dados e crie a sua senha:
-${link}
-
-O convite vale por 7 dias. Se tiver dúvidas, fale com o administrador da sua empresa.
-
-Atenciosamente,
-Equipe DNM&LTDA OBRAS`;
-      html = lib.corpo(
-        "Seu acesso ao APP OBRA",
-        '<p style="margin:0 0 12px">Olá,</p>' +
-          '<p style="margin:0 0 12px">Um acesso ao APP OBRA foi criado para você.</p>' +
-          `<p style="margin:0 0 16px">Usuário: <strong>${lib.esc(username)}</strong>` +
-          (idUnico ? `<br>Seu ID: <strong>${lib.esc(idUnico)}</strong>` : "") + "</p>" +
-          '<p style="margin:0 0 8px">Toque no botão para conferir seus dados e criar a sua senha:</p>',
-        "Criar minha senha",
-        link,
-        "O convite vale por 7 dias. Se tiver dúvidas, fale com o administrador da sua empresa."
-      );
+      ({ subject, text, html } = lib.mensagemConvite(username, idUnico, `${base}/ativar-conta?token=${inviteToken}`));
     } else {
       const link = `${base}/login`;
       subject = "Bem-vindo ao APP OBRA - DNM&LTDA OBRAS";
