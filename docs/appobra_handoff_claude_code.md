@@ -47,10 +47,17 @@
   estoque" (vem marcado o da obra quando ela tem tudo). Alerta de estoque mínimo continua só no geral.
   Testes: servidor 236/0, `estoque-obra.mjs` 12/0.
 
+- **Cor do material por lista** (`frontend/src/lib/coresMaterial.js`, campo `materiais.cor`): fio nas cores da
+  norma, tubo pelas linhas, tinta pelas cores comuns, lista geral no resto. A cor vai no fim do nome ("Fio 2,5 mm
+  Azul claro") e do código. Categoria virou lista; código / SKU é opcional (o sistema gera). Diego quer o máximo
+  de "escolher" e o mínimo de "digitar".
+
 **Feito em produção depois (com o sim do Diego, 19/10 22:58 UTC)**
 - dn-moraes passou para **02** (acesso e funcionário). Apagados de vez os testes 08/09 e o acesso de teste 08; o
   cadastro antigo arquivado do dn-moraes ficou com `ARQ-w0o3c940sf1are9` (guarda histórico de teste) e soltou o 07.
   Backup: `/data/backups/antes-id02-20261019-225828.db`.
+- 19/10 23:38 UTC: **app zerado** a pedido do Diego. Ficaram só o login dele (01), as empresas e os cargos.
+  Backup: `/data/backups/antes-zerar-20261019-233829.db` e `storage-antes-zerar.tgz`.
 
 **Pendente / ideias do Diego**
 - Câmera no almoxarifado: foto ou vídeo curto na entrega do material (futuro).

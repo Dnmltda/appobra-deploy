@@ -70,6 +70,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
+import { coresPara, corPorNome, nomeComCor } from '@/lib/coresMaterial.js';
 
 const AUDIT_MODULE = 'Materiais';
 
@@ -127,6 +128,7 @@ const emptyForm = {
   description: '',
   category: '',
   marca: '',
+  cor: '',
   unit: 'un',
   quantity_in_stock: '',
   min_quantity: '0',
@@ -329,11 +331,24 @@ const MateriaisPage = () => {
     }
   };
 
+  // Código vazio: o sistema gera. Com cor, o código ganha a cor no fim, para
+  // o mesmo fio em várias cores não repetir código.
+  const codigoAuto = useRef('');
+  const codigoFinal = () => {
+    let base = formData.code.trim();
+    if (!base) {
+      if (!codigoAuto.current) codigoAuto.current = `MAT-${Date.now().toString(36).toUpperCase()}`;
+      base = codigoAuto.current;
+    }
+    const sigla = String(formData.cor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return sigla && !base.toUpperCase().endsWith(`-${sigla}`) ? `${base}-${sigla}` : base;
+  };
+
   const validateForm = async () => {
     const errs = {};
 
     if (!formData.name.trim()) errs.name = 'Nome é obrigatório';
-    if (!formData.code.trim()) errs.code = 'Código / SKU é obrigatório';
     if (!formData.category.trim()) errs.category = 'Categoria é obrigatória';
     if (!formData.unit.trim()) errs.unit = 'Unidade de medida é obrigatória';
 
@@ -366,12 +381,12 @@ const MateriaisPage = () => {
     if (Object.keys(errs).length > 0) return false;
 
     // Duplicate checks (nome e código/SKU únicos por empresa)
-    const dupNome = await checkDuplicate('name', formData.name.trim(), editing?.id);
+    const dupNome = await checkDuplicate('name', nomeComCor(formData.name, formData.cor), editing?.id);
     if (dupNome) {
       setFormErrors((p) => ({ ...p, name: 'Já existe um material com este nome nesta empresa' }));
       return false;
     }
-    const dupCode = await checkDuplicate('code', formData.code.trim(), editing?.id);
+    const dupCode = await checkDuplicate('code', codigoFinal(), editing?.id);
     if (dupCode) {
       setFormErrors((p) => ({ ...p, code: 'Já existe um material com este código/SKU nesta empresa' }));
       return false;
@@ -396,8 +411,9 @@ const MateriaisPage = () => {
       // FormData pra permitir o upload da foto junto (campo file); os demais
       // campos vão como texto mesmo sem foto, o PocketBase aceita os dois.
       const fd = new FormData();
-      fd.append('name', formData.name.trim());
-      fd.append('code', formData.code.trim());
+      fd.append('name', nomeComCor(formData.name, formData.cor));
+      fd.append('cor', formData.cor || '');
+      fd.append('code', codigoFinal());
       fd.append('description', formData.description.trim() || '');
       fd.append('category', formData.category.trim());
       fd.append('marca', formData.marca.trim());
@@ -450,12 +466,18 @@ const MateriaisPage = () => {
 
   const handleEdit = (material) => {
     setEditing(material);
+    // A cor fica no fim do nome; na edição ela sai do campo Nome para trocar
+    // de cor sem repetir ("Fio Azul Vermelho").
+    const sufixo = material.cor ? ` ${material.cor}` : '';
+    const nomeSemCor = sufixo && String(material.name || '').endsWith(sufixo)
+      ? material.name.slice(0, -sufixo.length) : (material.name || '');
     setFormData({
-      name: material.name || '',
+      name: nomeSemCor,
       code: material.code || '',
       description: material.description || '',
       category: material.category || '',
       marca: material.marca || '',
+      cor: material.cor || '',
       unit: material.unit || 'un',
       quantity_in_stock: material.quantity_in_stock ?? '',
       min_quantity: material.min_quantity ?? 0,
@@ -493,6 +515,7 @@ const MateriaisPage = () => {
 
   const resetForm = () => {
     setFormData(emptyForm);
+    codigoAuto.current = '';
     setEditing(null);
     setFormErrors({});
     setCategoriaAtiva(null);
@@ -672,29 +695,30 @@ const MateriaisPage = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="mat_categoria">Categoria *</Label>
-                    <Input
-                      id="mat_categoria"
+                    <Select
                       value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      list="mat_categoria_list"
-                      placeholder="Selecione ou digite"
-                      className={formErrors.category ? 'border-destructive' : ''}
-                    />
-                    <datalist id="mat_categoria_list">
-                      {CATEGORIA_SUGESTOES.map((c) => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
+                      onValueChange={(v) => setFormData({ ...formData, category: v })}
+                    >
+                      <SelectTrigger id="mat_categoria" className={formErrors.category ? 'border-destructive' : ''}>
+                        <SelectValue placeholder="Escolha a categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(CATEGORIA_SUGESTOES.includes(formData.category) || !formData.category
+                          ? CATEGORIA_SUGESTOES : [formData.category, ...CATEGORIA_SUGESTOES]).map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {formErrors.category && <p className="text-xs text-destructive">{formErrors.category}</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="mat_code">Código / SKU *</Label>
+                    <Label htmlFor="mat_code">Código / SKU</Label>
                     <Input
                       id="mat_code"
                       value={formData.code}
                       onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      placeholder="Código único do material"
+                      placeholder="Deixe vazio que o sistema gera"
                       className={formErrors.code ? 'border-destructive' : ''}
                     />
                     {formErrors.code && <p className="text-xs text-destructive">{formErrors.code}</p>}
@@ -708,6 +732,34 @@ const MateriaisPage = () => {
                       onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
                       placeholder="Ex: Votoran, Tigre, Sherwin-Williams..."
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="mat_cor">Cor</Label>
+                    <Select
+                      value={formData.cor || 'sem'}
+                      onValueChange={(v) => setFormData({ ...formData, cor: v === 'sem' ? '' : v })}
+                    >
+                      <SelectTrigger id="mat_cor"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sem">Sem cor / não se aplica</SelectItem>
+                        {(() => {
+                          const lista = coresPara(formData.category, formData.name);
+                          const atual = formData.cor && !lista.some((c) => c.nome === formData.cor) ? [corPorNome(formData.cor) || { nome: formData.cor, hex: '#e5e7eb' }] : [];
+                          return [...atual, ...lista].map((c) => (
+                            <SelectItem key={c.nome} value={c.nome}>
+                              <span className="inline-flex items-center gap-2">
+                                <span className="inline-block w-3.5 h-3.5 rounded-full border border-black/20" style={{ background: c.hex }} />
+                                {c.nome}{c.dica ? <span className="text-muted-foreground"> ({c.dica})</span> : null}
+                              </span>
+                            </SelectItem>
+                          ));
+                        })()}
+                      </SelectContent>
+                    </Select>
+                    {formData.cor && formData.name.trim() && (
+                      <p className="text-xs text-muted-foreground">Vai aparecer como: <strong>{nomeComCor(formData.name, formData.cor)}</strong></p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -976,6 +1028,10 @@ const MateriaisPage = () => {
                         </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
+                            {m.cor && corPorNome(m.cor) && (
+                              <span className="inline-block w-3 h-3 rounded-full border border-black/20 mr-1.5 align-middle" title={m.cor}
+                                style={{ background: corPorNome(m.cor).hex }} />
+                            )}
                             <span>{m.name}{m.marca ? <span className="text-muted-foreground font-normal"> — {m.marca}</span> : ''}</span>
                             <span className="text-xs text-muted-foreground md:hidden">{m.category}</span>
                           </div>
