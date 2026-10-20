@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Search, AlertCircle, Eye, Download, ChevronLeft, ChevronRight,
   Package, Wrench, QrCode, Barcode, Copy, ArrowRightLeft, Archive, FileSpreadsheet, Printer, Filter, X, Truck, CheckCircle2,
-  TrendingDown, Boxes, AlertTriangle, HandHelping, Undo2,
+  TrendingDown, Boxes, AlertTriangle, HandHelping, Undo2, Repeat,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -235,6 +235,10 @@ const EquipamentosPage = () => {
   const [empTarget, setEmpTarget] = useState(null);
   const [empData, setEmpData] = useState({ funcionario_id: '', obra_id: '', expected_return_date: '', notes: '' });
   const [devTarget, setDevTarget] = useState(null);
+  // Passar para outra pessoa na obra: quem está com o equipamento (ou a
+  // gestão) diz para quem, onde estão e tira a foto da troca.
+  const [repTarget, setRepTarget] = useState(null);
+  const [repData, setRepData] = useState({ funcionario_id: '', local: '', foto: null });
   const [devData, setDevData] = useState({ estado_devolucao: '', observacao_devolucao: '' });
   const [empSalvando, setEmpSalvando] = useState(false);
 
@@ -828,6 +832,28 @@ const EquipamentosPage = () => {
     }
   };
 
+  const podePassar = (l) => perms.canTransfer || (!!currentUser?.funcionario_id && currentUser.funcionario_id === l.funcionario_id);
+  const openRepasse = (l) => { setRepTarget(l); setRepData({ funcionario_id: '', local: '', foto: null }); };
+  const handleRepasse = async () => {
+    if (!repData.funcionario_id) { toast.error('Escolha para quem vai passar'); return; }
+    if (!repData.local.trim()) { toast.error('Diga onde vocês estão'); return; }
+    if (!repData.foto) { toast.error('Tire a foto da troca'); return; }
+    setEmpSalvando(true);
+    try {
+      await pb.collection('emprestimos').create({
+        repassado_de: repTarget.id, funcionario_id: repData.funcionario_id, local_entrega: repData.local.trim(), foto_retirada: repData.foto,
+      }, { $autoCancel: false });
+      toast.success(`${repTarget.expand?.equipment_id?.nome || 'Equipamento'} passado para ${funcionarioNome(repData.funcionario_id)}`);
+      setRepTarget(null);
+      fetchEquipamentos(page);
+      fetchAllForDashboard();
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Não foi possível passar o equipamento'));
+    } finally {
+      setEmpSalvando(false);
+    }
+  };
+
   // ---------- Manutenção ----------
   const openManut = (eq) => {
     if (!perms.canManutencao) { toast.error('Sem permissão para gerenciar manutenção'); return; }
@@ -1358,6 +1384,7 @@ const EquipamentosPage = () => {
                     <strong>{l.expand?.equipment_id?.nome || 'Equipamento'}</strong>
                     {' com '}{l.expand?.funcionario_id?.nome || '-'}
                     {l.expand?.obra_id?.nome ? ` · ${l.expand.obra_id.nome}` : ''}
+                    {l.local_entrega ? ` · ${l.local_entrega}` : ''}
                     <span className="text-muted-foreground"> · desde {dataBR(l.borrow_date)}</span>
                     {l.expected_return_date && (
                       atrasado(l)
@@ -1366,9 +1393,14 @@ const EquipamentosPage = () => {
                     )}
                   </div>
                   </div>
-                  {perms.canTransfer && l.expand?.equipment_id && (
-                    <Button size="sm" variant="outline" onClick={() => openDevolver(l.expand.equipment_id)}><Undo2 className="w-4 h-4 mr-1" />Receber de volta</Button>
-                  )}
+                  <div className="flex flex-wrap gap-2">
+                    {podePassar(l) && (
+                      <Button size="sm" variant="outline" onClick={() => openRepasse(l)}><Repeat className="w-4 h-4 mr-1" />Passar para outra pessoa</Button>
+                    )}
+                    {perms.canTransfer && l.expand?.equipment_id && (
+                      <Button size="sm" variant="outline" onClick={() => openDevolver(l.expand.equipment_id)}><Undo2 className="w-4 h-4 mr-1" />Receber de volta</Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -1969,6 +2001,40 @@ const EquipamentosPage = () => {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setEmpTarget(null)}>Cancelar</Button>
                 <Button onClick={handleEmprestar} disabled={empSalvando || !empData.foto}>Confirmar empréstimo</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- Passar para outra pessoa ---------- */}
+      <Dialog open={!!repTarget} onOpenChange={(open) => { if (!open) setRepTarget(null); }}>
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Passar para outra pessoa</DialogTitle></DialogHeader>
+          {repTarget && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                <strong>{repTarget.expand?.equipment_id?.nome}</strong> está com {repTarget.expand?.funcionario_id?.nome || '-'}. Para quem vai agora?
+              </p>
+              <div className="space-y-1">
+                <Label htmlFor="rep_func">Para quem *</Label>
+                <Select value={repData.funcionario_id || 'none'} onValueChange={(v) => setRepData({ ...repData, funcionario_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger id="rep_func"><SelectValue placeholder="Escolha a pessoa" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Escolha a pessoa...</SelectItem>
+                    {funcionarios.filter((f) => f.id !== repTarget.funcionario_id).map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rep_local">Onde vocês estão *</Label>
+                <Input id="rep_local" placeholder="Ex.: 3º andar, torre B" value={repData.local} onChange={(e) => setRepData({ ...repData, local: e.target.value })} />
+                <p className="text-xs text-muted-foreground">O local e a hora ficam registrados: se a obra tiver câmeras, dá para achar a troca na gravação.</p>
+              </div>
+              <FotoRetirada rotulo="Foto da troca (quem está recebendo)" onFoto={(f) => setRepData((x) => ({ ...x, foto: f }))} />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setRepTarget(null)}>Cancelar</Button>
+                <Button onClick={handleRepasse} disabled={empSalvando || !repData.foto}>Confirmar troca</Button>
               </div>
             </div>
           )}

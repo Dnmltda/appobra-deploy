@@ -19,6 +19,12 @@
 //     Obras, Almoxarife) empresta e recebe.
 //   - Enquanto houver empréstimo aberto, a situação do equipamento não muda
 //     pela edição comum (só pela devolução).
+//   - Passar para outra pessoa (pedido do Diego, 20/10/2026): quem está com o
+//     equipamento (ou a gestão) passa direto para outro funcionário, dizendo
+//     onde estão (andar, setor) e com a foto da troca. O empréstimo de quem
+//     passou fecha como "Repassado" e abre um novo para quem recebeu
+//     (repassado_de aponta o anterior). Com o local e a hora registrados, dá
+//     para achar a troca nas câmeras da obra.
 // ============================================================
 
 onBootstrap((e) => {
@@ -30,7 +36,15 @@ onBootstrap((e) => {
     add(new RelationField({ name: "funcionario_id", collectionId: app.findCollectionByNameOrId("funcionarios").id, maxSelect: 1 }));
     add(new RelationField({ name: "entregue_por", collectionId: "_pb_users_auth_", maxSelect: 1 }));
     add(new RelationField({ name: "recebido_por", collectionId: "_pb_users_auth_", maxSelect: 1 }));
-    add(new SelectField({ name: "estado_devolucao", maxSelect: 1, values: ["Bom", "Precisa de manutenção", "Danificado", "Perdido"] }));
+    add(new SelectField({ name: "estado_devolucao", maxSelect: 1, values: ["Bom", "Precisa de manutenção", "Danificado", "Perdido", "Repassado"] }));
+    const est = col.fields.getByName("estado_devolucao");
+    if (est) {
+      const vals = [];
+      for (let i = 0; i < est.values.length; i++) vals.push(String(est.values[i]));
+      if (!vals.includes("Repassado")) est.values = vals.concat(["Repassado"]);
+    }
+    add(new TextField({ name: "local_entrega", max: 200 }));
+    add(new RelationField({ name: "repassado_de", collectionId: col.id, maxSelect: 1 }));
     add(new TextField({ name: "observacao_devolucao" }));
     // Previsão de devolução é opcional (nem todo empréstimo tem data certa).
     ["expected_return_date", "borrow_date"].forEach((n) => { const f = col.fields.getByName(n); if (f) f.required = false; });
@@ -45,11 +59,69 @@ onBootstrap((e) => {
   }
 });
 
+// ---------- Passar para outra pessoa ----------
+onRecordCreateRequest((e) => {
+  const r = e.record;
+  if (!r.get("repassado_de")) return e.next();
+  if (!e.auth) throw new UnauthorizedError("Entre no sistema para continuar.");
+  const lib = require(`${__hooks}/emprestimo-lib.js`);
+  let ant;
+  try { ant = e.app.findRecordById("emprestimos", r.get("repassado_de")); } catch (_) {}
+  if (!ant || (!e.auth.isSuperuser() && ant.get("company_id") !== e.auth.get("company_id"))) throw new BadRequestError("Empréstimo não encontrado.");
+  if (ant.get("status") !== "active") throw new BadRequestError("Este equipamento já foi devolvido ou passado adiante.");
+  const comEle = e.auth.get("funcionario_id") && e.auth.get("funcionario_id") === ant.get("funcionario_id");
+  if (!comEle) lib.exigirGestao(e.auth);
+  let func;
+  try { func = e.app.findRecordById("funcionarios", r.get("funcionario_id")); } catch (_) {}
+  if (!func || func.get("company_id") !== ant.get("company_id")) throw new BadRequestError("Escolha para quem vai passar o equipamento.");
+  if (func.id === ant.get("funcionario_id")) throw new BadRequestError("O equipamento já está com essa pessoa.");
+  const local = String(r.get("local_entrega") || "").trim();
+  if (!local) throw new BadRequestError("Diga onde vocês estão (ex.: 3º andar, torre B).");
+  let de = "";
+  try { de = e.app.findRecordById("funcionarios", ant.get("funcionario_id")).get("nome") || ""; } catch (_) {}
+  const agora = new Date().toISOString().replace("T", " ");
+
+  r.set("company_id", ant.get("company_id"));
+  r.set("equipment_id", ant.get("equipment_id"));
+  r.set("obra_id", r.get("obra_id") || ant.get("obra_id"));
+  if (!r.getString("expected_return_date")) r.set("expected_return_date", ant.getString("expected_return_date"));
+  r.set("status", "active");
+  r.set("borrow_date", agora);
+  r.set("return_date", "");
+  r.set("entregue_por", e.auth.id);
+  r.set("recebido_por", "");
+  r.set("estado_devolucao", "");
+  r.set("observacao_devolucao", "");
+  r.set("local_entrega", local);
+
+  e.app.runInTransaction((txApp) => {
+    e.app = txApp;
+    const aberto = txApp.findRecordById("emprestimos", ant.id); // relê dentro da transação
+    if (aberto.get("status") !== "active") throw new BadRequestError("Este equipamento já foi devolvido ou passado adiante.");
+    aberto.set("status", "returned");
+    aberto.set("return_date", agora);
+    aberto.set("recebido_por", e.auth.id);
+    aberto.set("estado_devolucao", "Repassado");
+    aberto.set("observacao_devolucao", `Passado para ${func.get("nome")} em ${local}`);
+    txApp.save(aberto);
+    e.next();
+    const eq = txApp.findRecordById("equipamentos", ant.get("equipment_id"));
+    const antes = { sit: eq.get("situacao"), local: eq.get("local_atual"), obra: eq.get("obra_atual_id"), resp: eq.get("responsavel_id") };
+    eq.set("funcionario_id", func.id);
+    eq.set("obra_atual_id", r.get("obra_id") || "");
+    eq.set("local_atual", `${local} (com ${func.get("nome")})`.slice(0, 250));
+    eq.set("atualizado_por", e.auth.id);
+    txApp.save(eq);
+    lib.historico(txApp, eq, e.auth.id, `Passado de ${de || "—"} para ${func.get("nome")}`, antes, `Local: ${local}`);
+  });
+}, "emprestimos");
+
 // ---------- Emprestar ----------
 onRecordCreateRequest((e) => {
+  const r = e.record;
+  if (r.get("repassado_de")) return e.next(); // tratado acima
   const lib = require(`${__hooks}/emprestimo-lib.js`);
   lib.exigirGestao(e.auth);
-  const r = e.record;
   const eq = lib.equipamentoDaEmpresa(e.app, r.get("equipment_id"), e.auth);
   if (!r.get("funcionario_id")) throw new BadRequestError("Escolha quem vai levar o equipamento.");
   let func;

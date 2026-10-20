@@ -744,6 +744,43 @@ check("foto", "Empréstimo de equipamento sem a foto de quem leva é recusado", 
 eB = novo_eq("Martelete B", cB, tB)
 s, r = call("POST", "/api/collections/emprestimos/records", tA, {"equipment_id": eB.get("id"), "funcionario_id": funE.get("id"), "company_id": cA, "foto_retirada": FOTO})
 check("permissao", "Empresa A não empresta equipamento da Empresa B", s >= 400, f"status {s}")
+
+# ---- passar o equipamento para outra pessoa (repasse na obra, 20/10/2026)
+_fc = {}
+for _n in ("Ana do Carrinho", "Beto do Carrinho"):
+    _fc[_n] = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-" + _n[:3].upper(), "nome": _n, "nome_completo": _n,
+                   "cargoId": cargo1, "company_id": cA})[1]
+    _em = _n.split()[0].lower() + ".carrinho@teste.local"
+    call("POST", "/api/collections/users/records", tA, {"email": _em, "username": _em.split("@")[0].replace(".", ""), "password": "Senha12345",
+         "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Servente", "role": "Servente", "status": "Ativo",
+         "funcionario_id": _fc[_n].get("id"), "name": _n})
+tAna, tBeto = login("ana.carrinho@teste.local")[0], login("beto.carrinho@teste.local")[0]
+e4 = novo_eq("Carrinho de mão")
+s, l4 = emp(e4, funcionario_id=_fc["Ana do Carrinho"].get("id"))
+def repasse(tok, de, para, **extra):
+    return call("POST", "/api/collections/emprestimos/records", tok, {"repassado_de": de.get("id"), "funcionario_id": para.get("id"),
+                "local_entrega": "3º andar, torre B", "foto_retirada": FOTO, **extra})
+s, r = repasse(tAna, l4, _fc["Beto do Carrinho"], local_entrega="")
+check("equip", "Passar para outra pessoa exige dizer onde estão", s >= 400 and "onde" in r.get("message", ""), r.get("message", "")[:80])
+s, r = repasse(tAna, l4, _fc["Beto do Carrinho"], foto_retirada=None)
+check("equip", "Passar para outra pessoa exige a foto da troca", s >= 400 and "foto" in r.get("message", ""), r.get("message", "")[:80])
+s, r = repasse(tPed, l4, _fc["Beto do Carrinho"])
+check("equip", "Quem não está com o equipamento (e não é da gestão) não passa adiante", s >= 400, f"status {s}")
+s, l5 = repasse(tAna, l4, _fc["Beto do Carrinho"])
+x = eqget(e4)
+_l4 = call("GET", f"/api/collections/emprestimos/records/{l4.get('id')}", tA)[1]
+check("equip", "Quem está com o equipamento passa para outra pessoa: fica com ela, no local informado", s == 200
+      and x.get("situacao") == "Emprestado" and x.get("funcionario_id") == _fc["Beto do Carrinho"].get("id") and "3º andar" in x.get("local_atual", "")
+      and l5.get("status") == "active" and l5.get("local_entrega") == "3º andar, torre B" and bool(l5.get("foto_retirada")), err(l5) if s >= 400 else str(x.get("local_atual")))
+check("equip", "O empréstimo de quem passou fecha como 'Repassado'", _l4.get("status") == "returned" and _l4.get("estado_devolucao") == "Repassado"
+      and "Beto do Carrinho" in _l4.get("observacao_devolucao", ""), str(_l4.get("estado_devolucao")))
+s, h = call("GET", "/api/collections/equipamentos_historico/records?filter=" + q(f'equipamento_id="{e4.get("id")}"'), tA)
+check("equip", "A troca fica no histórico do equipamento, com o local", any("Passado de Ana do Carrinho para Beto do Carrinho" in (i.get("alteracao_realizada") or "")
+      and "3º andar" in (i.get("detalhes") or "") for i in h.get("items", [])))
+s, r = repasse(tAna, l4, _fc["Beto do Carrinho"])
+check("equip", "Não dá para passar de novo um empréstimo que já foi passado", s >= 400, f"status {s}")
+s, r = repasse(tBeto, l5, _fc["Ana do Carrinho"], local_entrega="Térreo")
+check("equip", "Quem recebeu pode passar adiante de novo", s == 200 and eqget(e4).get("funcionario_id") == _fc["Ana do Carrinho"].get("id"), err(r) if s >= 400 else "")
 s, r = call("GET", "/api/collections/emprestimos/records", tB)
 check("permissao", "Empresa B não vê os empréstimos da A", r.get("totalItems") == 0, f"{r.get('totalItems')}")
 s, r = call("GET", "/api/collections/emprestimos/records")
