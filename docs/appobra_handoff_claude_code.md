@@ -88,7 +88,7 @@
 - Hostinger (`midnightblue-chamois-688707.hostingersite.com`): enviados `assets/index-BDqvJKn8.js`,
   `assets/index.es-ippwZO-t.js` e por último `index.html`. Login abre sem erro no Fly e na Hostinger.
 - Falta: os 9 testes do passo 9 de docs/PUBLICAR-COWORK.md com o Diego; a chave do Fly que o Diego colou
-  no chat deve ser trocada por uma nova cadastrada só nas configurações do ambiente (`FLY_API_TOKEN`).
+  no chat fica por enquanto (decisão do Diego); trocar na checagem de segurança antes de vender/passar o app.
 
 **Pendências da auditoria fechadas em 20/10/2026 (Claude Code, no PR #8)**
 - **Limite de tentativas de login** (`pb_hooks/login-limite.pb.js` + `login-limite-lib.js`): 5 senhas erradas
