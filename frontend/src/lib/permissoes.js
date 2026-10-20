@@ -39,7 +39,7 @@ export const MODULOS_POR_CARGO = {
 
 export const ehAdmin = (user) =>
   !!user && (user.role === 'admin' || user.role === 'Administrador' || user.cargo === 'Administrador'
-    || user.email === 'dnmltda@hotmail.com');
+    || user.dono_sistema === true);
 
 // O cargo manda; "role" só entra para usuários antigos sem cargo.
 export const cargoDe = (user) => user?.cargo || user?.role || 'Funcionário';

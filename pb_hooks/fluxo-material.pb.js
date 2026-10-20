@@ -21,7 +21,9 @@
 //   material entra no saldo dele (depois ele registra onde usou); senão é
 //   Consumo de Obra (com obra) ou Saída. Sem saldo, o aceite é recusado e nada
 //   é gravado (transação).
-// - Aceitar ou recusar na retirada: só quem pediu (ou o administrador).
+// - Aceitar na retirada: quem pediu, ou o almoxarifado registrando no balcão;
+//   sempre com a foto de quem leva (foto_retirada, ver foto-retirada.pb.js).
+//   Recusar: só quem pediu (ou o administrador).
 // - Itens só podem ser incluídos/alterados enquanto a solicitação não foi
 //   aprovada.
 // Solicitações sem itens (RH, transporte...) continuam com o fluxo livre.
@@ -134,7 +136,17 @@ onRecordUpdateRequest((e) => {
   const depois = r.get("status");
   if (a && !a.isSuperuser() && antes !== depois) {
     const lib = require(`${__hooks}/uso-material-lib.js`);
-    if (antes === "Pronto para retirada" && ["Concluída", "Em separação"].includes(depois)) {
+    if (antes === "Pronto para retirada" && depois === "Concluída") {
+      // Retirada: quem pediu aceita, ou o almoxarifado registra no balcão.
+      // Nos dois casos vai a foto de quem está levando (câmera do aparelho).
+      if (r.get("solicitante_id") !== a.id && !lib.ehGestao(a)) {
+        throw new ForbiddenError("Quem confere e aceita o material é a pessoa que fez o pedido.");
+      }
+      if (!r.getUnsavedFiles("foto_retirada").length) {
+        throw new BadRequestError("Tire a foto de quem está retirando o material.");
+      }
+      r.set("retirada_registrada_por", a.id);
+    } else if (antes === "Pronto para retirada" && depois === "Em separação") {
       if (r.get("solicitante_id") !== a.id && !lib.ehAdmin(a)) {
         throw new ForbiddenError("Quem confere e aceita o material é a pessoa que fez o pedido.");
       }
@@ -148,6 +160,11 @@ onRecordUpdateRequest((e) => {
       r.set("separado_por", a.id);
       r.set("retirada_recusa_motivo", "");
     }
+  }
+  // A foto da retirada só entra no aceite; depois ninguém troca nem apaga.
+  if (a && !a.isSuperuser() && !(antes === "Pronto para retirada" && depois === "Concluída")) {
+    r.set("foto_retirada", r.original().get("foto_retirada"));
+    r.set("retirada_registrada_por", r.original().get("retirada_registrada_por"));
   }
   // De qual estoque sai (geral ou da obra): quem separa escolhe ao marcar
   // "Pronto para retirada"; depois disso ninguém troca.
@@ -266,7 +283,7 @@ onRecordCreateRequest((e) => {
   if (a && !a.isSuperuser()) {
     const cargo = a.get("cargo") || a.get("role");
     const gestao = ["Administrador", "Diretoria", "Gerência", "Engenheiro", "Mestre de Obras", "Almoxarife", "Comprador"].includes(cargo)
-      || a.get("role") === "admin" || a.get("email") === "dnmltda@hotmail.com";
+      || a.get("role") === "admin" || a.get("dono_sistema") === true;
     if (!gestao) e.record.set("status", "Aberta");
   }
   e.next();

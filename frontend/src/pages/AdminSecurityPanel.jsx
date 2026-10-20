@@ -63,7 +63,7 @@ const AdminSecurityPanel = () => {
 
   const isPrincipalAdmin = (user) => {
     if (!user) return false;
-    return user.username === 'dnmltda' || user.email === 'dnmltda@hotmail.com';
+    return user.dono_sistema === true;
   };
 
   const handleBlock = async (userId, targetUser) => {

@@ -15,6 +15,7 @@
 onBootstrap((e) => {
   e.next();
   const app = e.app;
+  require(`${__hooks}/dono-lib.js`).garantir(app); // regras abaixo usam users.dono_sistema
   try {
     const obras = app.findCollectionByNameOrId("obras");
     if (!obras.fields.getByName("fotos")) {
@@ -28,7 +29,7 @@ onBootstrap((e) => {
 
     const GESTAO = '(@request.auth.cargo = "Administrador" || @request.auth.cargo = "Diretoria" || @request.auth.cargo = "Gerência" || ' +
       '@request.auth.cargo = "Engenheiro" || @request.auth.cargo = "Mestre de Obras" || @request.auth.cargo = "Almoxarife" || ' +
-      '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.email = "dnmltda@hotmail.com")';
+      '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.dono_sistema = true)';
     const SAME = '@request.auth.id != "" && @request.auth.company_id = company_id';
     const DA_OBRA = '@request.auth.funcionario_id.obraId = obra_id';
     let col = null;

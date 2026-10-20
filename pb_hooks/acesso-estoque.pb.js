@@ -18,14 +18,15 @@
 onBootstrap((e) => {
   e.next();
   const app = e.app;
+  require(`${__hooks}/dono-lib.js`).garantir(app); // regras abaixo usam users.dono_sistema
   const VE = '(@request.auth.cargo = "Administrador" || @request.auth.cargo = "Diretoria" || @request.auth.cargo = "Gerência" || ' +
     '@request.auth.cargo = "Engenheiro" || @request.auth.cargo = "Mestre de Obras" || @request.auth.cargo = "Almoxarife" || ' +
     '@request.auth.cargo = "Comprador" || @request.auth.cargo = "Financeiro" || ' +
-    '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.email = "dnmltda@hotmail.com")';
+    '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.dono_sistema = true)';
   const CUIDA = '(@request.auth.cargo = "Administrador" || @request.auth.cargo = "Diretoria" || @request.auth.cargo = "Gerência" || ' +
     '@request.auth.cargo = "Engenheiro" || @request.auth.cargo = "Mestre de Obras" || @request.auth.cargo = "Almoxarife" || ' +
     '@request.auth.cargo = "Comprador" || ' +
-    '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.email = "dnmltda@hotmail.com")';
+    '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.dono_sistema = true)';
   const SAME = '@request.auth.id != "" && @request.auth.company_id = company_id';
   const ajustar = (nome, fn) => {
     let col;
@@ -67,7 +68,7 @@ onRecordEnrich((e) => {
   const a = info && info.auth;
   if (a && !a.isSuperuser()) {
     const VE = ["Administrador", "Diretoria", "Gerência", "Engenheiro", "Mestre de Obras", "Almoxarife", "Comprador", "Financeiro"];
-    const admin = a.get("role") === "admin" || a.get("role") === "Administrador" || a.get("email") === "dnmltda@hotmail.com";
+    const admin = a.get("role") === "admin" || a.get("role") === "Administrador" || a.get("dono_sistema") === true;
     if (!admin && !VE.includes(a.get("cargo") || a.get("role"))) {
       e.record.hide("quantity_in_stock", "min_quantity");
     }

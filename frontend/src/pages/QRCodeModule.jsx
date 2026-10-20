@@ -1,96 +1,121 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
+import { Link, useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header.jsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { QrCode, ScanLine, History, Download, Printer, MapPin, HardHat, Wrench, Box } from 'lucide-react';
+import { QrCode, ScanLine, History, Download, Printer, HardHat, Wrench, Box, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import pb from '@/lib/pocketbaseClient';
+import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { QrImagem, linkDoItem, lerConteudo, imprimirEtiqueta } from '@/components/CodigosItem.jsx';
+
+// QR Code dos itens (Etapa 5 da auditoria): a etiqueta é de um item real da
+// empresa (material, equipamento ou EPI), gerada no próprio aparelho, e a
+// leitura mostra o item e fica registrada (qrcode_leituras, por empresa).
+// O QR guarda o endereço do app (?ler=tipo:id): lido pela câmera comum do
+// celular, abre o app direto no item.
+const TIPOS = {
+  material: { rotulo: 'Material', col: 'materiais', nome: (r) => r.name, codigo: (r) => r.code, pagina: '/materiais', icone: Box },
+  equipamento: { rotulo: 'Equipamento', col: 'equipamentos', nome: (r) => r.nome, codigo: (r) => r.codigo_interno || r.numero_patrimonial, pagina: '/equipamentos', icone: Wrench },
+  epi: { rotulo: 'EPI', col: 'epis', nome: (r) => r.nome, codigo: (r) => (r.numero_ca ? `CA ${r.numero_ca}` : r.id_unico), pagina: '/rh/epis', icone: HardHat },
+};
+
+const detalhes = (tipo, r) => {
+  if (tipo === 'material') return [r.unit && `Unidade: ${r.unit}`, r.quantity_in_stock !== undefined && `Em estoque: ${r.quantity_in_stock} ${r.unit || ''}`];
+  if (tipo === 'equipamento') return [r.situacao && `Situação: ${r.situacao}`, r.marca && `Marca: ${r.marca}`];
+  return [r.quantidade_estoque !== undefined && `Em estoque: ${r.quantidade_estoque}`, r.tamanho && `Tamanho: ${r.tamanho}`];
+};
 
 const QRCodeModule = () => {
-  const [activeTab, setActiveTab] = useState('generate');
-  const [itemType, setItemType] = useState('Materiais');
-  const [itemInfo, setItemInfo] = useState('');
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [scanResult, setScanResult] = useState(null);
-  const [history, setHistory] = useState([]);
-  
+  const { currentUser } = useAuth();
+  const companyId = currentUser?.company_id;
+  const [params, setParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(params.get('ler') ? 'scan' : 'generate');
+  const [tipo, setTipo] = useState('material');
+  const [itens, setItens] = useState([]);
+  const [itemId, setItemId] = useState('');
+  const [qrUrl, setQrUrl] = useState('');
+  const [lido, setLido] = useState(null); // { tipo, rec } | { erro }
+  const [historico, setHistorico] = useState([]);
   const scannerRef = useRef(null);
-  const isScannerInitialized = useRef(false);
 
+  // Itens da empresa do tipo escolhido.
   useEffect(() => {
-    if (activeTab === 'scan' && !isScannerInitialized.current) {
-      // Delay initialization slightly to ensure DOM element is ready
-      setTimeout(() => {
-        try {
-          const scanner = new Html5QrcodeScanner("qr-reader", { 
-            qrbox: { width: 250, height: 250 }, 
-            fps: 10,
-            rememberLastUsedCamera: true
-          });
-          
-          scanner.render((decodedText) => {
-            setScanResult(decodedText);
-            handleSuccessfulScan(decodedText);
-            scanner.clear();
-            isScannerInitialized.current = false;
-          }, (error) => {
-            // Ignore continuous scan errors (normal behavior)
-          });
-          
-          scannerRef.current = scanner;
-          isScannerInitialized.current = true;
-        } catch (err) {
-          console.error("Scanner initialization error:", err);
-        }
-      }, 300);
-    }
+    if (!companyId) return;
+    const t = TIPOS[tipo];
+    const filtro = tipo === 'material' ? `company_id = "${companyId}"` : `company_id = "${companyId}" && deleted_at = ""`;
+    pb.collection(t.col).getFullList({ filter: filtro, sort: tipo === 'material' ? 'name' : 'nome', $autoCancel: false })
+      .then(setItens)
+      .catch(() => pb.collection(t.col).getFullList({ filter: `company_id = "${companyId}"`, $autoCancel: false }).then(setItens).catch(() => setItens([])));
+    setItemId('');
+    setQrUrl('');
+  }, [tipo, companyId]);
 
-    return () => {
-      if (scannerRef.current && isScannerInitialized.current) {
-        try {
-          scannerRef.current.clear();
-        } catch (e) { console.error("Error clearing scanner", e); }
-        isScannerInitialized.current = false;
-      }
-    };
-  }, [activeTab]);
+  const item = itens.find((i) => i.id === itemId);
 
-  const handleGenerate = () => {
-    if (!itemInfo) {
-      toast.error('Informe os dados do item');
-      return;
-    }
-    const uniqueId = `${itemType.substring(0,3).toUpperCase()}-${Date.now().toString().slice(-6)}`;
-    const qrData = JSON.stringify({ type: itemType, info: itemInfo, id: uniqueId });
-    setGeneratedCode(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`);
-    toast.success('QR Code gerado com sucesso');
+  const carregarHistorico = () => {
+    if (!companyId) return;
+    pb.collection('qrcode_leituras').getList(1, 50, { filter: `company_id = "${companyId}"`, sort: '-created', expand: 'usuario_id', $autoCancel: false })
+      .then((r) => setHistorico(r.items)).catch(() => setHistorico([]));
   };
+  useEffect(() => { if (activeTab === 'track') carregarHistorico(); }, [activeTab, companyId]);
 
-  const handleSuccessfulScan = async (text) => {
+  const abrirItem = async (conteudo) => {
+    const c = lerConteudo(conteudo);
+    if (!c) { setLido({ erro: 'Este QR Code não é de um item do APP OBRA.' }); return; }
     try {
-      const data = JSON.parse(text);
-      toast.success(`Item escaneado: ${data.type} - ${data.info}`);
-      
-      // Log to database
-      const log = await pb.collection('qrcode_leituras').create({
-        qrcode_id: data.id,
-        item_tipo: data.type === 'EPIs' ? 'EPI' : data.type === 'Equipamentos' ? 'Equipamento' : 'Material',
-        usuario_id: pb.authStore.model?.id,
-        localizacao: 'Canteiro Central',
-        acao: 'Leitura'
-      }, { $autoCancel: false });
-      
-      setHistory(prev => [log, ...prev].slice(0, 10));
-    } catch (e) {
-      toast.warning(`Leitura realizada (formato não padrão): ${text.substring(0, 30)}...`);
+      const rec = await pb.collection(TIPOS[c.tipo].col).getOne(c.id, { $autoCancel: false });
+      setLido({ tipo: c.tipo, rec });
+      const t = TIPOS[c.tipo];
+      pb.collection('qrcode_leituras').create({
+        qrcode_id: [t.codigo(rec), t.nome(rec)].filter(Boolean).join(' · ').slice(0, 200),
+        item_id: rec.id, item_tipo: t.rotulo, usuario_id: currentUser?.id, acao: 'Leitura', localizacao: '',
+      }, { $autoCancel: false }).catch(() => {});
+    } catch (_) {
+      setLido({ erro: 'Item não encontrado nesta empresa (ou foi arquivado).' });
     }
   };
+
+  // Aberto pelo link do QR (câmera comum do celular).
+  useEffect(() => {
+    const ler = params.get('ler');
+    if (ler && currentUser) {
+      abrirItem(`?ler=${ler}`);
+      params.delete('ler');
+      setParams(params, { replace: true });
+    }
+  }, [currentUser]);
+
+  // Leitor pela câmera, só na aba "Escanear" e sem item na tela.
+  useEffect(() => {
+    if (activeTab !== 'scan' || lido) return undefined;
+    const t = setTimeout(() => {
+      try {
+        const scanner = new Html5QrcodeScanner('qr-reader', { qrbox: { width: 250, height: 250 }, fps: 10, rememberLastUsedCamera: true }, false);
+        scanner.render((texto) => {
+          scanner.clear().catch(() => {});
+          scannerRef.current = null;
+          abrirItem(texto);
+        }, () => {});
+        scannerRef.current = scanner;
+      } catch (err) {
+        console.error('Leitor de QR:', err);
+      }
+    }, 300);
+    return () => {
+      clearTimeout(t);
+      scannerRef.current?.clear().catch(() => {});
+      scannerRef.current = null;
+    };
+  }, [activeTab, lido]);
+
+  const T = TIPOS[tipo];
+  const linkItem = item ? linkDoItem(tipo, item.id) : '';
 
   return (
     <>
@@ -99,90 +124,70 @@ const QRCodeModule = () => {
       <main className="py-8 bg-muted/30 min-h-screen">
         <div className="app-container max-w-5xl">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-primary flex items-center gap-3">
-              <QrCode className="w-8 h-8" />
-              Módulo QR Code
-            </h1>
-            <p className="text-muted-foreground mt-2">Geração, leitura e rastreamento de itens e ativos</p>
+            <h1 className="text-3xl font-bold text-primary flex items-center gap-3"><QrCode className="w-8 h-8" />QR Code</h1>
+            <p className="text-muted-foreground mt-2">Etiquetas dos materiais, equipamentos e EPIs, leitura pela câmera e histórico de leituras</p>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-3 h-14 rounded-xl p-1 bg-card border shadow-sm">
-              <TabsTrigger value="generate" className="rounded-lg font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><QrCode className="w-4 h-4 mr-2"/> Gerar</TabsTrigger>
-              <TabsTrigger value="scan" className="rounded-lg font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><ScanLine className="w-4 h-4 mr-2"/> Escanear</TabsTrigger>
-              <TabsTrigger value="track" className="rounded-lg font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><History className="w-4 h-4 mr-2"/> Rastreio</TabsTrigger>
+              <TabsTrigger value="generate" className="rounded-lg font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><QrCode className="w-4 h-4 mr-2" />Gerar</TabsTrigger>
+              <TabsTrigger value="scan" className="rounded-lg font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><ScanLine className="w-4 h-4 mr-2" />Escanear</TabsTrigger>
+              <TabsTrigger value="track" className="rounded-lg font-semibold text-base data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"><History className="w-4 h-4 mr-2" />Histórico</TabsTrigger>
             </TabsList>
 
             <TabsContent value="generate">
               <div className="grid md:grid-cols-2 gap-6">
-                <Card className="shadow-md border-border">
+                <Card className="shadow-md">
                   <CardHeader className="bg-muted/30 border-b">
-                    <CardTitle className="text-xl">Dados do Item</CardTitle>
-                    <CardDescription>Preencha os dados para gerar a etiqueta</CardDescription>
+                    <CardTitle className="text-xl">Qual item</CardTitle>
+                    <CardDescription>Escolha o item cadastrado para gerar a etiqueta</CardDescription>
                   </CardHeader>
                   <CardContent className="pt-6 space-y-4">
                     <div className="space-y-2">
-                      <Label className="font-semibold">Categoria do Item</Label>
-                      <Select value={itemType} onValueChange={setItemType}>
-                        <SelectTrigger className="bg-background">
-                          <SelectValue />
-                        </SelectTrigger>
+                      <Label htmlFor="qr-tipo">Tipo</Label>
+                      <Select value={tipo} onValueChange={setTipo}>
+                        <SelectTrigger id="qr-tipo" aria-label="Tipo"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Materiais"><div className="flex items-center"><Box className="w-4 h-4 mr-2"/> Materiais</div></SelectItem>
-                          <SelectItem value="Equipamentos"><div className="flex items-center"><Wrench className="w-4 h-4 mr-2"/> Equipamentos</div></SelectItem>
-                          <SelectItem value="EPIs"><div className="flex items-center"><HardHat className="w-4 h-4 mr-2"/> EPIs</div></SelectItem>
+                          {Object.entries(TIPOS).map(([k, t]) => <SelectItem key={k} value={k}>{t.rotulo}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="font-semibold">Identificação / Nome</Label>
-                      <Input 
-                        placeholder="Ex: Furadeira Bosch 800W ou Lote Cimento..." 
-                        value={itemInfo}
-                        onChange={(e) => setItemInfo(e.target.value)}
-                        className="bg-background"
-                      />
+                      <Label htmlFor="qr-item">Item</Label>
+                      <Select value={itemId || 'none'} onValueChange={(v) => setItemId(v === 'none' ? '' : v)}>
+                        <SelectTrigger id="qr-item" aria-label="Item"><SelectValue placeholder="Escolha o item" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">{itens.length ? 'Escolha o item...' : `Nenhum ${T.rotulo.toLowerCase()} cadastrado`}</SelectItem>
+                          {itens.map((i) => <SelectItem key={i.id} value={i.id}>{[T.codigo(i), T.nome(i)].filter(Boolean).join(' · ')}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Button onClick={handleGenerate} className="w-full h-12 text-base mt-2 bg-accent text-accent-foreground hover:bg-accent/90 font-bold">
-                      Gerar QR Code
-                    </Button>
                   </CardContent>
                 </Card>
 
-                <Card className="shadow-md border-border flex flex-col items-center justify-center p-8 min-h-[400px]">
-                  {generatedCode ? (
-                    <div className="text-center space-y-6 w-full">
-                      <div className="p-4 bg-white rounded-xl shadow-inner inline-block border-2 border-dashed border-gray-200">
-                        <img src={generatedCode} alt="Generated QR" className="w-48 h-48 mx-auto" crossOrigin="anonymous" />
+                <Card className="shadow-md flex flex-col items-center justify-center p-8 min-h-[400px]">
+                  {item ? (
+                    <div className="text-center space-y-4 w-full">
+                      <div className="p-4 bg-white rounded-xl inline-block border-2 border-dashed border-gray-200">
+                        <QrImagem texto={linkItem} tamanho={200} onPronto={setQrUrl} />
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg">{itemInfo}</h3>
-                        <p className="text-sm text-muted-foreground uppercase tracking-widest">{itemType}</p>
+                        <h3 className="font-bold text-lg">{T.nome(item)}</h3>
+                        <p className="text-sm text-muted-foreground">{[T.rotulo, T.codigo(item)].filter(Boolean).join(' · ')}</p>
                       </div>
                       <div className="flex gap-3 justify-center w-full">
-                        <Button variant="outline" className="flex-1" onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = generatedCode;
-                          link.download = `qrcode_${itemType}_${Date.now()}.png`;
-                          link.click();
-                        }}>
-                          <Download className="w-4 h-4 mr-2" /> Salvar PNG
+                        <Button variant="outline" className="flex-1" disabled={!qrUrl} asChild>
+                          <a href={qrUrl} download={`qrcode-${(T.codigo(item) || item.id).replace(/\W+/g, '-')}.png`}><Download className="w-4 h-4 mr-2" />Salvar PNG</a>
                         </Button>
-                        <Button className="flex-1" onClick={() => {
-                          const win = window.open('');
-                          win.document.write(`<div style="text-align:center;font-family:sans-serif;"><img src="${generatedCode}" width="200"/><br/><h2>${itemInfo}</h2><p>${itemType}</p></div>`);
-                          win.document.close();
-                          win.focus();
-                          setTimeout(() => { win.print(); win.close(); }, 500);
-                        }}>
-                          <Printer className="w-4 h-4 mr-2" /> Imprimir
+                        <Button className="flex-1" disabled={!qrUrl} onClick={() => imprimirEtiqueta(qrUrl, T.nome(item), [T.rotulo, T.codigo(item)].filter(Boolean).join(' · '))}>
+                          <Printer className="w-4 h-4 mr-2" />Imprimir
                         </Button>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center text-muted-foreground flex flex-col items-center opacity-50">
                       <QrCode className="w-24 h-24 mb-4" />
-                      <p>O QR Code gerado aparecerá aqui</p>
+                      <p>Escolha um item para ver a etiqueta</p>
                     </div>
                   )}
                 </Card>
@@ -190,33 +195,41 @@ const QRCodeModule = () => {
             </TabsContent>
 
             <TabsContent value="scan">
-              <Card className="shadow-md border-border max-w-2xl mx-auto">
+              <Card className="shadow-md max-w-2xl mx-auto">
                 <CardHeader className="text-center border-b bg-muted/30">
-                  <CardTitle className="text-xl">Leitor de QR Code</CardTitle>
-                  <CardDescription>Aponte a câmera para a etiqueta do item</CardDescription>
+                  <CardTitle className="text-xl">Ler etiqueta</CardTitle>
+                  <CardDescription>Aponte a câmera para o QR Code do item</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  {!scanResult ? (
-                    <div className="rounded-xl overflow-hidden border-2 border-primary/20 bg-black/5">
-                      <div id="qr-reader" className="w-full"></div>
+                  {!lido ? (
+                    <div className="rounded-xl overflow-hidden border-2 border-primary/20 bg-black/5"><div id="qr-reader" className="w-full" /></div>
+                  ) : lido.erro ? (
+                    <div className="text-center py-10 space-y-4">
+                      <p className="font-semibold text-red-700">{lido.erro}</p>
+                      <Button onClick={() => setLido(null)}>Ler outro</Button>
                     </div>
                   ) : (
-                    <div className="text-center py-12 space-y-6">
-                      <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <ScanLine className="w-10 h-10" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-primary">Leitura Bem-Sucedida!</h3>
-                      <div className="p-4 bg-muted rounded-lg text-left max-w-sm mx-auto break-all font-mono text-sm">
-                        {scanResult}
-                      </div>
-                      <div className="flex gap-4 justify-center pt-4">
-                        <Button onClick={() => {
-                          setScanResult(null);
-                          setActiveTab('scan'); // trigger re-render to remount scanner
-                        }} className="bg-primary text-primary-foreground">
-                          Nova Leitura
-                        </Button>
-                      </div>
+                    <div className="py-6 space-y-4" data-testid="item-lido">
+                      {(() => {
+                        const t = TIPOS[lido.tipo];
+                        const Icone = t.icone;
+                        return (
+                          <>
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-primary/10 text-primary rounded-lg"><Icone className="w-8 h-8" /></div>
+                              <div>
+                                <p className="text-xs uppercase text-muted-foreground">{t.rotulo}{t.codigo(lido.rec) ? ` · ${t.codigo(lido.rec)}` : ''}</p>
+                                <h3 className="text-2xl font-bold">{t.nome(lido.rec)}</h3>
+                              </div>
+                            </div>
+                            <ul className="text-sm space-y-1">{detalhes(lido.tipo, lido.rec).filter(Boolean).map((d) => <li key={d}>{d}</li>)}</ul>
+                            <div className="flex flex-wrap gap-3 pt-2">
+                              <Button asChild variant="outline"><Link to={t.pagina}><ExternalLink className="w-4 h-4 mr-2" />Abrir {t.rotulo === 'EPI' ? 'EPIs' : `${t.rotulo.toLowerCase()}s`}</Link></Button>
+                              <Button onClick={() => setLido(null)}><ScanLine className="w-4 h-4 mr-2" />Ler outro</Button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </CardContent>
@@ -224,40 +237,31 @@ const QRCodeModule = () => {
             </TabsContent>
 
             <TabsContent value="track">
-              <Card className="shadow-md border-border">
+              <Card className="shadow-md">
                 <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-xl">Histórico de Rastreamento</CardTitle>
-                  <CardDescription>Últimas movimentações e leituras registradas</CardDescription>
+                  <CardTitle className="text-xl">Histórico de leituras</CardTitle>
+                  <CardDescription>As últimas etiquetas lidas na empresa</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  {history.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground flex flex-col items-center opacity-50">
-                      <MapPin className="w-16 h-16 mb-4" />
-                      <p>Nenhuma leitura registrada nesta sessão.</p>
-                      <p className="text-sm">As leituras aparecerão aqui em tempo real.</p>
-                    </div>
+                  {historico.length === 0 ? (
+                    <p className="text-center py-12 text-muted-foreground">Nenhuma leitura ainda.</p>
                   ) : (
-                    <div className="space-y-4">
-                      {history.map((log, idx) => (
-                        <div key={idx} className="flex items-start gap-4 p-4 rounded-xl bg-card border hover:shadow-md transition-shadow">
-                          <div className="p-3 bg-primary/10 text-primary rounded-lg">
-                            {log.item_tipo === 'EPI' ? <HardHat className="w-5 h-5"/> : 
-                             log.item_tipo === 'Equipamento' ? <Wrench className="w-5 h-5"/> : <Box className="w-5 h-5"/>}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between items-start">
-                              <h4 className="font-bold text-foreground">ID: {log.qrcode_id}</h4>
-                              <span className="text-xs font-medium px-2 py-1 bg-muted rounded-full">
-                                {new Date(log.created).toLocaleTimeString('pt-BR')}
-                              </span>
+                    <div className="space-y-3">
+                      {historico.map((h) => {
+                        const Icone = h.item_tipo === 'EPI' ? HardHat : h.item_tipo === 'Equipamento' ? Wrench : Box;
+                        return (
+                          <div key={h.id} className="flex items-start gap-4 p-3 rounded-xl bg-card border">
+                            <div className="p-2 bg-primary/10 text-primary rounded-lg"><Icone className="w-5 h-5" /></div>
+                            <div className="flex-1">
+                              <div className="flex justify-between items-start gap-2">
+                                <p className="font-semibold">{h.qrcode_id || h.item_tipo}</p>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">{new Date(h.created.replace(' ', 'T')).toLocaleString('pt-BR')}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{h.item_tipo} · lido por {h.expand?.usuario_id?.name || h.expand?.usuario_id?.email || '—'}</p>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Local: <span className="font-medium text-foreground">{log.localizacao}</span> • 
-                              Ação: <span className="font-medium text-foreground">{log.acao}</span>
-                            </p>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>

@@ -7,7 +7,7 @@ function exigirGestao(auth) {
   if (!auth) throw new UnauthorizedError("Entre no sistema para continuar.");
   if (auth.isSuperuser()) return;
   const cargo = auth.get("cargo") || auth.get("role");
-  if (GESTAO.includes(cargo) || auth.get("role") === "admin" || auth.get("email") === "dnmltda@hotmail.com") return;
+  if (GESTAO.includes(cargo) || auth.get("role") === "admin" || auth.get("dono_sistema") === true) return;
   throw new ForbiddenError("Só a gestão de equipamentos pode emprestar e receber equipamentos.");
 }
 

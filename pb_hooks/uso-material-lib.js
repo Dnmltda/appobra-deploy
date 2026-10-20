@@ -6,7 +6,7 @@ const CARGOS_GESTAO = ["Administrador", "Diretoria", "Gerência", "Engenheiro", 
 function ehAdmin(u) {
   if (!u) return false;
   return u.get("role") === "admin" || u.get("role") === "Administrador" || u.get("cargo") === "Administrador" ||
-    u.get("email") === "dnmltda@hotmail.com";
+    u.get("dono_sistema") === true;
 }
 
 function ehGestao(u) {

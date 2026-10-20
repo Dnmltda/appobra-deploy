@@ -63,7 +63,7 @@ onRecordUpdateRequest((e) => {
   if (a && !a.isSuperuser()) {
     const cargo = a.get("cargo") || a.get("role");
     const gestao = ["Administrador", "Diretoria", "Gerência", "Engenheiro", "Mestre de Obras", "Almoxarife", "RH"].includes(cargo)
-      || a.get("role") === "admin" || a.get("email") === "dnmltda@hotmail.com";
+      || a.get("role") === "admin" || a.get("dono_sistema") === true;
     if (!gestao) e.record.set("quantidade_estoque", e.record.original().get("quantidade_estoque"));
   }
   e.next();

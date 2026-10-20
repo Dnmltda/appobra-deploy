@@ -23,6 +23,8 @@ import {
   ArrowLeft, Pencil, FileText, Plus, Trash2, CheckCircle2, Download, ClipboardCheck, Paperclip, Package, Truck, XCircle,
 } from "lucide-react";
 import { podeGerirSolicitacoes, podeGerirEstoque, cargoDe } from "@/lib/permissoes.js";
+import FotoRetirada from "@/components/FotoRetirada.jsx";
+import FotoProtegida from "@/components/FotoProtegida.jsx";
 
 // Fluxo do material de consumo: o estoque confirma que recebeu o pedido,
 // separa e avisa; quem pediu confere e aceita na retirada (só aí o material
@@ -70,7 +72,7 @@ const SolicitacaoDetalhesPage = () => {
     if (!id) return;
     setLoading(true);
     try {
-      const s = await pb.collection("solicitacoes").getOne(id, { expand: "solicitante_id,obra_id,responsavel_id", $autoCancel: false });
+      const s = await pb.collection("solicitacoes").getOne(id, { expand: "solicitante_id,obra_id,responsavel_id,retirada_registrada_por", $autoCancel: false });
       setSolicitacao(s);
       const [ap, an, hi, it] = await Promise.all([
         h.fetchAprovacoes(id), h.fetchAnexos(id), h.fetchHistorico(id), h.fetchItens(id),
@@ -412,6 +414,10 @@ const FluxoMaterial = ({
   const st = solicitacao.status;
   const [recusando, setRecusando] = useState(false);
   const [motivo, setMotivo] = useState("");
+  // Retirada: quem pediu aceita, ou o almoxarifado registra no balcão; nos
+  // dois casos com a foto de quem está levando (o servidor exige).
+  const [foto, setFoto] = useState(null);
+  const podeRetirar = podeAceitar || estoque;
   // De qual estoque sai: geral ou o da obra do pedido (quem separa escolhe).
   const obraPedido = solicitacao.obra_id || "";
   const [saldoObra, setSaldoObra] = useState(null); // { material_id: quantidade }
@@ -485,6 +491,18 @@ const FluxoMaterial = ({
           )}
         </div>
 
+        {solicitacao.foto_retirada && (
+          <div className="flex items-center gap-3">
+            <FotoProtegida record={solicitacao} />
+            <div className="text-sm">
+              <p className="font-semibold">Foto da retirada</p>
+              {solicitacao.expand?.retirada_registrada_por && (
+                <p className="text-muted-foreground">Registrada por {solicitacao.expand.retirada_registrada_por.name || solicitacao.expand.retirada_registrada_por.email}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {!encerrada && (
           <div className="flex flex-wrap gap-2 pt-1">
             {aberta && gestao && (
@@ -524,17 +542,27 @@ const FluxoMaterial = ({
                 Sai do {solicitacao.estoque_obra_id ? `estoque da obra ${nomeObraPedido}` : "estoque geral"}.
               </p>
             )}
-            {st === "Pronto para retirada" && podeAceitar && !recusando && (
+            {st === "Pronto para retirada" && podeRetirar && !recusando && (
               confirmarEntrega ? (
-                <div className="flex flex-wrap items-center gap-2 p-3 border rounded-lg bg-amber-50 text-sm">
-                  <span>Conferiu tudo? Ao aceitar, o material sai do estoque e passa a ficar com você.</span>
-                  <Button size="sm" disabled={mudando} onClick={() => avancar("Concluída", "Material aceito. Retirada registrada.")}>Sim, aceitar</Button>
-                  <Button size="sm" variant="outline" onClick={() => setConfirmarEntrega(false)}>Voltar</Button>
+                <div className="w-full space-y-3 p-3 border rounded-lg bg-amber-50 text-sm">
+                  <p>{podeAceitar
+                    ? "Conferiu tudo? Ao aceitar, o material sai do estoque e passa a ficar com você."
+                    : `Retirada no balcão: confira o material com ${solicitacao.expand?.solicitante_id?.nome_completo || solicitacao.expand?.solicitante_id?.name || "quem pediu"}. Ao registrar, o material sai do estoque.`}</p>
+                  <FotoRetirada onFoto={setFoto} rotulo="Foto de quem está levando o material" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" disabled={mudando || !foto}
+                      onClick={() => avancar("Concluída", "Retirada registrada com foto.", { foto_retirada: foto }).then(() => setFoto(null))}>
+                      {podeAceitar ? "Sim, aceitar" : "Registrar retirada"}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => { setConfirmarEntrega(false); setFoto(null); }}>Voltar</Button>
+                  </div>
+                  {!foto && <p className="text-xs text-muted-foreground">Sem a foto não dá para registrar a retirada.</p>}
                 </div>
               ) : (
                 <>
-                  <Button onClick={() => setConfirmarEntrega(true)}><Truck className="w-4 h-4 mr-2" />Conferir e aceitar o material</Button>
-                  <Button variant="outline" onClick={() => setRecusando(true)}><XCircle className="w-4 h-4 mr-2" />Material errado</Button>
+                  <Button onClick={() => setConfirmarEntrega(true)}><Truck className="w-4 h-4 mr-2" />
+                    {podeAceitar ? "Conferir e aceitar o material" : "Registrar retirada no balcão"}</Button>
+                  {podeAceitar && <Button variant="outline" onClick={() => setRecusando(true)}><XCircle className="w-4 h-4 mr-2" />Material errado</Button>}
                 </>
               )
             )}
@@ -552,7 +580,7 @@ const FluxoMaterial = ({
                 </div>
               </div>
             )}
-            {st === "Pronto para retirada" && !podeAceitar && <p className="text-sm text-muted-foreground">Aguardando quem pediu conferir e aceitar o material na retirada.</p>}
+            {st === "Pronto para retirada" && !podeRetirar && <p className="text-sm text-muted-foreground">Aguardando quem pediu conferir e aceitar o material na retirada.</p>}
             {st === "Entregue" && (podeAceitar || gestao) && (
               <Button disabled={mudando} onClick={() => avancar("Concluída", "Recebimento confirmado")}><CheckCircle2 className="w-4 h-4 mr-2" />Confirmar que recebi</Button>
             )}

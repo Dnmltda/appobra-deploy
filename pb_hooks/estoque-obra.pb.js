@@ -18,6 +18,7 @@
 onBootstrap((e) => {
   e.next();
   const app = e.app;
+  require(`${__hooks}/dono-lib.js`).garantir(app); // regras abaixo usam users.dono_sistema
   try {
     const obras = app.findCollectionByNameOrId("obras");
     let col = null;
@@ -29,7 +30,7 @@ onBootstrap((e) => {
       const VE = '(@request.auth.cargo = "Administrador" || @request.auth.cargo = "Diretoria" || @request.auth.cargo = "Gerência" || ' +
         '@request.auth.cargo = "Engenheiro" || @request.auth.cargo = "Mestre de Obras" || @request.auth.cargo = "Almoxarife" || ' +
         '@request.auth.cargo = "Comprador" || @request.auth.cargo = "Financeiro" || ' +
-        '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.email = "dnmltda@hotmail.com")';
+        '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.dono_sistema = true)';
       col = new Collection({
         type: "base",
         name: "estoque_obra",

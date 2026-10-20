@@ -24,8 +24,10 @@ export async function apiLogin(email, pass = "Senha12345") {
 }
 
 export async function abrir(email = "a@teste.local", pass = "Senha12345") {
-  const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome" });
-  const page = await browser.newPage({ viewport: { width: 1366, height: 860 } });
+  // Câmera de mentira do Chromium (imagem de teste) para a foto da retirada.
+  const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
+    args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] });
+  const page = await browser.newPage({ viewport: { width: 1366, height: 860 }, permissions: ["camera"] });
   const erros = [];
   page.on("console", (m) => { if (m.type() === "error") erros.push(m.text().slice(0, 220)); });
   page.on("pageerror", (e) => erros.push("PAGEERROR " + e.message.slice(0, 220)));
@@ -69,4 +71,21 @@ export async function garantirMaterial(token, cid, nome, extra = {}) {
   return (await api("POST", "/api/collections/materiais/records", token, {
     name: nome, code: "T-" + nome.slice(0, 3).toUpperCase(), unit: "un", category: "Materiais de Construção", status: "active", company_id: cid, ...extra,
   })).data;
+}
+
+// Foto da retirada: abre a câmera (de teste) e espera ela tirar sozinha.
+export async function tirarFoto(page, escopo) {
+  await (escopo || page).getByRole("button", { name: /Abrir câmera/ }).click();
+  await (escopo || page).getByAltText("Foto tirada").waitFor({ timeout: 10000 });
+}
+
+// Igual a api(), mas manda junto a foto obrigatória de quem retira (foto_retirada).
+const JPEG = Buffer.from("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=", "base64");
+export async function apiComFoto(method, path, token, body) {
+  const fd = new FormData();
+  fd.append("@jsonPayload", JSON.stringify(body));
+  fd.append("foto_retirada", new Blob([JPEG], { type: "image/jpeg" }), "foto.jpg");
+  const r = await fetch(API + path, { method, headers: token ? { Authorization: token } : {}, body: fd });
+  const txt = await r.text();
+  return { status: r.status, data: txt ? JSON.parse(txt) : {} };
 }

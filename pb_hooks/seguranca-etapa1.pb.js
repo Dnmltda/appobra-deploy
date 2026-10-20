@@ -36,8 +36,9 @@
 onBootstrap((e) => {
   e.next();
   const app = e.app;
+  require(`${__hooks}/dono-lib.js`).garantir(app); // regras abaixo usam users.dono_sistema
 
-  const SEG_MASTER = '@request.auth.email = "dnmltda@hotmail.com"';
+  const SEG_MASTER = '@request.auth.dono_sistema = true';
   // Exige login explicitamente: sem isso um visitante (empresa vazia) passaria
   // em registros sem empresa, porque "" = "".
   const SEG_SAME = '@request.auth.id != "" && @request.auth.company_id = company_id';
@@ -167,6 +168,30 @@ onBootstrap((e) => {
       console.log(`[seguranca-etapa1] Erro em ${name}:`, err);
     }
   });
+
+  // ---- Etapa 5: tabelas duplicadas que nenhuma tela usa (o app usa a outra
+  // do par: companies, veiculos, epis_entregas, compras, compras_aprovacao,
+  // compras_recebimento, solicitacoes, qrcode_leituras). Os dados antigos
+  // ficam guardados e legíveis na empresa; só não dá mais para gravar nelas.
+  const SEG_DUPLICADAS = ["empresa", "veiculo", "epi_entrega", "epi_funcionario", "pedidos_compra",
+    "aprovacoes_compra", "recebimentos", "qr_scans", "solicitacoes_compra"];
+  const segTravarDuplicadas = () => {
+    const comDados = [];
+    SEG_DUPLICADAS.forEach((name) => {
+      try {
+        const col = app.findCollectionByNameOrId(name);
+        if (col.createRule !== null || col.updateRule !== null || col.deleteRule !== null) {
+          col.createRule = null;
+          col.updateRule = null;
+          col.deleteRule = null;
+          app.save(col);
+        }
+        const n = app.countRecords(name);
+        if (n) comDados.push(`${name} (${n})`);
+      } catch (_) { /* tabela não existe neste banco */ }
+    });
+    if (comDados.length) console.log(`[seguranca-etapa1] Tabelas duplicadas travadas, com dados antigos guardados: ${comDados.join(", ")}.`);
+  };
 
   // ---- S7: logs com empresa, só admin da empresa lê, ninguém altera/apaga
   SEG_LOGS.forEach((name) => {
@@ -310,7 +335,7 @@ onBootstrap((e) => {
     // atual (Gestão de Acessos: "Resetar senha"). Sem manageRule o PocketBase
     // exigia oldPassword e o reset falhava. A conta Master fica de fora.
     col.manageRule =
-      `(${SEG_ADMIN} && ${SEG_SAME} && email != "dnmltda@hotmail.com") || ${SEG_MASTER}`;
+      `(${SEG_ADMIN} && ${SEG_SAME} && dono_sistema != true) || ${SEG_MASTER}`;
     // Os tokens NÃO podem ser "hidden": campo hidden não é gravável pela API,
     // e a tela de convite grava o token ao criar o acesso. Eles ficam
     // visíveis no schema e são escondidos pelos hooks no fim deste arquivo.
@@ -388,6 +413,7 @@ onBootstrap((e) => {
     }
   });
 
+  segTravarDuplicadas(); // por último: as regras acima também passam por estas tabelas
   console.log("[seguranca-etapa1] Regras de segurança e separação por empresa aplicadas.");
 });
 
