@@ -21,6 +21,7 @@ const recados = async (tok) => (await api("GET", "/api/collections/obra_mensagen
 // 1. João escreve no mural pela "Minha Obra"
 let s = await abrir("joao@teste.local");
 let page = s.page;
+await page.getByRole("link", { name: /Minha Obra/ }).first().waitFor({ timeout: 10000 }).catch(() => {});
 check("Menu do pedreiro tem 'Minha Obra'", (await page.getByRole("link", { name: /Minha Obra/ }).count()) > 0);
 await page.goto(FRONT + "/minha-obra"); await page.waitForTimeout(2000);
 check("Minha Obra abre a obra dele (Residencial Jardim)", (await page.getByRole("heading", { name: "Residencial Jardim" }).count()) === 1);
