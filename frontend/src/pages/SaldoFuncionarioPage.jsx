@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
-import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
+import { ehAdmin, cargoDe, podeVerEstoque } from '@/lib/permissoes.js';
 
 const AUDIT_MODULE = 'Saldo por Funcionário';
 
@@ -80,6 +80,8 @@ const SaldoFuncionarioPage = () => {
   const { currentUser } = useAuth();
   const companyId = currentUser?.company_id;
   const perms = usePermissions(currentUser);
+  // Pedreiro, servente etc. veem só o próprio material (o servidor também só manda o dele).
+  const soOMeu = !podeVerEstoque(currentUser);
 
   const [lancamentos, setLancamentos] = useState([]);
   const [funcionarios, setFuncionarios] = useState([]);
@@ -188,7 +190,8 @@ const SaldoFuncionarioPage = () => {
 
   // Linhas agregadas por funcionário para a listagem
   const linhasFuncionarios = useMemo(() => {
-    return funcionarios.map((f) => {
+    const lista = soOMeu ? funcionarios.filter((f) => f.id === currentUser?.funcionario_id) : funcionarios;
+    return lista.map((f) => {
       const mats = saldoPorFuncionario.get(f.id) || new Map();
       const itens = [];
       let totalQtd = 0;
@@ -216,7 +219,7 @@ const SaldoFuncionarioPage = () => {
         valorTotal,
       };
     });
-  }, [funcionarios, saldoPorFuncionario, materialById]);
+  }, [funcionarios, saldoPorFuncionario, materialById, soOMeu, currentUser?.funcionario_id]);
 
   const filteredLinhas = useMemo(() => {
     let list = linhasFuncionarios;
@@ -581,9 +584,11 @@ const SaldoFuncionarioPage = () => {
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-1">Saldo por Funcionário</h1>
+            <h1 className="text-3xl font-bold mb-1">{soOMeu ? 'Meu Material' : 'Saldo por Funcionário'}</h1>
             <p className="text-muted-foreground">
-              Materiais em posse de cada funcionário, com histórico de retiradas e devoluções
+              {soOMeu
+                ? 'O material que está com você: o que retirou, devolveu e usou na obra'
+                : 'Materiais em posse de cada funcionário, com histórico de retiradas e devoluções'}
             </p>
           </div>
           <Button variant="outline" onClick={handleExport}>

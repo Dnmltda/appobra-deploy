@@ -178,6 +178,11 @@ const MateriaisPage = () => {
   const [materiaisModelo, setMateriaisModelo] = useState([]);
   const [carregandoModelos, setCarregandoModelos] = useState(false);
 
+  // Busca de material pronto (catálogo padrão + o que a empresa já tem), para
+  // escolher em vez de digitar, no computador e no celular.
+  const [buscaPronto, setBuscaPronto] = useState('');
+  const [prontos, setProntos] = useState([]);
+
   // Foto do material — preparação pro padrão visual futuro (foto + QR code).
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
@@ -260,6 +265,49 @@ const MateriaisPage = () => {
       unit_cost: '',
     }));
     setFormErrors({});
+  };
+
+  useEffect(() => {
+    if (!dialogOpen || editing || !companyId) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        if (!catalogoRef.current) {
+          catalogoRef.current = await pb.send('/api/custom/catalogo-materiais', { $autoCancel: false }).catch(() => []);
+        }
+        const daEmpresa = await pb.collection('materiais').getFullList({
+          filter: `company_id = "${companyId}"`, sort: 'name', fields: 'id,name,category,unit,description,marca', $autoCancel: false,
+        }).catch(() => []);
+        const nomes = new Set(daEmpresa.map((m) => String(m.name || '').toLowerCase()));
+        const sugestoes = (catalogoRef.current || [])
+          .filter((c) => !nomes.has(String(c.name).toLowerCase()))
+          .map((c) => ({ ...c, id: `sug-${c.code}`, sugestao: true }));
+        if (!cancelado) setProntos([...daEmpresa, ...sugestoes]);
+      } catch (err) {
+        console.error('Erro ao carregar materiais prontos:', err);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [dialogOpen, editing, companyId]);
+
+  const semAcento = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const prontosVisiveis = useMemo(() => {
+    const q = semAcento(buscaPronto.trim());
+    if (!q) {
+      // Sem busca: os mais comuns de cada categoria.
+      const vistos = {};
+      return prontos.filter((m) => {
+        vistos[m.category] = (vistos[m.category] || 0) + 1;
+        return vistos[m.category] <= 2;
+      }).slice(0, 20);
+    }
+    return prontos.filter((m) => semAcento(`${m.name} ${m.category}`).includes(q)).slice(0, 30);
+  }, [prontos, buscaPronto]);
+
+  const escolherPronto = (modelo) => {
+    usarMaterialModelo(modelo);
+    setCategoriaAtiva(null);
+    setBuscaPronto('');
   };
 
   const handleFotoChange = (e) => {
@@ -499,6 +547,7 @@ const MateriaisPage = () => {
   const resetForm = () => {
     setFormData(emptyForm);
     setMarcaOutra(false);
+    setBuscaPronto('');
     setEditing(null);
     setFormErrors({});
     setCategoriaAtiva(null);
@@ -601,8 +650,43 @@ const MateriaisPage = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!editing && (
+                  <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <Label htmlFor="busca_pronto">Escolha um material pronto</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="busca_pronto"
+                        className="pl-9"
+                        placeholder="Procure: cimento, fio, tinta, tubo, luva..."
+                        value={buscaPronto}
+                        onChange={(e) => setBuscaPronto(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {buscaPronto.trim() ? 'Toque no material para preencher nome, categoria e unidade.' : 'Mais usados nas obras. Toque para preencher; depois escolha cor, marca e preço.'}
+                    </p>
+                    {prontosVisiveis.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nada encontrado. Digite o nome do material novo no campo Nome abaixo.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                        {prontosVisiveis.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => escolherPronto(m)}
+                            className={`text-xs px-2.5 py-1.5 rounded-full border bg-background hover:bg-primary/10 hover:border-primary transition-colors ${formData.name === m.name ? 'border-primary bg-primary/10 font-medium' : ''}`}
+                          >
+                            {m.name}<span className="text-muted-foreground"> · {m.category}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!editing && (
                   <div className="space-y-2">
-                    <Label>Categoria — escolha pra ver os materiais já cadastrados</Label>
+                    <Label>Ou veja por categoria</Label>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                       {CATEGORIA_SUGESTOES.filter((c) => c !== 'Outros').map((cat) => {
                         const Icone = getCategoriaIcon(cat);

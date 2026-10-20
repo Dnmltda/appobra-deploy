@@ -33,8 +33,8 @@ export const MODULOS_POR_CARGO = {
   'Servente': OBRA,
   'Encanador': OBRA,
   'Eletricista': OBRA,
-  // Faxina: controla o material de limpeza e pode pedir reposição.
-  'Faxina': ['dashboard', 'minha_obra', 'solicitacoes', 'estoque', 'movimentacoes', 'ocorrencias'],
+  // Faxina: pede o material de limpeza e vê só o que está com ela.
+  'Faxina': ['dashboard', 'minha_obra', 'solicitacoes', 'saldo_funcionario', 'ocorrencias'],
 };
 
 export const ehAdmin = (user) =>
@@ -49,6 +49,11 @@ export const podeAcessar = (user, modulo) => {
   if (ehAdmin(user)) return true;
   return (MODULOS_POR_CARGO[cargoDe(user)] || ['dashboard']).includes(modulo);
 };
+
+// Quem vê o estoque geral, o das obras e o saldo de todos (mesma lista do
+// servidor, pb_hooks/acesso-estoque.pb.js). Os demais veem só o próprio saldo.
+export const podeVerEstoque = (user) =>
+  ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador', 'Financeiro'].includes(cargoDe(user));
 
 // Gestão do estoque (aprovar/cancelar movimentação, ver de todos).
 export const podeGerirEstoque = (user) =>

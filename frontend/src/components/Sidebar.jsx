@@ -28,7 +28,7 @@ import {
   MessagesSquare,
 } from 'lucide-react';
 import Logo from './Logo.jsx';
-import { ehAdmin, podeAcessar } from '@/lib/permissoes.js';
+import { ehAdmin, podeAcessar, podeVerEstoque } from '@/lib/permissoes.js';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { language } = useLanguage();
@@ -112,7 +112,10 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   };
 
   // "Minha Obra" só para quem tem cadastro de funcionário (é por ele que se sabe a obra).
-  const visibleItems = menuItems.filter(item => hasPermission(item.id) && (item.id !== 'minha_obra' || !!currentUser?.funcionario_id));
+  const visibleItems = menuItems
+    .filter(item => hasPermission(item.id) && (item.id !== 'minha_obra' || !!currentUser?.funcionario_id))
+    // Quem não vê o estoque só enxerga o próprio saldo.
+    .map(item => (item.id === 'saldo_funcionario' && !podeVerEstoque(currentUser) ? { ...item, label: 'Meu Material' } : item));
 
   // Pick only the longest (most specific) matching path as active,
   // so a parent route never lights up together with a more specific

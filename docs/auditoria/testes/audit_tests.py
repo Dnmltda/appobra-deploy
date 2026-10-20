@@ -328,10 +328,12 @@ def movc(tok, tipo, qtd, status="Aprovado", **extra):
     body.update(extra)
     return call("POST", "/api/collections/movimentacoes/records", tok, body)
 s, r = movc(tPed, "Saída", 1)
-check("divergencia", "Pedreiro lança saída 'Aprovado': fica Pendente e o saldo não muda", s == 200 and r.get("status") == "Pendente" and saldo(mid) == s0,
+check("divergencia", "Pedreiro não lança movimentação de estoque (só vê o próprio material)", s >= 400 and saldo(mid) == s0, f"status {s}")
+s, r = movc(tAlm, "Saída", 1, status="Pendente")
+check("divergencia", "Saída lançada como Pendente não mexe no saldo", s == 200 and r.get("status") == "Pendente" and saldo(mid) == s0,
       err(r) if s >= 400 else f"{r.get('status')} saldo {saldo(mid)}")
 s, r2 = call("PATCH", f"/api/collections/movimentacoes/records/{r.get('id')}", tPed, {"status": "Aprovado"})
-check("divergencia", "Pedreiro não aprova movimentação (servidor)", s == 403 and saldo(mid) == s0, f"status {s}")
+check("divergencia", "Pedreiro não aprova movimentação (servidor)", s >= 400 and saldo(mid) == s0, f"status {s}")
 s, r2 = call("PATCH", f"/api/collections/movimentacoes/records/{r.get('id')}", tAlm, {"status": "Aprovado"})
 check("divergencia", "Almoxarife aprova a saída normal", s == 200 and saldo(mid) == s0 - 1, err(r2) if s >= 400 else f"saldo {saldo(mid)}")
 s0 = saldo(mid)
@@ -582,7 +584,8 @@ s, r = call("POST", "/api/collections/estoque_obra/records", tA, {"company_id": 
 check("estoque_obra", "Ninguém grava o estoque da obra direto pela API", s >= 400, f"status {s}")
 s, r = call("GET", "/api/collections/estoque_obra/records", tB)
 check("isolamento", "Outra empresa não vê o estoque das obras", s == 200 and r.get("totalItems") == 0, f"{r.get('totalItems')}")
-check("estoque_obra", "Funcionário da empresa vê o estoque da obra", na_obra(tF) == 22)
+check("estoque_obra", "Funcionário comum não vê o estoque da obra (só quem cuida do estoque)", na_obra(tF) == 0)
+check("estoque_obra", "Almoxarife vê o estoque da obra", na_obra(tAlm) == 22)
 # pedido de material separado do estoque da obra
 s, so3 = call("POST", "/api/collections/solicitacoes/records", tF, {"company_id": cA, "numero_solicitacao": "SOL-EOB-1", "tipo": "Material",
               "solicitante_id": uF["id"], "descricao": "tijolo da obra", "status": "Aberta", "obra_id": obra.get("id")})

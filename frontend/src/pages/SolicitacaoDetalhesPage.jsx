@@ -474,7 +474,7 @@ const FluxoMaterial = ({
                 <Select value={novoItem.material_id} onValueChange={(v) => setNovoItem({ ...novoItem, material_id: v })}>
                   <SelectTrigger aria-label="Material"><SelectValue placeholder="Escolha o material" /></SelectTrigger>
                   <SelectContent>
-                    {materiais.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} ({m.quantity_in_stock || 0} {m.unit} em estoque)</SelectItem>)}
+                    {materiais.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}{estoque ? ` (${m.quantity_in_stock || 0} ${m.unit} em estoque)` : ''}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

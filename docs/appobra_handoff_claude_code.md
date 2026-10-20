@@ -65,6 +65,13 @@
   30 dias, pedidos por status. Funcionário de obra: minha obra, botões grandes, meus pedidos, material comigo.
   Empresa vazia mostra "Vamos começar". Cada bloco só aparece se o cargo pode abrir aquela tela.
 - Câmera que lê código de barras do material: ideia para o futuro (não feito).
+- **Quem vê o estoque** (`pb_hooks/acesso-estoque.pb.js`, pedido do Diego 20/10): estoque geral, estoque das obras,
+  movimentações e saldo de todos só para Administrador, Diretoria, Gerência, Engenheiro, Mestre de Obras, Almoxarife,
+  Comprador e Financeiro (Financeiro só lê). Pedreiro, servente, encanador, eletricista, faxina e funcionário veem só o
+  próprio material (menu **Meu Material**), pedem material e registram uso; não cadastram nem alteram material e
+  recebem a lista de materiais sem quantidade e mínimo.
+- **Material pronto no cadastro**: busca no topo de "Adicionar Material" (catálogo padrão + materiais da empresa),
+  igual no computador e no celular.
 
 **Feito em produção depois (com o sim do Diego, 19/10 22:58 UTC)**
 - dn-moraes passou para **02** (acesso e funcionário). Apagados de vez os testes 08/09 e o acesso de teste 08; o
