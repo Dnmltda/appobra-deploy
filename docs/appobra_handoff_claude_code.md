@@ -80,6 +80,16 @@
 - 19/10 23:38 UTC: **app zerado** a pedido do Diego. Ficaram só o login dele (01), as empresas e os cargos.
   Backup: `/data/backups/antes-zerar-20261019-233829.db` e `storage-antes-zerar.tgz`.
 
+**Publicado em 20/10/2026 (Claude Code, pedido do Diego)**
+- PR #8 no `main` (merge a2ef34c). Snapshot antes: `vs_yxxDyQ9jVajSKV5zkj9j` (volume vol_re1q22xm5ye2j0o4).
+- Fly: release **v20** (imagem `registry.fly.io/appobra-backend:pr8-a2ef34c`, montada no Claude Code com o
+  mesmo Dockerfile; o builder remoto do Fly não passa pelo proxy da nuvem). Boot sem `Erro` nem
+  `failed to execute`; `/api/health` ok. Voltar atrás: `fly releases` → v19.
+- Hostinger (`midnightblue-chamois-688707.hostingersite.com`): enviados `assets/index-BDqvJKn8.js`,
+  `assets/index.es-ippwZO-t.js` e por último `index.html`. Login abre sem erro no Fly e na Hostinger.
+- Falta: os 9 testes do passo 9 de docs/PUBLICAR-COWORK.md com o Diego; a chave do Fly que o Diego colou
+  no chat deve ser trocada por uma nova cadastrada só nas configurações do ambiente (`FLY_API_TOKEN`).
+
 **Pendências da auditoria fechadas em 20/10/2026 (Claude Code, no PR #8)**
 - **Limite de tentativas de login** (`pb_hooks/login-limite.pb.js` + `login-limite-lib.js`): 5 senhas erradas
   seguidas na mesma conta travam por 15 minutos (vale para as abas E-mail, Usuário e ID); senha certa zera o
