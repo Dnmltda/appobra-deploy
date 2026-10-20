@@ -758,7 +758,7 @@ tAna, tBeto = login("ana.carrinho@teste.local")[0], login("beto.carrinho@teste.l
 e4 = novo_eq("Carrinho de mão")
 s, l4 = emp(e4, funcionario_id=_fc["Ana do Carrinho"].get("id"))
 def repasse(tok, de, para, **extra):
-    return call("POST", "/api/collections/emprestimos/records", tok, {"repassado_de": de.get("id"), "funcionario_id": para.get("id"),
+    return call("POST", "/api/collections/emprestimos/records", tok, {"repassado_de": de.get("id"), "company_id": cA, "funcionario_id": para.get("id"),
                 "local_entrega": "3º andar, torre B", "foto_retirada": FOTO, **extra})
 s, r = repasse(tAna, l4, _fc["Beto do Carrinho"], local_entrega="")
 check("equip", "Passar para outra pessoa exige dizer onde estão", s >= 400 and "onde" in r.get("message", ""), r.get("message", "")[:80])

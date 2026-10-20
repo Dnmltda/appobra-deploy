@@ -89,4 +89,4 @@ if (qrlib) {
   check("A leitura pela câmera também fica registrada", ls.length === 2, `${ls.length}`);
 }
 
-check("Sem erro de consulta na tela", !erros.some((e) => /Failed to fetch|\b400\b|\b403\b|\b500\b/.test(e) && !/realtime|submitSubscriptions/.test(e)), erros.join(" | ").slice(0, 200));
+check("Sem erro de consulta na tela", !erros.some((e) => /\b400\b|\b403\b|\b404\b|\b500\b/.test(e)), erros.join(" | ").slice(0, 200));

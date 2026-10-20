@@ -841,7 +841,7 @@ const EquipamentosPage = () => {
     setEmpSalvando(true);
     try {
       await pb.collection('emprestimos').create({
-        repassado_de: repTarget.id, funcionario_id: repData.funcionario_id, local_entrega: repData.local.trim(), foto_retirada: repData.foto,
+        repassado_de: repTarget.id, company_id: companyId, funcionario_id: repData.funcionario_id, local_entrega: repData.local.trim(), foto_retirada: repData.foto,
       }, { $autoCancel: false });
       toast.success(`${repTarget.expand?.equipment_id?.nome || 'Equipamento'} passado para ${funcionarioNome(repData.funcionario_id)}`);
       setRepTarget(null);

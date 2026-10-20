@@ -46,6 +46,7 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `materiais-cor.mjs` | cadastro de material por lista: categoria, cor (fio nas cores da norma) e marca; código sempre gerado pelo servidor (ELE-001, ELE-002), mesmo fio em duas cores, troca de cor na edição |
 | `acesso-estoque.mjs` | servente vê só o próprio material (Meu Material), não cadastra material, não vê quantidade, movimentações nem estoque das obras; almoxarife vê tudo; busca de material pronto no cadastro |
 | `obra-mural.mjs` | página da obra: Minha Obra do pedreiro, mural só para quem está na obra, aviso no sininho, recado vazio recusado, foto da obra, Tirar da obra / Colocar na obra |
+| `equipamento-repasse.mjs` | passar o equipamento para outra pessoa na obra: só quem está com ele (ou a gestão) vê o botão; para quem, onde estão e foto da troca; o equipamento fica com a nova pessoa, no local informado |
 | `qrcode.mjs` | QR Code: etiqueta de um item real gerada no aparelho (sem site de fora), link do QR abre o item, leitura registrada por empresa, outra empresa não vê, leitura de verdade pela câmera (precisa de `FRONTEND_DIR` apontando para `frontend/`, para gerar a imagem da câmera de teste) |
 
 A câmera dos testes é a câmera de teste do Chromium (`--use-fake-device-for-media-stream`): a foto da retirada

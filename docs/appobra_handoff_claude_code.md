@@ -111,6 +111,11 @@
   depois e protegida (só abre com login de quem vê o registro). Aparece na solicitação, na lista de entregas de
   EPI e em "Emprestados agora". Campo `foto_retirada` em `solicitacoes`, `epis_entregas` e `emprestimos`
   (+ `solicitacoes.retirada_registrada_por`). Câmeras fixas (CFTV) não fazem parte: é a câmera do celular/tablet.
+- **Passar equipamento para outra pessoa** (`emprestimo-equipamento.pb.js`, tela Equipamentos → "Emprestados agora"):
+  quem está com o equipamento (ou a gestão) passa direto para outro funcionário dizendo onde estão (andar/setor) e
+  com a foto da troca. O empréstimo de quem passou fecha como "Repassado" e abre outro para quem recebeu
+  (`emprestimos.repassado_de`, `local_entrega`); o histórico do equipamento guarda de quem para quem e o local.
+  Com local e hora registrados, a troca pode ser achada nas câmeras fixas da obra.
 - **Dono do sistema como campo** (`pb_hooks/dono-lib.js` + `dono-sistema.pb.js`): `users.dono_sistema` substitui
   o e-mail fixo nas regras e hooks (os e-mails de contato/remetente continuam). No boot o campo é criado, a conta
   `dnmltda@hotmail.com` é marcada e as regras antigas no banco são trocadas. Só o superusuário (painel `/_/`)
@@ -126,7 +131,8 @@
   audit_logs/auditoria, campos inglês/português): mexe em dados de produção e fica para a checagem antes de vender.
 - Hierarquia: conferida na tela — Almoxarife/Engenheiro/Administrador mostram Júnior/Pleno/Sênior; cargos de obra
   mostram Ajudante/Oficial/Encarregado.
-- Testes: servidor `audit_tests.py` 271/0; navegador com câmera de teste (`qrcode.mjs` novo, lê o QR pela câmera).
+- Testes: servidor `audit_tests.py` 279/0; navegador com câmera de teste (novos `qrcode.mjs`, que lê o QR pela câmera,
+  e `equipamento-repasse.mjs`); todos os 27 testes de tela passam.
 
 **Pendente / ideias do Diego**
 - Câmeras fixas (CFTV) no almoxarifado: fora do app por enquanto.
