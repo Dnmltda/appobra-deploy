@@ -1,6 +1,6 @@
 // Estoque geral + estoque por obra: transferir, consumir e devolver pela tela,
 // e pedido de material separado do estoque da obra.
-import { abrir, api, apiLogin, escolher, preencher, check, OUT, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, escolher, preencher, check, OUT, FRONT, apiComFoto } from "./lib.mjs";
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
 const obra = (await api("POST", "/api/collections/obras/records", token, { nome: "Obra Jardim", company_id: cid })).data;
@@ -68,7 +68,7 @@ await page.getByRole("button", { name: /Material separado, avisar quem pediu/ })
 const solDepois = (await api("GET", "/api/collections/solicitacoes/records/" + sol.id, token)).data;
 check("Pedido marcado para sair do estoque da obra", solDepois.status === "Pronto para retirada" && solDepois.estoque_obra_id === obra.id,
   `${solDepois.status} / ${solDepois.estoque_obra_id}`);
-await api("PATCH", "/api/collections/solicitacoes/records/" + sol.id, tp, { status: "Concluída" });
+await apiComFoto("PATCH", "/api/collections/solicitacoes/records/" + sol.id, tp, { status: "Concluída" });
 check("No aceite sai da obra (20 -> 10) e o geral fica 65", (await naObra()) === 10 && (await geral()) === 65, `geral ${await geral()} obra ${await naObra()}`);
 
 // 4. Gasto da obra

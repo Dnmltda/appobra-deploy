@@ -15,7 +15,7 @@ const GESTAO_ESTOQUE = ["Administrador", "Diretoria", "Gerência", "Engenheiro",
 const AUTORIZA = ["Administrador", "Diretoria", "Gerência", "Engenheiro"];
 
 function cargo(a) { return a.get("cargo") || a.get("role"); }
-function mestre(a) { return a.get("role") === "admin" || a.get("email") === "dnmltda@hotmail.com"; }
+function mestre(a) { return a.get("role") === "admin" || a.get("dono_sistema") === true; }
 function gestaoEstoque(a) { return mestre(a) || GESTAO_ESTOQUE.includes(cargo(a)); }
 function autoriza(a) { return mestre(a) || AUTORIZA.includes(cargo(a)); }
 

@@ -80,6 +80,16 @@
 - 19/10 23:38 UTC: **app zerado** a pedido do Diego. Ficaram só o login dele (01), as empresas e os cargos.
   Backup: `/data/backups/antes-zerar-20261019-233829.db` e `storage-antes-zerar.tgz`.
 
+**Publicado em 20/10/2026 (Claude Code, pedido do Diego)**
+- PR #8 no `main` (merge a2ef34c). Snapshot antes: `vs_yxxDyQ9jVajSKV5zkj9j` (volume vol_re1q22xm5ye2j0o4).
+- Fly: release **v20** (imagem `registry.fly.io/appobra-backend:pr8-a2ef34c`, montada no Claude Code com o
+  mesmo Dockerfile; o builder remoto do Fly não passa pelo proxy da nuvem). Boot sem `Erro` nem
+  `failed to execute`; `/api/health` ok. Voltar atrás: `fly releases` → v19.
+- Hostinger (`midnightblue-chamois-688707.hostingersite.com`): enviados `assets/index-BDqvJKn8.js`,
+  `assets/index.es-ippwZO-t.js` e por último `index.html`. Login abre sem erro no Fly e na Hostinger.
+- Falta: os 9 testes do passo 9 de docs/PUBLICAR-COWORK.md com o Diego; a chave do Fly que o Diego colou
+  no chat fica por enquanto (decisão do Diego); trocar na checagem de segurança antes de vender/passar o app.
+
 **Pendências da auditoria fechadas em 20/10/2026 (Claude Code, no PR #8)**
 - **Limite de tentativas de login** (`pb_hooks/login-limite.pb.js` + `login-limite-lib.js`): 5 senhas erradas
   seguidas na mesma conta travam por 15 minutos (vale para as abas E-mail, Usuário e ID); senha certa zera o
@@ -92,14 +102,40 @@
   direto. A tela de EPIs não grava mais o saldo (antes fazia a conta e gravava) e relê o EPI depois de cada
   operação.
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
-- Ainda da auditoria (Etapa 5, limpeza): "dono do sistema" como campo em vez do e-mail fixo
-  `dnmltda@hotmail.com` (aparece em 18 arquivos), juntar tabelas repetidas e campos inglês/português,
-  QR Code gerado no app.
+
+**Etapa 5 e câmera (20/10/2026, Claude Code, pedido do Diego "faça tudo antes dos testes")**
+- **Foto de quem retira** (`pb_hooks/foto-retirada.pb.js`, regra do aceite em `fluxo-material.pb.js`; tela
+  `components/FotoRetirada.jsx` e `FotoProtegida.jsx`): na retirada do material (aceite de quem pediu ou registro
+  do almoxarifado no balcão), na entrega de EPI e no empréstimo de equipamento a câmera do aparelho abre, conta
+  3 segundos e tira a foto da pessoa sozinha (ou escolhe uma foto). Obrigatória no servidor, não pode ser trocada
+  depois e protegida (só abre com login de quem vê o registro). Aparece na solicitação, na lista de entregas de
+  EPI e em "Emprestados agora". Campo `foto_retirada` em `solicitacoes`, `epis_entregas` e `emprestimos`
+  (+ `solicitacoes.retirada_registrada_por`). Câmeras fixas (CFTV) não fazem parte: é a câmera do celular/tablet.
+- **Passar equipamento para outra pessoa** (`emprestimo-equipamento.pb.js`, tela Equipamentos → "Emprestados agora"):
+  quem está com o equipamento (ou a gestão) passa direto para outro funcionário dizendo onde estão (andar/setor) e
+  com a foto da troca. O empréstimo de quem passou fecha como "Repassado" e abre outro para quem recebeu
+  (`emprestimos.repassado_de`, `local_entrega`); o histórico do equipamento guarda de quem para quem e o local.
+  Com local e hora registrados, a troca pode ser achada nas câmeras fixas da obra.
+- **Dono do sistema como campo** (`pb_hooks/dono-lib.js` + `dono-sistema.pb.js`): `users.dono_sistema` substitui
+  o e-mail fixo nas regras e hooks (os e-mails de contato/remetente continuam). No boot o campo é criado, a conta
+  `dnmltda@hotmail.com` é marcada e as regras antigas no banco são trocadas. Só o superusuário (painel `/_/`)
+  liga ou desliga; pela API ninguém se torna dono.
+- **QR Code no app** (`pages/QRCodeModule.jsx`, `components/CodigosItem.jsx`, bibliotecas `qrcode` e `jsbarcode`):
+  etiqueta de um item real (material, equipamento, EPI) gerada no aparelho; o QR guarda o link
+  `/qrcode?ler=tipo:id` (a câmera comum do celular abre o app no item); leitura registrada em `qrcode_leituras`
+  da empresa; item no menu (Suprimentos → QR Code). Equipamentos: QR e código de barras também locais (antes
+  api.qrserver.com e bwipjs-api.fly.dev).
+- **Tabelas duplicadas** (`seguranca-etapa1.pb.js`, `SEG_DUPLICADAS`): as que nenhuma tela usa (empresa, veiculo,
+  epi_entrega, epi_funcionario, pedidos_compra, aprovacoes_compra, recebimentos, qr_scans, solicitacoes_compra) ficam travadas para gravação; dados antigos guardados. O log do
+  boot lista as que têm dados. Não foi feita a fusão com migração de dados (companies/empresas,
+  audit_logs/auditoria, campos inglês/português): mexe em dados de produção e fica para a checagem antes de vender.
+- Hierarquia: conferida na tela — Almoxarife/Engenheiro/Administrador mostram Júnior/Pleno/Sênior; cargos de obra
+  mostram Ajudante/Oficial/Encarregado.
+- Testes: servidor `audit_tests.py` 279/0; navegador com câmera de teste (novos `qrcode.mjs`, que lê o QR pela câmera,
+  e `equipamento-repasse.mjs`); todos os 27 testes de tela passam.
 
 **Pendente / ideias do Diego**
-- Câmera no almoxarifado: foto ou vídeo curto na entrega do material (futuro).
-- Hierarquia: já existe em todos os cargos, sem limite por nível; pergunta aberta se cargos de obra também usam
-  Júnior/Pleno/Sênior.
+- Câmeras fixas (CFTV) no almoxarifado: fora do app por enquanto.
 - E-mails no spam: Diego aceita por enquanto (domínio próprio no futuro).
 
 ## 0. Atualização 19/10/2026 (Claude Code) — o que aconteceu depois da primeira versão deste documento

@@ -25,8 +25,7 @@ import {
   ShieldCheck,
   Siren,
   Warehouse,
-  MessagesSquare,
-} from 'lucide-react';
+  MessagesSquare, QrCode } from 'lucide-react';
 import Logo from './Logo.jsx';
 import { ehAdmin, podeAcessar, podeVerEstoque } from '@/lib/permissoes.js';
 
@@ -63,6 +62,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     { id: 'materiais_obra', path: '/materiais-por-obra', label: 'Materiais por Obra', icon: Construction },
     { id: 'equipamentos', path: '/equipamentos', label: 'Equipamentos', icon: Wrench },
     { id: 'epis', path: '/rh/epis', label: 'EPIs', icon: HardHat },
+    { id: 'qrcode', path: '/qrcode', label: 'QR Code', icon: QrCode },
     { id: 'fornecedores', path: '/suppliers', label: 'Fornecedores', icon: Truck },
     { id: 'compras', path: '/compras', label: 'Compras', icon: ShoppingCart },
     { id: 'solicitacoes', path: '/solicitacoes', label: 'Solicitações', icon: ClipboardList },
@@ -97,6 +97,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     materiais: 'SUPRIMENTOS',
     equipamentos: 'SUPRIMENTOS',
     epis: 'SUPRIMENTOS',
+    qrcode: 'SUPRIMENTOS',
     fornecedores: 'SUPRIMENTOS',
     solicitacoes: 'FLUXO_COMPRA',
     compras: 'FLUXO_COMPRA',

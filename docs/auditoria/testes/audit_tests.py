@@ -6,6 +6,7 @@ produção. Pré-requisito: empresas "Empresa A" (a@teste.local) e "Empresa B"
 
 Uso: python3 -I audit_tests.py resultado.json
 """
+import base64
 import json
 import os
 import sys
@@ -20,12 +21,26 @@ SU_PASS = os.environ.get("PB_SUPERUSER_PASSWORD", "AuditPass123!")
 results = []
 
 
+# Foto de teste (JPEG 1x1) para os campos de foto obrigatória (foto_retirada).
+FOTO = base64.b64decode("/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=")
+
+
 def call(method, path, token=None, body=None):
     req = urllib.request.Request(B + path, method=method)
-    req.add_header("content-type", "application/json")
     if token:
         req.add_header("Authorization", token)
-    data = json.dumps(body).encode() if body is not None else None
+    arquivos = {k: v for k, v in (body or {}).items() if isinstance(v, bytes)}
+    if arquivos:  # multipart: campos em @jsonPayload + as fotos
+        lim = "----auditoria" + uuid.uuid4().hex
+        partes = [f'--{lim}\r\nContent-Disposition: form-data; name="@jsonPayload"\r\n\r\n'.encode()
+                  + json.dumps({k: v for k, v in body.items() if k not in arquivos}).encode() + b"\r\n"]
+        for k, v in arquivos.items():
+            partes.append(f'--{lim}\r\nContent-Disposition: form-data; name="{k}"; filename="foto.jpg"\r\nContent-Type: image/jpeg\r\n\r\n'.encode() + v + b"\r\n")
+        data = b"".join(partes) + f"--{lim}--\r\n".encode()
+        req.add_header("content-type", "multipart/form-data; boundary=" + lim)
+    else:
+        req.add_header("content-type", "application/json")
+        data = json.dumps(body).encode() if body is not None else None
     try:
         with urllib.request.urlopen(req, data) as r:
             txt = r.read().decode()
@@ -520,12 +535,30 @@ s_m, m2 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
 check("fluxo", "Quem pediu recusa o material errado: volta para separação, estoque não muda", s == 200 and r.get("status") == "Em separação"
       and m2.get("quantity_in_stock") == 10, err(r) if s >= 400 else "")
 call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"status": "Pronto para retirada"})
-s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tAlm, {"status": "Concluída"})
-check("fluxo", "Outra pessoa (almoxarife) não aceita no lugar de quem pediu", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tPed, {"status": "Concluída", "foto_retirada": FOTO})
+check("fluxo", "Outra pessoa (pedreiro, nem quem pediu nem o estoque) não aceita a retirada", s >= 400, f"status {s}")
 s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Concluída"})
+check("foto", "Retirada sem a foto de quem leva é recusada", s >= 400 and "foto" in r.get("message", ""), r.get("message", "")[:80])
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tF, {"status": "Concluída", "foto_retirada": FOTO})
 s_m, m2 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
-check("fluxo", "Quem pediu aceita na retirada e o estoque baixa (10 -> 6)", s == 200 and m2.get("quantity_in_stock") == 6,
+check("fluxo", "Quem pediu aceita na retirada (com foto) e o estoque baixa (10 -> 6)", s == 200 and m2.get("quantity_in_stock") == 6,
       err(r) if s >= 400 else f"saldo {m2.get('quantity_in_stock')}")
+check("foto", "A foto fica gravada na retirada, com quem registrou", bool(r.get("foto_retirada")) and r.get("retirada_registrada_por") == uF["id"], str(r.get("foto_retirada")))
+_foto1 = r.get("foto_retirada")
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so['id']}", tA, {"foto_retirada": FOTO, "descricao": "troca"})
+check("foto", "Depois da retirada ninguém troca a foto", r.get("foto_retirada") == _foto1, str(r.get("foto_retirada")))
+_sf = urllib.request.Request(B + f"/api/files/solicitacoes/{so['id']}/{_foto1}")
+try:
+    _sfs = urllib.request.urlopen(_sf).status
+except urllib.error.HTTPError as _e:
+    _sfs = _e.code
+check("foto", "A foto não abre sem login (arquivo protegido)", _sfs >= 400, f"status {_sfs}")
+_tk = call("POST", "/api/files/token", tA, {})[1].get("token", "")
+try:
+    _sfs = urllib.request.urlopen(B + f"/api/files/solicitacoes/{so['id']}/{_foto1}?token={_tk}").status
+except urllib.error.HTTPError as _e:
+    _sfs = _e.code
+check("foto", "A gestão da empresa abre a foto com o login", _sfs == 200, f"status {_sfs}")
 s, movs = call("GET", "/api/collections/movimentacoes/records?filter=" + q(f'solicitacao_id="{so["id"]}"'), tA)
 check("fluxo", "A saída fica ligada à solicitação (Consumo de Obra, quem pediu não tem cadastro de funcionário)",
       movs.get("totalItems") == 1 and movs["items"][0].get("tipo") == "Consumo de Obra" and movs["items"][0].get("responsavel_id") == uA["id"])
@@ -541,7 +574,7 @@ check("fluxo", "Pedido de material novo avisa o estoque no sininho", ns.get("tot
 so2, s2, it3 = nova_sol("SOL-FLX-2", 999)
 for st in ("Aprovada", "Em separação", "Pronto para retirada"):
     call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tA, {"status": st})
-s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tF, {"status": "Concluída"})
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so2['id']}", tF, {"status": "Concluída", "foto_retirada": FOTO})
 s_m, m3 = call("GET", f"/api/collections/materiais/records/{mf.get('id')}", tA)
 s_s, sol2 = call("GET", f"/api/collections/solicitacoes/records/{so2['id']}", tA)
 check("fluxo", "Aceite sem saldo é recusado e nada muda", s >= 400 and "Saldo insuficiente" in r.get("message", "") and m3.get("quantity_in_stock") == 6
@@ -593,7 +626,7 @@ call("POST", "/api/collections/solicitacoes_itens/records", tF, {"solicitacao_id
 for st in ("Aprovada", "Em separação"):
     call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tA, {"status": st})
 s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tA, {"status": "Pronto para retirada", "estoque_obra_id": obra.get("id")})
-s2, r2 = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tF, {"status": "Concluída", "estoque_obra_id": ""})
+s2, r2 = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tF, {"status": "Concluída", "estoque_obra_id": "", "foto_retirada": FOTO})
 check("estoque_obra", "Pedido separado do estoque da obra: no aceite sai da obra (22 -> 12), geral fica 60", s == 200 and s2 == 200
       and na_obra() == 12 and geral() == 60, (err(r) if s >= 400 else err(r2) if s2 >= 400 else f"geral {geral()} obra {na_obra()}"))
 
@@ -614,7 +647,9 @@ s, so3 = call("POST", "/api/collections/solicitacoes/records", tEl, {"company_id
 call("POST", "/api/collections/solicitacoes_itens/records", tEl, {"solicitacao_id": so3.get("id"), "material_id": fio.get("id"), "quantidade": 3})
 for st in ("Aprovada", "Em separação", "Pronto para retirada"):
     call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tAlm, {"status": st})
-s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tEl, {"status": "Concluída"})
+s, r = call("PATCH", f"/api/collections/solicitacoes/records/{so3['id']}", tAlm, {"status": "Concluída", "foto_retirada": FOTO})
+check("foto", "No balcão o almoxarifado registra a retirada com a foto de quem leva", s == 200 and r.get("retirada_registrada_por") != uEl["id"]
+      and bool(r.get("foto_retirada")), err(r) if s >= 400 else "")
 s, movs = call("GET", "/api/collections/movimentacoes/records?filter=" + q(f'solicitacao_id="{so3["id"]}"'), tA)
 s_sf, sf = call("GET", "/api/collections/saldo_funcionario/records?filter=" + q(f'funcionario_id="{funU["id"]}"'), tA)
 check("uso", "Aceite de quem tem cadastro de funcionário vira Retirada por Funcionário e entra no saldo dele",
@@ -663,7 +698,7 @@ def novo_eq(nome, cid=None, tok=None):
     return eq
 def emp(eq, tok=None, **extra):
     return call("POST", "/api/collections/emprestimos/records", tok or tA, {"equipment_id": eq.get("id"), "funcionario_id": funE.get("id"),
-                "obra_id": obra.get("id"), "company_id": cA, "expected_return_date": "2026-12-31 12:00:00", **extra})
+                "obra_id": obra.get("id"), "company_id": cA, "expected_return_date": "2026-12-31 12:00:00", "foto_retirada": FOTO, **extra})
 def eqget(eq):
     return call("GET", f"/api/collections/equipamentos/records/{eq.get('id')}", tA)[1]
 e1 = novo_eq("Martelete 1")
@@ -702,9 +737,50 @@ e3 = novo_eq("Furadeira 1")
 s, l3 = emp(e3)
 call("PATCH", f"/api/collections/emprestimos/records/{l3.get('id')}", tA, {"status": "returned", "estado_devolucao": "Perdido"})
 check("equip", "Perdido: equipamento fica 'Extraviado'", eqget(e3).get("situacao") == "Extraviado", eqget(e3).get("situacao"))
+eF = novo_eq("Furadeira sem foto")
+s, r = emp(eF, foto_retirada=None)
+check("foto", "Empréstimo de equipamento sem a foto de quem leva é recusado", s >= 400 and "foto" in r.get("message", "")
+      and eqget(eF).get("situacao") == "Disponível", r.get("message", "")[:80])
 eB = novo_eq("Martelete B", cB, tB)
-s, r = call("POST", "/api/collections/emprestimos/records", tA, {"equipment_id": eB.get("id"), "funcionario_id": funE.get("id"), "company_id": cA})
+s, r = call("POST", "/api/collections/emprestimos/records", tA, {"equipment_id": eB.get("id"), "funcionario_id": funE.get("id"), "company_id": cA, "foto_retirada": FOTO})
 check("permissao", "Empresa A não empresta equipamento da Empresa B", s >= 400, f"status {s}")
+
+# ---- passar o equipamento para outra pessoa (repasse na obra, 20/10/2026)
+_fc = {}
+for _n in ("Ana do Carrinho", "Beto do Carrinho"):
+    _fc[_n] = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-" + _n[:3].upper(), "nome": _n, "nome_completo": _n,
+                   "cargoId": cargo1, "company_id": cA})[1]
+    _em = _n.split()[0].lower() + ".carrinho@teste.local"
+    call("POST", "/api/collections/users/records", tA, {"email": _em, "username": _em.split("@")[0].replace(".", ""), "password": "Senha12345",
+         "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Servente", "role": "Servente", "status": "Ativo",
+         "funcionario_id": _fc[_n].get("id"), "name": _n})
+tAna, tBeto = login("ana.carrinho@teste.local")[0], login("beto.carrinho@teste.local")[0]
+e4 = novo_eq("Carrinho de mão")
+s, l4 = emp(e4, funcionario_id=_fc["Ana do Carrinho"].get("id"))
+def repasse(tok, de, para, **extra):
+    return call("POST", "/api/collections/emprestimos/records", tok, {"repassado_de": de.get("id"), "company_id": cA, "funcionario_id": para.get("id"),
+                "local_entrega": "3º andar, torre B", "foto_retirada": FOTO, **extra})
+s, r = repasse(tAna, l4, _fc["Beto do Carrinho"], local_entrega="")
+check("equip", "Passar para outra pessoa exige dizer onde estão", s >= 400 and "onde" in r.get("message", ""), r.get("message", "")[:80])
+s, r = repasse(tAna, l4, _fc["Beto do Carrinho"], foto_retirada=None)
+check("equip", "Passar para outra pessoa exige a foto da troca", s >= 400 and "foto" in r.get("message", ""), r.get("message", "")[:80])
+s, r = repasse(tPed, l4, _fc["Beto do Carrinho"])
+check("equip", "Quem não está com o equipamento (e não é da gestão) não passa adiante", s >= 400, f"status {s}")
+s, l5 = repasse(tAna, l4, _fc["Beto do Carrinho"])
+x = eqget(e4)
+_l4 = call("GET", f"/api/collections/emprestimos/records/{l4.get('id')}", tA)[1]
+check("equip", "Quem está com o equipamento passa para outra pessoa: fica com ela, no local informado", s == 200
+      and x.get("situacao") == "Emprestado" and x.get("funcionario_id") == _fc["Beto do Carrinho"].get("id") and "3º andar" in x.get("local_atual", "")
+      and l5.get("status") == "active" and l5.get("local_entrega") == "3º andar, torre B" and bool(l5.get("foto_retirada")), err(l5) if s >= 400 else str(x.get("local_atual")))
+check("equip", "O empréstimo de quem passou fecha como 'Repassado'", _l4.get("status") == "returned" and _l4.get("estado_devolucao") == "Repassado"
+      and "Beto do Carrinho" in _l4.get("observacao_devolucao", ""), str(_l4.get("estado_devolucao")))
+s, h = call("GET", "/api/collections/equipamentos_historico/records?filter=" + q(f'equipamento_id="{e4.get("id")}"'), tA)
+check("equip", "A troca fica no histórico do equipamento, com o local", any("Passado de Ana do Carrinho para Beto do Carrinho" in (i.get("alteracao_realizada") or "")
+      and "3º andar" in (i.get("detalhes") or "") for i in h.get("items", [])))
+s, r = repasse(tAna, l4, _fc["Beto do Carrinho"])
+check("equip", "Não dá para passar de novo um empréstimo que já foi passado", s >= 400, f"status {s}")
+s, r = repasse(tBeto, l5, _fc["Ana do Carrinho"], local_entrega="Térreo")
+check("equip", "Quem recebeu pode passar adiante de novo", s == 200 and eqget(e4).get("funcionario_id") == _fc["Ana do Carrinho"].get("id"), err(r) if s >= 400 else "")
 s, r = call("GET", "/api/collections/emprestimos/records", tB)
 check("permissao", "Empresa B não vê os empréstimos da A", r.get("totalItems") == 0, f"{r.get('totalItems')}")
 s, r = call("GET", "/api/collections/emprestimos/records")
@@ -800,12 +876,17 @@ def entrega(q, tok=None, cid=None, col="epis_entregas", extra=None):
     body = {"funcionario_id": funE.get("id"), "epi_id": epi.get("id"), "quantidade": q, "company_id": cid or cA,
             "responsavel_id": uA["id"], "numero_entrega": num, "numero_reposicao": num,
             "data_entrega": "2026-10-20 12:00:00.000Z", "hora_entrega": "08:00", "data_reposicao": "2026-10-20 12:00:00.000Z"}
+    if col == "epis_entregas":
+        body["foto_retirada"] = FOTO
     body.update(extra or {})
     return call("POST", f"/api/collections/{col}/records", tok or tA, body)
 s, en1 = entrega(4)
 check("epi", "Entrega de 4 baixa o estoque no servidor (10 -> 6)", s == 200 and epi_saldo(epi.get("id")) == 6, err(en1) if s >= 400 else f"saldo {epi_saldo(epi.get('id'))}")
 s, rp = entrega(2, col="epis_reposicoes", extra={"tipo_reposicao": "Troca por desgaste"})
 check("epi", "Reposição de 2 também baixa (6 -> 4)", s == 200 and epi_saldo(epi.get("id")) == 4, err(rp) if s >= 400 else f"saldo {epi_saldo(epi.get('id'))}")
+s, r = entrega(1, extra={"foto_retirada": None})
+check("foto", "Entrega de EPI sem a foto de quem recebe é recusada e o estoque não muda", s >= 400 and "foto" in r.get("message", "")
+      and epi_saldo(epi.get("id")) == 4, r.get("message", "")[:80])
 s, r = entrega(99)
 check("epi", "Entrega maior que o estoque é recusada e nada muda", s >= 400 and "Estoque insuficiente" in r.get("message", "")
       and epi_saldo(epi.get("id")) == 4, r.get("message", "")[:80])
@@ -880,6 +961,32 @@ check("permissao", "Login pelo ID com senha errada é recusado", s >= 400, f"sta
 s1, _ = call("POST", "/api/custom/esqueci-senha", None, {"identificador": "a@teste.local"})
 s2, _ = call("POST", "/api/custom/esqueci-senha", None, {"identificador": "ninguem@teste.local"})
 check("permissao", "Esqueci minha senha responde igual com ou sem conta", s1 == 200 and s2 == 200)
+
+# ------------------------------------------------------------------ dono do sistema como campo (Etapa 5)
+# Antes o "Master" era o e-mail dnmltda@hotmail.com escrito nas regras; agora é users.dono_sistema.
+if tSU:
+    _cols = call("GET", "/api/collections?perPage=500", tSU)[1].get("items", [])
+    _velhas = [c["name"] for c in _cols for k in ("listRule", "viewRule", "createRule", "updateRule", "deleteRule", "manageRule")
+               if "dnmltda@hotmail.com" in str(c.get(k) or "")]
+    check("permissao", "Nenhuma regra usa mais o e-mail fixo do Master", not _velhas, ", ".join(sorted(set(_velhas))))
+call("PATCH", f"/api/collections/users/records/{uA['id']}", tA, {"dono_sistema": True})
+s, r = call("GET", f"/api/collections/users/records/{uA['id']}", tA)
+check("permissao", "Administrador da empresa não consegue se tornar dono do sistema", r.get("dono_sistema") is False, str(r.get("dono_sistema")))
+s, r = call("POST", "/api/collections/users/records", tA, {"email": "falsodono@teste.local", "username": "falsodono", "password": "Senha12345",
+            "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Ativo", "dono_sistema": True})
+check("permissao", "Ninguém cria acesso já como dono do sistema", r.get("dono_sistema") is False, str(r.get("dono_sistema")))
+s, r = call("GET", f"/api/collections/users/records?filter=company_id%3D%27{cA}%27", tB)
+check("permissao", "Empresa B continua sem ver os usuários da Empresa A", s == 200 and r.get("totalItems") == 0, f"{r.get('totalItems')}")
+if tSU:
+    call("PATCH", f"/api/collections/users/records/{uB['id']}", tSU, {"dono_sistema": True})
+    s, r = call("GET", f"/api/collections/users/records?filter=company_id%3D%27{cA}%27", login("b@teste.local", "SenhaB12345")[0])
+    check("permissao", "Com o campo ligado pelo superusuário, o dono vê as outras empresas", s == 200 and r.get("totalItems", 0) > 0, f"{r.get('totalItems')}")
+    call("PATCH", f"/api/collections/users/records/{uB['id']}", tSU, {"dono_sistema": False})
+
+# ------------------------------------------------------------------ tabelas duplicadas sem uso (Etapa 5)
+for _t in ("pedidos_compra", "solicitacoes_compra", "recebimentos", "veiculo"):
+    s, r = call("POST", f"/api/collections/{_t}/records", tA, {"company_id": cA})
+    check("permissao", f"Ninguém grava na tabela duplicada '{_t}' (o app usa a outra)", s >= 400, f"status {s}")
 
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)

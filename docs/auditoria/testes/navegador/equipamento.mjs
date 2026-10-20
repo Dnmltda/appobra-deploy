@@ -1,5 +1,5 @@
 // Empréstimo e devolução de equipamento pela tela (Etapa 4.2).
-import { abrir, api, apiLogin, escolher, check, toast, OUT, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, escolher, check, toast, OUT, FRONT, tirarFoto } from "./lib.mjs";
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
 await api("POST", "/api/collections/obras/records", token, { nome: "Obra Jardim", company_id: cid });
@@ -19,6 +19,7 @@ const d = page.getByRole("dialog");
 await escolher(page, "Com quem fica *", "José Pedreiro", d);
 await escolher(page, "Para qual obra (opcional)", "Obra Jardim", d);
 await d.locator("#emp_ate").fill("2020-01-10"); // data passada: deve aparecer "Atrasado"
+await tirarFoto(page, d);
 await d.getByRole("button", { name: "Confirmar empréstimo" }).click();
 const t1 = await toast(page);
 await page.waitForTimeout(1500);

@@ -21,12 +21,13 @@
 onBootstrap((e) => {
   e.next();
   const app = e.app;
+  require(`${__hooks}/dono-lib.js`).garantir(app); // regras abaixo usam users.dono_sistema
   try {
     let col = null;
     try { col = app.findCollectionByNameOrId("ocorrencias"); } catch (_) {}
     const GESTAO = '(@request.auth.cargo = "Administrador" || @request.auth.cargo = "Diretoria" || @request.auth.cargo = "Gerência" || ' +
       '@request.auth.cargo = "Engenheiro" || @request.auth.cargo = "Mestre de Obras" || @request.auth.cargo = "Almoxarife" || ' +
-      '@request.auth.role = "admin" || @request.auth.email = "dnmltda@hotmail.com")';
+      '@request.auth.role = "admin" || @request.auth.dono_sistema = true)';
     const SAME = '@request.auth.id != "" && @request.auth.company_id = company_id';
     const VER = `${SAME} && (registrado_por = @request.auth.id || ${GESTAO})`;
     if (!col) {
@@ -108,7 +109,7 @@ onRecordUpdateRequest((e) => {
     ["company_id", "numero", "registrado_por", "resolvido_por", "data_resolucao"].forEach((f) => r.set(f, o.get(f)));
     const cargo = a.get("cargo") || a.get("role");
     const gestao = ["Administrador", "Diretoria", "Gerência", "Engenheiro", "Mestre de Obras", "Almoxarife"].includes(cargo)
-      || a.get("role") === "admin" || a.get("email") === "dnmltda@hotmail.com";
+      || a.get("role") === "admin" || a.get("dono_sistema") === true;
     const antes = o.get("status");
     const depois = r.get("status");
     if (!gestao) {

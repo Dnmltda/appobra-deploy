@@ -34,7 +34,7 @@ function verificar(app, materialId) {
 
   const users = app.findRecordsByFilter("users", "company_id = {:c} && status != 'Inativo'", "", 200, 0, { c: m.get("company_id") });
   const cargo = (u) => u.get("cargo") || u.get("role");
-  const admin = (u) => u.get("role") === "admin" || u.get("email") === "dnmltda@hotmail.com";
+  const admin = (u) => u.get("role") === "admin" || u.get("dono_sistema") === true;
   const avisar = users.filter((u) => !u.getString("deleted_at") && (admin(u) || AVISA.includes(cargo(u))));
 
   const col = app.findCollectionByNameOrId("notificacoes");

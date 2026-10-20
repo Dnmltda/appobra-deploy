@@ -1,6 +1,6 @@
 // Estoque de EPI pelo servidor (pb_hooks/estoque-epi.pb.js): a entrega pela tela
 // baixa o estoque, a tela mostra o saldo novo e entrega maior que o estoque é recusada.
-import { abrir, api, apiLogin, escolher, check, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, escolher, check, FRONT, tirarFoto } from "./lib.mjs";
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
 const cargo = (await api("GET", "/api/collections/cargos/records?perPage=1", token)).data.items?.[0]?.id || "";
@@ -21,6 +21,7 @@ async function entregar(qtd) {
   const d = page.getByRole("dialog");
   await escolher(page, "Funcionário *", "José Pedreiro", d);
   await d.locator('input[type="number"]').first().fill(String(qtd));
+  await tirarFoto(page, d);
   await d.getByRole("button", { name: /Registrar Entrega/ }).click();
   await page.waitForTimeout(2000);
   return (await page.locator("[data-sonner-toast]").allInnerTexts()).join(" | ");

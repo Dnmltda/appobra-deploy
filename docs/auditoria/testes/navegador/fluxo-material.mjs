@@ -1,4 +1,4 @@
-import { abrir, api, apiLogin, escolher, check, OUT, FRONT } from "./lib.mjs";
+import { abrir, api, apiLogin, escolher, check, OUT, FRONT, tirarFoto } from "./lib.mjs";
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
 await api("POST", "/api/collections/obras/records", token, { nome: "Obra Jardim", company_id: cid });
@@ -47,8 +47,9 @@ await page.getByRole("button", { name: /Começar a separar/ }).click(); await pa
 await page.getByRole("button", { name: /Material separado, avisar quem pediu/ }).click(); await page.waitForTimeout(2000);
 check("Separado: fica 'Pronto para retirada' e o estoque ainda não baixa (20)",
   (await status(solId)) === "Pronto para retirada" && (await saldo()) === 20, `${await status(solId)} / saldo ${await saldo()}`);
-check("Quem não fez o pedido não aceita no lugar dele", !(await page.getByRole("button", { name: /Conferir e aceitar/ }).count())
-  && (await page.locator("text=Aguardando quem pediu conferir").count()) > 0);
+check("O estoque não 'aceita' no lugar de quem pediu: só registra a retirada no balcão, com foto",
+  !(await page.getByRole("button", { name: /Conferir e aceitar/ }).count())
+  && (await page.getByRole("button", { name: /Registrar retirada no balcão/ }).count()) === 1);
 await page.screenshot({ path: OUT + "fluxo-2-separado.png" });
 await s.browser.close();
 
@@ -73,7 +74,11 @@ s = await abrir("pedreiro@teste.local");
 page = s.page;
 await page.goto(FRONT + "/solicitacoes/" + solId); await page.waitForTimeout(2000);
 await page.getByRole("button", { name: /Conferir e aceitar o material/ }).click();
-await page.getByRole("button", { name: /Sim, aceitar/ }).click(); await page.waitForTimeout(2000);
+check("Sem a foto o botão de aceitar fica travado", await page.getByRole("button", { name: /Sim, aceitar/ }).isDisabled());
+await tirarFoto(page);
+await page.getByRole("button", { name: /Sim, aceitar/ }).click(); await page.waitForTimeout(2500);
+check("Depois do aceite aparece a foto da retirada", (await page.getByAltText("Foto da retirada").count()) === 1
+  && await page.getByAltText("Foto da retirada").evaluate((i) => i.complete && i.naturalWidth > 0));
 check("Pedreiro aceita na retirada: Concluída e o estoque cai de 20 para 12",
   (await status(solId)) === "Concluída" && (await saldo()) === 12, `${await status(solId)} / saldo ${await saldo()}`);
 await page.screenshot({ path: OUT + "fluxo-3-aceito.png" });

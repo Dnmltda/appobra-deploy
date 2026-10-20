@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Plus, Pencil, Trash2, Search, AlertCircle, Eye, Download, ChevronLeft, ChevronRight,
   Package, Wrench, QrCode, Barcode, Copy, ArrowRightLeft, Archive, FileSpreadsheet, Printer, Filter, X, Truck, CheckCircle2,
-  TrendingDown, Boxes, AlertTriangle, HandHelping, Undo2,
+  TrendingDown, Boxes, AlertTriangle, HandHelping, Undo2, Repeat,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
@@ -39,6 +39,9 @@ import {
 } from 'recharts';
 import { mensagemErro } from '@/lib/erros.js';
 import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
+import FotoRetirada from '@/components/FotoRetirada.jsx';
+import FotoProtegida from '@/components/FotoProtegida.jsx';
+import { QrImagem, CodigoBarras, linkDoItem, imprimirEtiqueta } from '@/components/CodigosItem.jsx';
 
 const AUDIT_MODULE = 'Equipamentos';
 const PER_PAGE = 10;
@@ -232,6 +235,10 @@ const EquipamentosPage = () => {
   const [empTarget, setEmpTarget] = useState(null);
   const [empData, setEmpData] = useState({ funcionario_id: '', obra_id: '', expected_return_date: '', notes: '' });
   const [devTarget, setDevTarget] = useState(null);
+  // Passar para outra pessoa na obra: quem está com o equipamento (ou a
+  // gestão) diz para quem, onde estão e tira a foto da troca.
+  const [repTarget, setRepTarget] = useState(null);
+  const [repData, setRepData] = useState({ funcionario_id: '', local: '', foto: null });
   const [devData, setDevData] = useState({ estado_devolucao: '', observacao_devolucao: '' });
   const [empSalvando, setEmpSalvando] = useState(false);
 
@@ -240,6 +247,7 @@ const EquipamentosPage = () => {
 
   const [qrTarget, setQrTarget] = useState(null);
   const [qrOpen, setQrOpen] = useState(false);
+  const [qrPng, setQrPng] = useState('');
 
   const filtersRef = useRef(null);
 
@@ -769,16 +777,17 @@ const EquipamentosPage = () => {
 
   const openEmprestar = (eq) => {
     setEmpTarget(eq);
-    setEmpData({ funcionario_id: '', obra_id: eq.obra_atual_id || '', expected_return_date: '', notes: '' });
+    setEmpData({ funcionario_id: '', obra_id: eq.obra_atual_id || '', expected_return_date: '', notes: '', foto: null });
   };
 
   const handleEmprestar = async () => {
     if (!empData.funcionario_id) { toast.error('Escolha quem vai levar o equipamento'); return; }
+    if (!empData.foto) { toast.error('Tire a foto de quem está levando o equipamento'); return; }
     setEmpSalvando(true);
     try {
       await pb.collection('emprestimos').create({
         equipment_id: empTarget.id, company_id: companyId, funcionario_id: empData.funcionario_id,
-        obra_id: empData.obra_id || '', notes: empData.notes,
+        obra_id: empData.obra_id || '', notes: empData.notes, foto_retirada: empData.foto,
         expected_return_date: empData.expected_return_date ? `${empData.expected_return_date} 12:00:00` : '',
       }, { $autoCancel: false });
       toast.success(`${empTarget.nome} emprestado para ${funcionarioNome(empData.funcionario_id)}`);
@@ -818,6 +827,28 @@ const EquipamentosPage = () => {
       fetchAllForDashboard();
     } catch (err) {
       toast.error(mensagemErro(err, 'Não foi possível registrar a devolução'));
+    } finally {
+      setEmpSalvando(false);
+    }
+  };
+
+  const podePassar = (l) => perms.canTransfer || (!!currentUser?.funcionario_id && currentUser.funcionario_id === l.funcionario_id);
+  const openRepasse = (l) => { setRepTarget(l); setRepData({ funcionario_id: '', local: '', foto: null }); };
+  const handleRepasse = async () => {
+    if (!repData.funcionario_id) { toast.error('Escolha para quem vai passar'); return; }
+    if (!repData.local.trim()) { toast.error('Diga onde vocês estão'); return; }
+    if (!repData.foto) { toast.error('Tire a foto da troca'); return; }
+    setEmpSalvando(true);
+    try {
+      await pb.collection('emprestimos').create({
+        repassado_de: repTarget.id, company_id: companyId, funcionario_id: repData.funcionario_id, local_entrega: repData.local.trim(), foto_retirada: repData.foto,
+      }, { $autoCancel: false });
+      toast.success(`${repTarget.expand?.equipment_id?.nome || 'Equipamento'} passado para ${funcionarioNome(repData.funcionario_id)}`);
+      setRepTarget(null);
+      fetchEquipamentos(page);
+      fetchAllForDashboard();
+    } catch (err) {
+      toast.error(mensagemErro(err, 'Não foi possível passar o equipamento'));
     } finally {
       setEmpSalvando(false);
     }
@@ -1347,10 +1378,13 @@ const EquipamentosPage = () => {
               <p className="font-semibold">Emprestados agora ({emprestimos.length})</p>
               {emprestimos.map((l) => (
                 <div key={l.id} data-testid="emprestimo-aberto" className="flex flex-wrap items-center justify-between gap-2 border rounded-md p-2 text-sm">
+                  <div className="flex items-center gap-3">
+                  <FotoProtegida record={l} alt="Foto de quem levou" className="h-12 w-12" />
                   <div>
                     <strong>{l.expand?.equipment_id?.nome || 'Equipamento'}</strong>
                     {' com '}{l.expand?.funcionario_id?.nome || '-'}
                     {l.expand?.obra_id?.nome ? ` · ${l.expand.obra_id.nome}` : ''}
+                    {l.local_entrega ? ` · ${l.local_entrega}` : ''}
                     <span className="text-muted-foreground"> · desde {dataBR(l.borrow_date)}</span>
                     {l.expected_return_date && (
                       atrasado(l)
@@ -1358,9 +1392,15 @@ const EquipamentosPage = () => {
                         : <span className="text-muted-foreground"> · devolver até {dataBR(l.expected_return_date)}</span>
                     )}
                   </div>
-                  {perms.canTransfer && l.expand?.equipment_id && (
-                    <Button size="sm" variant="outline" onClick={() => openDevolver(l.expand.equipment_id)}><Undo2 className="w-4 h-4 mr-1" />Receber de volta</Button>
-                  )}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {podePassar(l) && (
+                      <Button size="sm" variant="outline" onClick={() => openRepasse(l)}><Repeat className="w-4 h-4 mr-1" />Passar para outra pessoa</Button>
+                    )}
+                    {perms.canTransfer && l.expand?.equipment_id && (
+                      <Button size="sm" variant="outline" onClick={() => openDevolver(l.expand.equipment_id)}><Undo2 className="w-4 h-4 mr-1" />Receber de volta</Button>
+                    )}
+                  </div>
                 </div>
               ))}
             </CardContent>
@@ -1957,9 +1997,44 @@ const EquipamentosPage = () => {
                 <Label htmlFor="emp_ate">Devolver até (opcional)</Label>
                 <Input id="emp_ate" type="date" value={empData.expected_return_date} onChange={(e) => setEmpData({ ...empData, expected_return_date: e.target.value })} />
               </div>
+              <FotoRetirada rotulo="Foto de quem está levando o equipamento" onFoto={(f) => setEmpData((x) => ({ ...x, foto: f }))} />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setEmpTarget(null)}>Cancelar</Button>
-                <Button onClick={handleEmprestar} disabled={empSalvando}>Confirmar empréstimo</Button>
+                <Button onClick={handleEmprestar} disabled={empSalvando || !empData.foto}>Confirmar empréstimo</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ---------- Passar para outra pessoa ---------- */}
+      <Dialog open={!!repTarget} onOpenChange={(open) => { if (!open) setRepTarget(null); }}>
+        <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Passar para outra pessoa</DialogTitle></DialogHeader>
+          {repTarget && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                <strong>{repTarget.expand?.equipment_id?.nome}</strong> está com {repTarget.expand?.funcionario_id?.nome || '-'}. Para quem vai agora?
+              </p>
+              <div className="space-y-1">
+                <Label htmlFor="rep_func">Para quem *</Label>
+                <Select value={repData.funcionario_id || 'none'} onValueChange={(v) => setRepData({ ...repData, funcionario_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger id="rep_func"><SelectValue placeholder="Escolha a pessoa" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Escolha a pessoa...</SelectItem>
+                    {funcionarios.filter((f) => f.id !== repTarget.funcionario_id).map((f) => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="rep_local">Onde vocês estão *</Label>
+                <Input id="rep_local" placeholder="Ex.: 3º andar, torre B" value={repData.local} onChange={(e) => setRepData({ ...repData, local: e.target.value })} />
+                <p className="text-xs text-muted-foreground">O local e a hora ficam registrados: se a obra tiver câmeras, dá para achar a troca na gravação.</p>
+              </div>
+              <FotoRetirada rotulo="Foto da troca (quem está recebendo)" onFoto={(f) => setRepData((x) => ({ ...x, foto: f }))} />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setRepTarget(null)}>Cancelar</Button>
+                <Button onClick={handleRepasse} disabled={empSalvando || !repData.foto}>Confirmar troca</Button>
               </div>
             </div>
           )}
@@ -2111,31 +2186,27 @@ const EquipamentosPage = () => {
                 <div className="p-2 rounded border"><p className="text-xs text-muted-foreground">Código Interno</p><p className="font-medium">{qrTarget.codigo_interno || '-'}</p></div>
               </div>
 
-              {(() => {
-                const qrData = qrTarget.codigo_qr || qrTarget.numero_patrimonial || qrTarget.id;
-                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrData)}`;
-                return (
-                  <div className="flex flex-col items-center gap-2">
-                    <p className="text-xs text-muted-foreground">QR Code</p>
-                    <img src={qrUrl} alt="QR Code" width={220} height={220} className="border rounded" />
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={qrUrl} download={`qrcode_${qrTarget.numero_patrimonial || qrTarget.id}.png`}>
-                        <Download className="w-4 h-4 mr-1" />Baixar QR Code
-                      </a>
-                    </Button>
-                  </div>
-                );
-              })()}
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-xs text-muted-foreground">QR Code (lido pela câmera, abre este equipamento no app)</p>
+                <QrImagem texto={linkDoItem('equipamento', qrTarget.id)} tamanho={220} onPronto={setQrPng} className="border rounded" />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={!qrPng} asChild>
+                    <a href={qrPng} download={`qrcode_${qrTarget.numero_patrimonial || qrTarget.codigo_interno || qrTarget.id}.png`}>
+                      <Download className="w-4 h-4 mr-1" />Baixar QR Code
+                    </a>
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={!qrPng}
+                    onClick={() => imprimirEtiqueta(qrPng, qrTarget.nome, [qrTarget.codigo_interno, qrTarget.numero_patrimonial].filter(Boolean).join(' · '))}>
+                    <Printer className="w-4 h-4 mr-1" />Imprimir etiqueta
+                  </Button>
+                </div>
+              </div>
 
               {qrTarget.codigo_barras && (
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-xs text-muted-foreground">Código de Barras</p>
                   <div className="font-mono text-2xl tracking-widest border px-4 py-2 rounded bg-muted/30">{qrTarget.codigo_barras}</div>
-                  <img
-                    src={`https://bwipjs-api.fly.dev/?bcid=code128&text=${encodeURIComponent(qrTarget.codigo_barras)}&scale=2`}
-                    alt="Código de barras"
-                    className="border rounded h-16"
-                  />
+                  <CodigoBarras texto={qrTarget.codigo_barras} className="border rounded max-w-full" />
                 </div>
               )}
             </div>

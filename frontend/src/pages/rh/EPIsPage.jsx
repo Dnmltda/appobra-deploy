@@ -89,6 +89,8 @@ import {
   Legend,
 } from 'recharts';
 import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
+import FotoRetirada from '@/components/FotoRetirada.jsx';
+import FotoProtegida from '@/components/FotoProtegida.jsx';
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -560,7 +562,7 @@ const EPIsPage = () => {
     data_entrega: todayISO(), hora_entrega: nowTime(), responsavel_id: currentUser?.id || '',
     epi_id: '', quantidade: 1, tamanho: '', ca_utilizado: '', lote: '', validade: '',
     prazo_troca: '', data_prevista_devolucao: '', situacao: 'Entregue',
-    assinatura_digital: '', observacoes: '',
+    assinatura_digital: '', observacoes: '', foto_retirada: null,
   };
   const [entregaForm, setEntregaForm] = useState(emptyEntrega);
 
@@ -581,6 +583,7 @@ const EPIsPage = () => {
   const saveEntrega = async (e) => {
     e.preventDefault();
     if (!entregaForm.funcionario_id || !entregaForm.epi_id) { toast.error('Selecione funcionário e EPI'); return; }
+    if (!entregaForm.foto_retirada) { toast.error('Tire a foto de quem está recebendo o EPI'); return; }
     try {
       const epi = epis.find((x) => x.id === entregaForm.epi_id);
       const qtd = Number(entregaForm.quantidade || 0);
@@ -1083,10 +1086,10 @@ const EPIsPage = () => {
                       <TableHeader className="bg-muted/50"><TableRow>
                         <TableHead>Nº</TableHead><TableHead>Funcionário</TableHead><TableHead>EPI</TableHead>
                         <TableHead>Qtd</TableHead><TableHead>Data</TableHead><TableHead>Prazo Troca</TableHead>
-                        <TableHead>Situação</TableHead><TableHead className="text-right">Ações</TableHead>
+                        <TableHead>Situação</TableHead><TableHead>Foto</TableHead><TableHead className="text-right">Ações</TableHead>
                       </TableRow></TableHeader>
                       <TableBody>
-                        {entregas.length === 0 ? <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma entrega registrada</TableCell></TableRow> :
+                        {entregas.length === 0 ? <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma entrega registrada</TableCell></TableRow> :
                           entregas.map((e) => (
                             <TableRow key={e.id}>
                               <TableCell className="font-medium">{e.numero_entrega}</TableCell>
@@ -1096,6 +1099,7 @@ const EPIsPage = () => {
                               <TableCell>{fmtDate(e.data_entrega)}</TableCell>
                               <TableCell>{fmtDate(e.prazo_troca)}</TableCell>
                               <TableCell>{statusBadge(e.situacao)}</TableCell>
+                              <TableCell><FotoProtegida record={e} alt="Foto de quem recebeu" className="h-10 w-10" /></TableCell>
                               <TableCell className="text-right">
                                 {canManage && e.situacao !== 'Devolvido' && (
                                   <Button size="sm" variant="ghost" title="Registrar devolução" onClick={() => openDevolucao(e)}><ArrowUpFromLine className="w-4 h-4" /></Button>
@@ -1226,6 +1230,7 @@ const EPIsPage = () => {
             </div>
             <div className="space-y-1.5"><Label>Observações</Label><Textarea value={entregaForm.observacoes} onChange={(e) => setEntregaForm({ ...entregaForm, observacoes: e.target.value })} rows={2} /></div>
             <SignaturePad value={entregaForm.assinatura_digital} onChange={(v) => setEntregaForm({ ...entregaForm, assinatura_digital: v })} />
+            <FotoRetirada rotulo="Foto de quem está recebendo o EPI" onFoto={(f) => setEntregaForm((x) => ({ ...x, foto_retirada: f }))} />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setEntregaModalOpen(false)}>Cancelar</Button>
               <Button type="submit"><ArrowDownToLine className="w-4 h-4 mr-2" /> Registrar Entrega</Button>

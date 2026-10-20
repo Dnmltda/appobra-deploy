@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
       });
       
       
-      const isAdmin = user.email === 'dnmltda@hotmail.com' || user.username === 'dnmltda' || user.cargo === 'Administrador';
+      const isAdmin = user.dono_sistema === true || user.cargo === 'Administrador';
       user.role = isAdmin ? 'admin' : (user.role || user.cargo || 'Funcionário');
       user.permissions = user.permissions || [];
       
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }) => {
       pb.authStore.clear();
       throw new Error('Usuário bloqueado. Entre em contato com o administrador.');
     }
-    if (record.status === 'Inativo' && record.email !== 'dnmltda@hotmail.com') {
+    if (record.status === 'Inativo' && record.dono_sistema !== true) {
       pb.authStore.clear();
       throw new Error('Usuário inativo. Entre em contato com o administrador.');
     }
@@ -507,10 +507,10 @@ export const AuthProvider = ({ children }) => {
     resetUserPassword,
     logout,
     isAuthenticated: !!currentUser,
-    // isMasterAdmin: identificacao EXCLUSIVA por email, separada de isAdmin.
-    // NAO usa id_unico, NAO usa cargo, NAO usa company_id.
-    isMasterAdmin: currentUser?.email === 'dnmltda@hotmail.com',
-    isAdmin: currentUser?.role === 'admin' || currentUser?.cargo === 'Administrador' || currentUser?.username === 'dnmltda' || currentUser?.email === 'dnmltda@hotmail.com',
+    // isMasterAdmin: dono do sistema (users.dono_sistema, só o superusuário
+    // liga). NAO usa id_unico, cargo nem company_id.
+    isMasterAdmin: currentUser?.dono_sistema === true,
+    isAdmin: currentUser?.role === 'admin' || currentUser?.cargo === 'Administrador' || currentUser?.dono_sistema === true,
     initialLoading,
     loading,
     error

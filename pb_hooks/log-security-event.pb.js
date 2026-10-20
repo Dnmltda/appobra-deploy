@@ -572,9 +572,9 @@ onBootstrap((e) => {
 });
 
 
-// Administrador Master (superadmin) — dnmltda@hotmail.com.
-// Concede acesso GLOBAL (todas as empresas) somente a este e-mail
-// especifico, via condicao explicita nas regras do PocketBase.
+// Administrador Master (superadmin) — conta com users.dono_sistema = true
+// (antes era o e-mail fixo; ver dono-lib.js). Concede acesso GLOBAL (todas
+// as empresas) via condicao explicita nas regras do PocketBase.
 // NAO usa id_unico, NAO usa role/cargo isoladamente, NAO altera
 // o valor real de role/cargo/company_id/is_active do usuario.
 // Isolamento por company_id para os DEMAIS Administradores
@@ -586,13 +586,14 @@ onBootstrap((e) => {
 // foram alteradas nesta etapa - ver relatorio para escopo completo.
 onBootstrap((e) => {
   e.next();
-  const MASTER_EMAIL = '@request.auth.email = "dnmltda@hotmail.com"';
+  require(`${__hooks}/dono-lib.js`).garantir($app);
+  const MASTER_EMAIL = '@request.auth.dono_sistema = true';
 
   function addMasterException(collectionName, ruleName, companyCondition) {
     try {
       const col = $app.findCollectionByNameOrId(collectionName);
       const current = col[ruleName];
-      if (current && !current.includes('dnmltda@hotmail.com')) {
+      if (current && !current.includes('dono_sistema')) {
         col[ruleName] = "(" + current + ") || " + MASTER_EMAIL;
         $app.save(col);
         console.log("[fix-master-admin] " + collectionName + "." + ruleName + " atualizada com excecao do Master.");
