@@ -218,10 +218,13 @@ onBootstrap((e) => {
     } else {
       // Gestão altera qualquer solicitação da empresa. Quem pediu pode editar
       // a própria, mas não aprovar: o status só pode ficar igual, ir para
-      // "Cancelada" (antes da entrega) ou "Concluída" (confirmar recebimento).
+      // "Cancelada" (antes da entrega), "Concluída" (aceitar o material na
+      // retirada) ou voltar para "Em separação" (recusar o material errado).
       col.updateRule = `${SEG_SAME} && (${SEG_GESTAO} || (solicitante_id = @request.auth.id && ` +
         `(@request.body.status:isset = false || @request.body.status = status || ` +
-        `(@request.body.status = "Cancelada" && status != "Entregue") || (@request.body.status = "Concluída" && status = "Entregue"))))`;
+        `(@request.body.status = "Cancelada" && status != "Entregue") || ` +
+        `(@request.body.status = "Concluída" && (status = "Entregue" || status = "Pronto para retirada")) || ` +
+        `(@request.body.status = "Em separação" && status = "Pronto para retirada"))))`;
       app.save(col);
     }
   } catch (err) {

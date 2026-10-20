@@ -73,6 +73,7 @@ import {
   Save,
   Signature,
 } from 'lucide-react';
+import { mensagemErro } from '@/lib/erros.js';
 import { toast } from 'sonner';
 import {
   PieChart,
@@ -529,7 +530,7 @@ const EPIsPage = () => {
       setEpiModalOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Erro ao salvar EPI');
+      toast.error(mensagemErro(err, 'Erro ao salvar EPI'));
     }
   };
 
@@ -568,6 +569,15 @@ const EPIsPage = () => {
     setEntregaModalOpen(true);
   };
 
+  // O estoque muda no servidor; relê o EPI para a tela mostrar o saldo novo.
+  const recarregarEpi = async (id) => {
+    if (!id) return;
+    try {
+      const rec = await pb.collection('epis').getOne(id, { $autoCancel: false });
+      setEpis((p) => p.map((x) => (x.id === rec.id ? rec : x)));
+    } catch (_) { /* a lista volta certa no próximo carregamento */ }
+  };
+
   const saveEntrega = async (e) => {
     e.preventDefault();
     if (!entregaForm.funcionario_id || !entregaForm.epi_id) { toast.error('Selecione funcionário e EPI'); return; }
@@ -591,15 +601,8 @@ const EPIsPage = () => {
         criado_por: currentUser?.id,
         atualizado_por: currentUser?.id,
       };
+      // O servidor dá a baixa no estoque (pb_hooks/estoque-epi.pb.js) e recusa sem saldo.
       const saved = await pb.collection('epis_entregas').create(payload, { $autoCancel: false });
-      // Baixa no estoque
-      if (epi) {
-        await pb.collection('epis').update(epi.id, {
-          quantidade_estoque: Number(epi.quantidade_estoque || 0) - qtd,
-          atualizado_por: currentUser?.id,
-          data_atualizacao: new Date().toISOString(),
-        }, { $autoCancel: false });
-      }
       await auditLog(AUDIT_ACTIONS.RECORD_CREATED, AUDIT_MODULES.HR, `Entrega de EPI: ${numero} para funcionário`);
       await registrarHistorico({
         funcionario_id: entregaForm.funcionario_id, epi_id: entregaForm.epi_id,
@@ -608,10 +611,11 @@ const EPIsPage = () => {
         detalhes: entregaForm.observacoes || '',
       });
       toast.success('Entrega registrada com sucesso');
+      recarregarEpi(entregaForm.epi_id);
       setEntregaModalOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Erro ao registrar entrega');
+      toast.error(mensagemErro(err, 'Erro ao registrar entrega'));
     }
   };
 
@@ -651,21 +655,9 @@ const EPIsPage = () => {
         criado_por: currentUser?.id,
         atualizado_por: currentUser?.id,
       };
+      // O servidor marca a entrega como "Devolvido" e, se aprovado para
+      // reutilizar, devolve ao estoque (pb_hooks/estoque-epi.pb.js).
       const saved = await pb.collection('epis_devolucoes').create(payload, { $autoCancel: false });
-      // Atualiza situação da entrega
-      await pb.collection('epis_entregas').update(devolucaoForm.entrega_id, {
-        situacao: 'Devolvido', atualizado_por: currentUser?.id,
-      }, { $autoCancel: false });
-      // Se aprovado reutilização, devolve ao estoque
-      if (devolucaoForm.aprovado_reutilizacao && devolucaoEntrega?.epi_id) {
-        const epi = epis.find((x) => x.id === devolucaoEntrega.epi_id);
-        if (epi) {
-          await pb.collection('epis').update(epi.id, {
-            quantidade_estoque: Number(epi.quantidade_estoque || 0) + Number(devolucaoEntrega.quantidade || 1),
-            atualizado_por: currentUser?.id, data_atualizacao: new Date().toISOString(),
-          }, { $autoCancel: false });
-        }
-      }
       await auditLog(AUDIT_ACTIONS.RECORD_CREATED, AUDIT_MODULES.HR, `Devolução de EPI: ${numero}`);
       await registrarHistorico({
         funcionario_id: devolucaoForm.funcionario_id, epi_id: devolucaoEntrega?.epi_id || null,
@@ -674,10 +666,11 @@ const EPIsPage = () => {
         detalhes: devolucaoForm.motivo,
       });
       toast.success('Devolução registrada');
+      recarregarEpi(devolucaoEntrega?.epi_id);
       setDevolucaoModalOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Erro ao registrar devolução');
+      toast.error(mensagemErro(err, 'Erro ao registrar devolução'));
     }
   };
 
@@ -716,13 +709,8 @@ const EPIsPage = () => {
         criado_por: currentUser?.id,
         atualizado_por: currentUser?.id,
       };
+      // O servidor dá a baixa no estoque (pb_hooks/estoque-epi.pb.js) e recusa sem saldo.
       const saved = await pb.collection('epis_reposicoes').create(payload, { $autoCancel: false });
-      if (epi) {
-        await pb.collection('epis').update(epi.id, {
-          quantidade_estoque: Number(epi.quantidade_estoque || 0) - qtd,
-          atualizado_por: currentUser?.id, data_atualizacao: new Date().toISOString(),
-        }, { $autoCancel: false });
-      }
       await auditLog(AUDIT_ACTIONS.RECORD_CREATED, AUDIT_MODULES.HR, `Reposição de EPI: ${numero} - ${reposicaoForm.tipo_reposicao}`);
       await registrarHistorico({
         funcionario_id: reposicaoForm.funcionario_id, epi_id: reposicaoForm.epi_id,
@@ -731,10 +719,11 @@ const EPIsPage = () => {
         detalhes: reposicaoForm.motivo || '',
       });
       toast.success('Reposição registrada');
+      recarregarEpi(reposicaoForm.epi_id);
       setReposicaoModalOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Erro ao registrar reposição');
+      toast.error(mensagemErro(err, 'Erro ao registrar reposição'));
     }
   };
 

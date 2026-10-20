@@ -48,6 +48,9 @@ import MovimentacoesPage from '@/pages/MovimentacoesPage.jsx';
 import EstoqueAlmoxarifadoPage from '@/pages/EstoqueAlmoxarifadoPage.jsx';
 import OcorrenciasPage from '@/pages/OcorrenciasPage.jsx';
 import SaldoFuncionarioPage from '@/pages/SaldoFuncionarioPage.jsx';
+import MateriaisObraPage from '@/pages/MateriaisObraPage.jsx';
+import EstoqueObrasPage from '@/pages/EstoqueObrasPage.jsx';
+import ObraPage from '@/pages/ObraPage.jsx';
 import EquipamentosPage from '@/pages/EquipamentosPage.jsx';
 import EmpresasPage from '@/pages/EmpresasPage.jsx';
 import EmpresaDetalhesPage from '@/pages/EmpresaDetalhesPage.jsx';
@@ -1007,8 +1010,12 @@ function App() {
               <Route path="/materiais" element={<ProtectedRoute module="materiais"><MateriaisPage /></ProtectedRoute>} />
               <Route path="/movimentacoes" element={<ProtectedRoute module="movimentacoes"><MovimentacoesPage /></ProtectedRoute>} />
               <Route path="/estoque" element={<ProtectedRoute module="estoque"><EstoqueAlmoxarifadoPage /></ProtectedRoute>} />
+              <Route path="/obras/:id" element={<ProtectedRoute module="obras"><ObraPage /></ProtectedRoute>} />
+              <Route path="/minha-obra" element={<ProtectedRoute module="minha_obra"><ObraPage minha /></ProtectedRoute>} />
+              <Route path="/estoque-obras" element={<ProtectedRoute module="estoque_obras"><EstoqueObrasPage /></ProtectedRoute>} />
               <Route path="/ocorrencias" element={<ProtectedRoute module="ocorrencias"><OcorrenciasPage /></ProtectedRoute>} />
               <Route path="/saldo-funcionario" element={<ProtectedRoute module="saldo_funcionario"><SaldoFuncionarioPage /></ProtectedRoute>} />
+              <Route path="/materiais-por-obra" element={<ProtectedRoute module="materiais_obra"><MateriaisObraPage /></ProtectedRoute>} />
               <Route path="/equipamentos" element={<ProtectedRoute module="equipamentos"><EquipamentosPage /></ProtectedRoute>} />
               <Route path="/rh/epis" element={<ProtectedRoute module="epis"><EPIsPage /></ProtectedRoute>} />
               <Route path="/suppliers" element={<ProtectedRoute module="fornecedores"><SuppliersManagement /></ProtectedRoute>} />

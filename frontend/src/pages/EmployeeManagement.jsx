@@ -363,7 +363,8 @@ const EmployeeManagement = () => {
 
       // Usa FormData para permitir upload da foto (campo file).
       const fd = new FormData();
-      fd.append('matricula', formData.matricula);
+      // Matrícula = o mesmo número; no cadastro novo o servidor preenche.
+      if (editingEmployee) fd.append('matricula', formData.matricula);
       fd.append('nome', formData.nome.trim());
       fd.append('nome_completo', formData.nome.trim());
       fd.append('company_id', currentUser.company_id);
@@ -556,16 +557,14 @@ const EmployeeManagement = () => {
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-primary border-b pb-2">Dados Pessoais</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="matricula">ID do Funcionário *</Label>
-                      <Input
-                        id="matricula"
-                        value={formData.matricula}
-                        onChange={(e) => setFormData({ ...formData, matricula: e.target.value })}
-                        required
-                        className="text-foreground"
-                      />
-                    </div>
+                    {editingEmployee && (
+                      <div className="space-y-2">
+                        <Label htmlFor="matricula">ID</Label>
+                        {/* Dado pelo servidor por ordem de chegada; não se digita nem muda. */}
+                        <Input id="matricula" value={editingEmployee.id_unico || formData.matricula} readOnly tabIndex={-1}
+                          className="bg-muted/40 text-foreground" />
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label htmlFor="nome">Nome Completo *</Label>
                       <Input
@@ -868,7 +867,7 @@ const EmployeeManagement = () => {
                 ) : (
                   filteredEmployees.map(employee => (
                     <TableRow key={employee.id}>
-                      <TableCell className="font-medium">{employee.matricula}</TableCell>
+                      <TableCell className="font-medium">{employee.id_unico || employee.matricula}</TableCell>
                       <TableCell>{employee.nome}</TableCell>
                       <TableCell>
                         {employee.expand?.cargoId?.nome || '-'}

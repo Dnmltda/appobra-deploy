@@ -10,31 +10,31 @@ export const CARGOS = [
   'Financeiro', 'RH', 'Funcionário', 'Cliente', 'Pedreiro', 'Servente', 'Encanador', 'Eletricista', 'Faxina',
 ];
 
-const OBRA = ['dashboard', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos', 'ocorrencias'];
+const OBRA = ['dashboard', 'minha_obra', 'solicitacoes', 'saldo_funcionario', 'epis', 'equipamentos', 'ocorrencias'];
 
 export const MODULOS_POR_CARGO = {
-  'Diretoria': ['dashboard', 'obras', 'financeiro', 'rh', 'documentos', 'auditoria', 'configuracoes', 'relatorios',
-    'estoque', 'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos', 'ocorrencias'],
-  'Gerência': ['dashboard', 'obras', 'materiais', 'compras', 'financeiro', 'rh', 'documentos', 'relatorios', 'estoque',
+  'Diretoria': ['dashboard', 'materiais_obra', 'obras', 'financeiro', 'rh', 'documentos', 'auditoria', 'configuracoes', 'relatorios',
+    'estoque', 'estoque_obras', 'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos', 'ocorrencias'],
+  'Gerência': ['dashboard', 'materiais_obra', 'obras', 'materiais', 'compras', 'financeiro', 'rh', 'documentos', 'relatorios', 'estoque', 'estoque_obras',
     'saldo_funcionario', 'empresas', 'comercial', 'frota', 'perdas_ganhos', 'solicitacoes', 'movimentacoes', 'equipamentos', 'ocorrencias'],
-  'Engenheiro': ['dashboard', 'obras', 'materiais', 'compras', 'documentos', 'equipamentos', 'relatorios', 'estoque',
+  'Engenheiro': ['dashboard', 'materiais_obra', 'obras', 'materiais', 'compras', 'documentos', 'equipamentos', 'relatorios', 'estoque', 'estoque_obras',
     'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos', 'solicitacoes', 'movimentacoes', 'ocorrencias'],
-  'Mestre de Obras': ['dashboard', 'obras', 'materiais', 'funcionarios', 'equipamentos', 'epis', 'solicitacoes', 'estoque',
+  'Mestre de Obras': ['dashboard', 'minha_obra', 'materiais_obra', 'obras', 'materiais', 'funcionarios', 'equipamentos', 'epis', 'solicitacoes', 'estoque', 'estoque_obras',
     'saldo_funcionario', 'frota', 'qrcode', 'perdas_ganhos', 'ocorrencias'],
-  'Almoxarife': ['dashboard', 'materiais', 'movimentacoes', 'compras', 'fornecedores', 'epis', 'equipamentos', 'solicitacoes',
-    'estoque', 'saldo_funcionario', 'qrcode', 'perdas_ganhos', 'ocorrencias'],
+  'Almoxarife': ['dashboard', 'minha_obra', 'materiais_obra', 'materiais', 'movimentacoes', 'compras', 'fornecedores', 'epis', 'equipamentos', 'solicitacoes',
+    'estoque', 'estoque_obras', 'saldo_funcionario', 'qrcode', 'perdas_ganhos', 'ocorrencias'],
   'Comprador': ['dashboard', 'compras', 'solicitacoes', 'fornecedores', 'estoque', 'ocorrencias'],
-  'Financeiro': ['dashboard', 'financeiro', 'compras', 'relatorios', 'ocorrencias'],
+  'Financeiro': ['dashboard', 'materiais_obra', 'financeiro', 'compras', 'relatorios', 'ocorrencias'],
   'RH': ['dashboard', 'rh', 'funcionarios', 'epis', 'documentos', 'ocorrencias'],
   'Cliente': ['dashboard', 'obras'],
-  'Funcionário': ['dashboard', 'solicitacoes', 'ocorrencias'],
+  'Funcionário': ['dashboard', 'minha_obra', 'solicitacoes', 'ocorrencias'],
   // Execução de obra: painel, pedir material/EPI, ver o próprio saldo e os equipamentos.
   'Pedreiro': OBRA,
   'Servente': OBRA,
   'Encanador': OBRA,
   'Eletricista': OBRA,
-  // Faxina: controla o material de limpeza e pode pedir reposição.
-  'Faxina': ['dashboard', 'solicitacoes', 'estoque', 'movimentacoes', 'ocorrencias'],
+  // Faxina: pede o material de limpeza e vê só o que está com ela.
+  'Faxina': ['dashboard', 'minha_obra', 'solicitacoes', 'saldo_funcionario', 'ocorrencias'],
 };
 
 export const ehAdmin = (user) =>
@@ -49,6 +49,11 @@ export const podeAcessar = (user, modulo) => {
   if (ehAdmin(user)) return true;
   return (MODULOS_POR_CARGO[cargoDe(user)] || ['dashboard']).includes(modulo);
 };
+
+// Quem vê o estoque geral, o das obras e o saldo de todos (mesma lista do
+// servidor, pb_hooks/acesso-estoque.pb.js). Os demais veem só o próprio saldo.
+export const podeVerEstoque = (user) =>
+  ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador', 'Financeiro'].includes(cargoDe(user));
 
 // Gestão do estoque (aprovar/cancelar movimentação, ver de todos).
 export const podeGerirEstoque = (user) =>

@@ -70,6 +70,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
+import { coresPara, corPorNome, nomeComCor } from '@/lib/coresMaterial.js';
+import { marcasPara } from '@/lib/marcasMaterial.js';
 
 const AUDIT_MODULE = 'Materiais';
 
@@ -127,6 +129,7 @@ const emptyForm = {
   description: '',
   category: '',
   marca: '',
+  cor: '',
   unit: 'un',
   quantity_in_stock: '',
   min_quantity: '0',
@@ -174,6 +177,11 @@ const MateriaisPage = () => {
   const [categoriaAtiva, setCategoriaAtiva] = useState(null);
   const [materiaisModelo, setMateriaisModelo] = useState([]);
   const [carregandoModelos, setCarregandoModelos] = useState(false);
+
+  // Busca de material pronto (catálogo padrão + o que a empresa já tem), para
+  // escolher em vez de digitar, no computador e no celular.
+  const [buscaPronto, setBuscaPronto] = useState('');
+  const [prontos, setProntos] = useState([]);
 
   // Foto do material — preparação pro padrão visual futuro (foto + QR code).
   const [fotoFile, setFotoFile] = useState(null);
@@ -259,6 +267,49 @@ const MateriaisPage = () => {
     setFormErrors({});
   };
 
+  useEffect(() => {
+    if (!dialogOpen || editing || !companyId) return;
+    let cancelado = false;
+    (async () => {
+      try {
+        if (!catalogoRef.current) {
+          catalogoRef.current = await pb.send('/api/custom/catalogo-materiais', { $autoCancel: false }).catch(() => []);
+        }
+        const daEmpresa = await pb.collection('materiais').getFullList({
+          filter: `company_id = "${companyId}"`, sort: 'name', fields: 'id,name,category,unit,description,marca', $autoCancel: false,
+        }).catch(() => []);
+        const nomes = new Set(daEmpresa.map((m) => String(m.name || '').toLowerCase()));
+        const sugestoes = (catalogoRef.current || [])
+          .filter((c) => !nomes.has(String(c.name).toLowerCase()))
+          .map((c) => ({ ...c, id: `sug-${c.code}`, sugestao: true }));
+        if (!cancelado) setProntos([...daEmpresa, ...sugestoes]);
+      } catch (err) {
+        console.error('Erro ao carregar materiais prontos:', err);
+      }
+    })();
+    return () => { cancelado = true; };
+  }, [dialogOpen, editing, companyId]);
+
+  const semAcento = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const prontosVisiveis = useMemo(() => {
+    const q = semAcento(buscaPronto.trim());
+    if (!q) {
+      // Sem busca: os mais comuns de cada categoria.
+      const vistos = {};
+      return prontos.filter((m) => {
+        vistos[m.category] = (vistos[m.category] || 0) + 1;
+        return vistos[m.category] <= 2;
+      }).slice(0, 20);
+    }
+    return prontos.filter((m) => semAcento(`${m.name} ${m.category}`).includes(q)).slice(0, 30);
+  }, [prontos, buscaPronto]);
+
+  const escolherPronto = (modelo) => {
+    usarMaterialModelo(modelo);
+    setCategoriaAtiva(null);
+    setBuscaPronto('');
+  };
+
   const handleFotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -329,11 +380,12 @@ const MateriaisPage = () => {
     }
   };
 
+  const [marcaOutra, setMarcaOutra] = useState(false);
+
   const validateForm = async () => {
     const errs = {};
 
     if (!formData.name.trim()) errs.name = 'Nome é obrigatório';
-    if (!formData.code.trim()) errs.code = 'Código / SKU é obrigatório';
     if (!formData.category.trim()) errs.category = 'Categoria é obrigatória';
     if (!formData.unit.trim()) errs.unit = 'Unidade de medida é obrigatória';
 
@@ -366,14 +418,9 @@ const MateriaisPage = () => {
     if (Object.keys(errs).length > 0) return false;
 
     // Duplicate checks (nome e código/SKU únicos por empresa)
-    const dupNome = await checkDuplicate('name', formData.name.trim(), editing?.id);
+    const dupNome = await checkDuplicate('name', nomeComCor(formData.name, formData.cor), editing?.id);
     if (dupNome) {
       setFormErrors((p) => ({ ...p, name: 'Já existe um material com este nome nesta empresa' }));
-      return false;
-    }
-    const dupCode = await checkDuplicate('code', formData.code.trim(), editing?.id);
-    if (dupCode) {
-      setFormErrors((p) => ({ ...p, code: 'Já existe um material com este código/SKU nesta empresa' }));
       return false;
     }
     return true;
@@ -396,8 +443,8 @@ const MateriaisPage = () => {
       // FormData pra permitir o upload da foto junto (campo file); os demais
       // campos vão como texto mesmo sem foto, o PocketBase aceita os dois.
       const fd = new FormData();
-      fd.append('name', formData.name.trim());
-      fd.append('code', formData.code.trim());
+      fd.append('name', nomeComCor(formData.name, formData.cor));
+      fd.append('cor', formData.cor || '');
       fd.append('description', formData.description.trim() || '');
       fd.append('category', formData.category.trim());
       fd.append('marca', formData.marca.trim());
@@ -450,12 +497,18 @@ const MateriaisPage = () => {
 
   const handleEdit = (material) => {
     setEditing(material);
+    // A cor fica no fim do nome; na edição ela sai do campo Nome para trocar
+    // de cor sem repetir ("Fio Azul Vermelho").
+    const sufixo = material.cor ? ` ${material.cor}` : '';
+    const nomeSemCor = sufixo && String(material.name || '').endsWith(sufixo)
+      ? material.name.slice(0, -sufixo.length) : (material.name || '');
     setFormData({
-      name: material.name || '',
+      name: nomeSemCor,
       code: material.code || '',
       description: material.description || '',
       category: material.category || '',
       marca: material.marca || '',
+      cor: material.cor || '',
       unit: material.unit || 'un',
       quantity_in_stock: material.quantity_in_stock ?? '',
       min_quantity: material.min_quantity ?? 0,
@@ -493,6 +546,8 @@ const MateriaisPage = () => {
 
   const resetForm = () => {
     setFormData(emptyForm);
+    setMarcaOutra(false);
+    setBuscaPronto('');
     setEditing(null);
     setFormErrors({});
     setCategoriaAtiva(null);
@@ -595,8 +650,43 @@ const MateriaisPage = () => {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {!editing && (
+                  <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                    <Label htmlFor="busca_pronto">Escolha um material pronto</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="busca_pronto"
+                        className="pl-9"
+                        placeholder="Procure: cimento, fio, tinta, tubo, luva..."
+                        value={buscaPronto}
+                        onChange={(e) => setBuscaPronto(e.target.value)}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {buscaPronto.trim() ? 'Toque no material para preencher nome, categoria e unidade.' : 'Mais usados nas obras. Toque para preencher; depois escolha cor, marca e preço.'}
+                    </p>
+                    {prontosVisiveis.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">Nada encontrado. Digite o nome do material novo no campo Nome abaixo.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                        {prontosVisiveis.map((m) => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => escolherPronto(m)}
+                            className={`text-xs px-2.5 py-1.5 rounded-full border bg-background hover:bg-primary/10 hover:border-primary transition-colors ${formData.name === m.name ? 'border-primary bg-primary/10 font-medium' : ''}`}
+                          >
+                            {m.name}<span className="text-muted-foreground"> · {m.category}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!editing && (
                   <div className="space-y-2">
-                    <Label>Categoria — escolha pra ver os materiais já cadastrados</Label>
+                    <Label>Ou veja por categoria</Label>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
                       {CATEGORIA_SUGESTOES.filter((c) => c !== 'Outros').map((cat) => {
                         const Icone = getCategoriaIcon(cat);
@@ -672,42 +762,86 @@ const MateriaisPage = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="mat_categoria">Categoria *</Label>
-                    <Input
-                      id="mat_categoria"
+                    <Select
                       value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      list="mat_categoria_list"
-                      placeholder="Selecione ou digite"
-                      className={formErrors.category ? 'border-destructive' : ''}
-                    />
-                    <datalist id="mat_categoria_list">
-                      {CATEGORIA_SUGESTOES.map((c) => (
-                        <option key={c} value={c} />
-                      ))}
-                    </datalist>
+                      onValueChange={(v) => setFormData({ ...formData, category: v })}
+                    >
+                      <SelectTrigger id="mat_categoria" className={formErrors.category ? 'border-destructive' : ''}>
+                        <SelectValue placeholder="Escolha a categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(CATEGORIA_SUGESTOES.includes(formData.category) || !formData.category
+                          ? CATEGORIA_SUGESTOES : [formData.category, ...CATEGORIA_SUGESTOES]).map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {formErrors.category && <p className="text-xs text-destructive">{formErrors.category}</p>}
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="mat_code">Código / SKU *</Label>
-                    <Input
-                      id="mat_code"
-                      value={formData.code}
-                      onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                      placeholder="Código único do material"
-                      className={formErrors.code ? 'border-destructive' : ''}
-                    />
-                    {formErrors.code && <p className="text-xs text-destructive">{formErrors.code}</p>}
+                    <Label htmlFor="mat_code">Código / SKU</Label>
+                    {/* Dado pelo sistema: prefixo da categoria + número (ELE-001). */}
+                    <Input id="mat_code" value={editing ? formData.code : 'Gerado pelo sistema ao salvar'} readOnly tabIndex={-1}
+                      className="bg-muted/40" />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="mat_marca">Marca</Label>
-                    <Input
-                      id="mat_marca"
-                      value={formData.marca}
-                      onChange={(e) => setFormData({ ...formData, marca: e.target.value })}
-                      placeholder="Ex: Votoran, Tigre, Sherwin-Williams..."
-                    />
+                    {(() => {
+                      const lista = marcasPara(formData.category, formData.name);
+                      const outra = marcaOutra || (formData.marca && !lista.includes(formData.marca));
+                      return (
+                        <>
+                          <Select
+                            value={outra ? 'outra' : (formData.marca || 'nenhuma')}
+                            onValueChange={(v) => {
+                              setMarcaOutra(v === 'outra');
+                              setFormData({ ...formData, marca: v === 'outra' || v === 'nenhuma' ? '' : v });
+                            }}
+                          >
+                            <SelectTrigger id="mat_marca"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="nenhuma">Sem marca / não sei</SelectItem>
+                              {lista.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                              <SelectItem value="outra">Outra marca (digitar)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {outra && (
+                            <Input aria-label="Nome da marca" value={formData.marca} placeholder="Nome da marca"
+                              onChange={(e) => setFormData({ ...formData, marca: e.target.value })} />
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="mat_cor">Cor</Label>
+                    <Select
+                      value={formData.cor || 'sem'}
+                      onValueChange={(v) => setFormData({ ...formData, cor: v === 'sem' ? '' : v })}
+                    >
+                      <SelectTrigger id="mat_cor"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sem">Sem cor / não se aplica</SelectItem>
+                        {(() => {
+                          const lista = coresPara(formData.category, formData.name);
+                          const atual = formData.cor && !lista.some((c) => c.nome === formData.cor) ? [corPorNome(formData.cor) || { nome: formData.cor, hex: '#e5e7eb' }] : [];
+                          return [...atual, ...lista].map((c) => (
+                            <SelectItem key={c.nome} value={c.nome}>
+                              <span className="inline-flex items-center gap-2">
+                                <span className="inline-block w-3.5 h-3.5 rounded-full border border-black/20" style={{ background: c.hex }} />
+                                {c.nome}{c.dica ? <span className="text-muted-foreground"> ({c.dica})</span> : null}
+                              </span>
+                            </SelectItem>
+                          ));
+                        })()}
+                      </SelectContent>
+                    </Select>
+                    {formData.cor && formData.name.trim() && (
+                      <p className="text-xs text-muted-foreground">Vai aparecer como: <strong>{nomeComCor(formData.name, formData.cor)}</strong></p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -976,6 +1110,10 @@ const MateriaisPage = () => {
                         </TableCell>
                         <TableCell className="font-medium">
                           <div className="flex flex-col">
+                            {m.cor && corPorNome(m.cor) && (
+                              <span className="inline-block w-3 h-3 rounded-full border border-black/20 mr-1.5 align-middle" title={m.cor}
+                                style={{ background: corPorNome(m.cor).hex }} />
+                            )}
                             <span>{m.name}{m.marca ? <span className="text-muted-foreground font-normal"> — {m.marca}</span> : ''}</span>
                             <span className="text-xs text-muted-foreground md:hidden">{m.category}</span>
                           </div>

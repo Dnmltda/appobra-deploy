@@ -128,6 +128,7 @@ onRecordCreateExecute((e) => {
   const r = e.record;
   r.set("estoque_aplicado", false);
   r.set("quantidade_aplicada", 0);
+  r.set("quantidade_aplicada_obra", 0);
   r.set("saldo_anterior", 0);
   r.set("saldo_posterior", 0);
   if (est.efetivo(r.get("status"))) est.aplicar(e.app, r);
@@ -139,7 +140,7 @@ onRecordUpdateExecute((e) => {
   const r = e.record;
   const o = r.original();
   // campos de controle nunca vêm da tela
-  ["estoque_aplicado", "quantidade_aplicada", "saldo_anterior", "saldo_posterior"].forEach((f) => r.set(f, o.get(f)));
+  ["estoque_aplicado", "quantidade_aplicada", "quantidade_aplicada_obra", "saldo_anterior", "saldo_posterior"].forEach((f) => r.set(f, o.get(f)));
 
   if (o.get("estoque_aplicado")) {
     const livres = ["status", "motivo_cancelamento", "observacoes", "atualizado_por", "updated", "updated_at"];

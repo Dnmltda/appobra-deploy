@@ -48,6 +48,8 @@ const PER_PAGE = 10;
 const TIPOS = [
   'Entrada', 'Saída', 'Transferência', 'Devolução', 'Perda',
   'Ajuste de Estoque', 'Inventário', 'Consumo de Obra', 'Retorno ao Almoxarifado',
+  // estoque por obra: geral -> obra e obra -> geral (a obra vem do campo Obra)
+  'Transferência para Obra', 'Devolução da Obra',
 ];
 const STATUS_VALUES = ['Pendente', 'Aprovado', 'Cancelado', 'Finalizado'];
 
@@ -80,6 +82,8 @@ const TIPO_COLORS = {
   'Inventário': '#7c3aed',
   'Consumo de Obra': '#ea580c',
   'Retorno ao Almoxarifado': '#0d9488',
+  'Transferência para Obra': '#4f46e5',
+  'Devolução da Obra': '#0f766e',
 };
 
 const ENTRADA_TIPOS = ['Entrada', 'Retorno ao Almoxarifado', 'Devolução'];

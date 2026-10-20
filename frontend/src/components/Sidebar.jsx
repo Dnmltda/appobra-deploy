@@ -9,6 +9,7 @@ import {
   Package, 
   Boxes,
   PackageCheck,
+  Construction,
   ArrowRightLeft, 
   Wrench, 
   HardHat, 
@@ -23,9 +24,11 @@ import {
   Settings, 
   ShieldCheck,
   Siren,
+  Warehouse,
+  MessagesSquare,
 } from 'lucide-react';
 import Logo from './Logo.jsx';
-import { ehAdmin, podeAcessar } from '@/lib/permissoes.js';
+import { ehAdmin, podeAcessar, podeVerEstoque } from '@/lib/permissoes.js';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { language } = useLanguage();
@@ -50,11 +53,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const menuItems = [
     { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'obras', path: '/projects', label: 'Obras', icon: Building2 },
+    { id: 'minha_obra', path: '/minha-obra', label: 'Minha Obra', icon: MessagesSquare },
     { id: 'ocorrencias', path: '/ocorrencias', label: 'Ocorrências', icon: Siren },
     { id: 'materiais', path: '/materiais', label: 'Materiais', icon: Package },
     { id: 'estoque', path: '/estoque', label: 'Estoque', icon: Boxes },
+    { id: 'estoque_obras', path: '/estoque-obras', label: 'Estoque por Obra', icon: Warehouse },
     { id: 'movimentacoes', path: '/movimentacoes', label: 'Movimentações', icon: ArrowRightLeft },
     { id: 'saldo_funcionario', path: '/saldo-funcionario', label: 'Saldo por Funcionário', icon: PackageCheck },
+    { id: 'materiais_obra', path: '/materiais-por-obra', label: 'Materiais por Obra', icon: Construction },
     { id: 'equipamentos', path: '/equipamentos', label: 'Equipamentos', icon: Wrench },
     { id: 'epis', path: '/rh/epis', label: 'EPIs', icon: HardHat },
     { id: 'fornecedores', path: '/suppliers', label: 'Fornecedores', icon: Truck },
@@ -86,6 +92,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     documentos: 'GESTAO',
     auditoria: 'GESTAO',
     obras: 'GESTAO',
+    minha_obra: 'GESTAO',
     ocorrencias: 'GESTAO',
     materiais: 'SUPRIMENTOS',
     equipamentos: 'SUPRIMENTOS',
@@ -94,7 +101,9 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     solicitacoes: 'FLUXO_COMPRA',
     compras: 'FLUXO_COMPRA',
     estoque: 'SUPRIMENTOS',
+    estoque_obras: 'SUPRIMENTOS',
     saldo_funcionario: 'SUPRIMENTOS',
+    materiais_obra: 'SUPRIMENTOS',
     movimentacoes: 'SUPRIMENTOS',
     funcionarios: 'PESSOAS',
     usuarios: 'PESSOAS',
@@ -102,7 +111,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     configuracoes: 'EMPRESA',
   };
 
-  const visibleItems = menuItems.filter(item => hasPermission(item.id));
+  // "Minha Obra" só para quem tem cadastro de funcionário (é por ele que se sabe a obra).
+  const visibleItems = menuItems
+    .filter(item => hasPermission(item.id) && (item.id !== 'minha_obra' || !!currentUser?.funcionario_id))
+    // Quem não vê o estoque só enxerga o próprio saldo.
+    .map(item => (item.id === 'saldo_funcionario' && !podeVerEstoque(currentUser) ? { ...item, label: 'Meu Material' } : item));
 
   // Pick only the longest (most specific) matching path as active,
   // so a parent route never lights up together with a more specific

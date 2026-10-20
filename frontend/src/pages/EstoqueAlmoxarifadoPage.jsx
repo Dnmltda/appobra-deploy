@@ -778,7 +778,10 @@ const EstoqueAlmoxarifadoPage = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold mb-1">Estoque / Almoxarifado</h1>
-            <p className="text-muted-foreground">Controle de estoque, entradas, saídas e histórico de movimentações</p>
+            <p className="text-muted-foreground">
+              Estoque geral: entradas, saídas e histórico. O que já foi para cada obra está em{' '}
+              <button type="button" className="underline" onClick={() => navigate('/estoque-obras')}>Estoque por Obra</button>.
+            </p>
           </div>
           {perms.canMove && (
             <div className="flex flex-wrap gap-2">

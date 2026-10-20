@@ -6,15 +6,101 @@
 
 ## TL;DR
 
-- Repositório: **`Dnmltda/appobra-deploy`**. Todo o trabalho do Code está na branch
-  **`ccr-6751e2d4-oj4p0r`** (19 commits à frente do `main`, sem conflito). **Nada foi publicado ainda.**
-- Foi feita a **auditoria completa** (pedida pela documentação mestre) e executadas as **Etapas 1 a 4** do
-  plano dela, todas testadas num PocketBase local isolado: servidor **199/0**, telas (Playwright) **118/118**.
-- O código-fonte das telas agora está no GitHub em **`frontend/`** (veio de `~\Documents\appobra-app\apps\web`).
-  **Daqui para frente as telas mudam no GitHub, não no Hostinger Horizons**, senão as duas cópias se separam.
-- **Próximo passo é da Cowork: publicar.** Roteiro e prompt prontos em **`docs/PUBLICAR-COWORK.md`**
-  (snapshot → Brevo → Secrets → merge → deploy → logs → Hostinger → teste rápido).
-- Depois de publicado e usado alguns dias, o Code segue para a **Etapa 5 (limpeza)**.
+- Repositório: **`Dnmltda/appobra-deploy`**, branch `main`. **Em produção (Fly v17)**: tudo até o PR #7 (Etapas 1 a 4,
+  login, convite, limite de troca de senha). As telas também estão na **Hostinger**
+  (`midnightblue-chamois-688707.hostingersite.com`), que é o endereço que o Diego usa; o Fly
+  (`appobra-backend.fly.dev`) mostra o mesmo app.
+- **A cada deploy com mudança de tela, reenviar `pb_public/` para a Hostinger** (ver seção 00).
+- O código das telas fica em **`frontend/`** (GitHub), não no Hostinger Horizons.
+- Próximo: PR "uso de material / Materiais por Obra / aceite na retirada" (seção 00) e depois estoque por obra.
+
+## 00. Atualização 19/10/2026, noite (Claude Code)
+
+**Feito em produção (com pedido do Diego)**
+- Telas novas enviadas para a Hostinger (`pb_public/` da `main`, pela API da Hostinger; cópia das antigas guardada).
+- Acesso `dn-moraes@hotmail.com` apagado para o Diego recriar do zero: estava **arquivado pela limpeza inicial**
+  (por isso não aparecia em Gestão de Acessos) e havia 14 cadastros de funcionário com o mesmo e-mail. Mantido
+  arquivado 1 cadastro com retirada de teste no histórico. Backup antes: `/data/backups/` no volume.
+
+**PR desta etapa (não publicado até o Diego pedir)**
+- **Saldo por Funcionário → "Registrar uso"**: a pessoa diz material, quantidade, obra e local (ex.: "3º andar");
+  sai do saldo dela, **não volta ao estoque** e vira gasto da obra. Servidor: `pb_hooks/uso-material.pb.js`
+  (confere o que está em posse, calcula o valor; funcionário só no próprio saldo; só a gestão lança
+  retirada/devolução ou altera lançamentos).
+- **Materiais por Obra** (`/materiais-por-obra`): por obra, material usado e valor gasto (Consumo de Obra +
+  usos registrados).
+- **Pedido de material com aceite na retirada**: estoque confirma que recebeu → separa → "Pronto para retirada"
+  → **quem pediu aceita** (só aí baixa o estoque; se tem cadastro de funcionário, vai para o saldo dele) ou
+  **recusa com o motivo** (volta para separação). Avisos no sininho em cada passo.
+- **ID automático (01, 02...)**: o campo ID saiu do cadastro de funcionário e de acesso (aparece só para ler,
+  na edição). O servidor dá o primeiro número livre da empresa; quem já foi da empresa continua dono do seu.
+  **Quem volta** (mesmo e-mail ou CPF de um cadastro arquivado/inativo) **recupera o número antigo**; o acesso
+  antigo solta o número (`ARQ-<id>`). Só fica livre o número de quem for **apagado de vez**, e isso só quando o
+  Diego disser que a pessoa não volta mais (`pb_hooks/id-lib.js`).
+- Testes: servidor 224/0 (`audit_tests.py`), navegador `fluxo-material.mjs` 15/0, `funcionario-acesso.mjs` 20/0.
+
+- **Estoque geral + estoque por obra**: a compra entra no estoque geral (`materiais.quantity_in_stock`, como antes)
+  e a tela **Estoque por Obra** (`/estoque-obras`) transfere para cada obra, registra consumo e devolve ao geral.
+  Saldo de cada obra na coleção `estoque_obra` (só o servidor grava, `pb_hooks/estoque-obra.pb.js` +
+  `estoque-lib.js`). Tipos novos: "Transferência para Obra" e "Devolução da Obra"; qualquer movimentação com
+  `estoque_obra_id` mexe no estoque daquela obra. No pedido de material, quem separa escolhe "Separar de qual
+  estoque" (vem marcado o da obra quando ela tem tudo). Alerta de estoque mínimo continua só no geral.
+  Testes: servidor 236/0, `estoque-obra.mjs` 12/0.
+
+- **Cor do material por lista** (`frontend/src/lib/coresMaterial.js`, campo `materiais.cor`): fio nas cores da
+  norma, tubo pelas linhas, tinta pelas cores comuns, lista geral no resto. A cor vai no fim do nome ("Fio 2,5 mm
+  Azul claro") e do código. Categoria virou lista; código / SKU é opcional (o sistema gera). Diego quer o máximo
+  de "escolher" e o mínimo de "digitar".
+
+- **Código do material sempre automático** (`pb_hooks/materiais-cor.pb.js`): o servidor dá prefixo da categoria +
+  sequência na empresa (ELE-001, ELE-002...); cada cor é um material com código próprio; editar não muda o código.
+- **Marca por lista** (`frontend/src/lib/marcasMaterial.js`): a lista muda pelo nome/categoria do material (tintas,
+  fios, cimento...); "Outra marca" deixa digitar.
+- **Página da obra** (`/obras/:id`, e **Minha Obra** `/minha-obra` para o funcionário): fotos da obra (`obras.fotos`)
+  e **mural da equipe** (coleção `obra_mensagens`, `pb_hooks/obra-mural.pb.js`): assunto e andar por lista, recado,
+  até 4 fotos. Só quem está na obra (funcionário com `obraId`) e a gestão leem e escrevem; novo recado avisa a
+  equipe no sininho. Na obra e em "Ver Equipe": **Tirar da obra** e **Colocar na obra**.
+- **Painel inicial novo** (`DashboardPage.jsx` + `components/dashboard/`): só dados reais da empresa (nada de
+  exemplo). Gestão: números do dia, "Precisa da sua atenção", obras, gasto por obra, movimentações dos últimos
+  30 dias, pedidos por status. Funcionário de obra: minha obra, botões grandes, meus pedidos, material comigo.
+  Empresa vazia mostra "Vamos começar". Cada bloco só aparece se o cargo pode abrir aquela tela.
+- Câmera que lê código de barras do material: ideia para o futuro (não feito).
+- **Quem vê o estoque** (`pb_hooks/acesso-estoque.pb.js`, pedido do Diego 20/10): estoque geral, estoque das obras,
+  movimentações e saldo de todos só para Administrador, Diretoria, Gerência, Engenheiro, Mestre de Obras, Almoxarife,
+  Comprador e Financeiro (Financeiro só lê). Pedreiro, servente, encanador, eletricista, faxina e funcionário veem só o
+  próprio material (menu **Meu Material**), pedem material e registram uso; não cadastram nem alteram material e
+  recebem a lista de materiais sem quantidade e mínimo.
+- **Material pronto no cadastro**: busca no topo de "Adicionar Material" (catálogo padrão + materiais da empresa),
+  igual no computador e no celular.
+
+**Feito em produção depois (com o sim do Diego, 19/10 22:58 UTC)**
+- dn-moraes passou para **02** (acesso e funcionário). Apagados de vez os testes 08/09 e o acesso de teste 08; o
+  cadastro antigo arquivado do dn-moraes ficou com `ARQ-w0o3c940sf1are9` (guarda histórico de teste) e soltou o 07.
+  Backup: `/data/backups/antes-id02-20261019-225828.db`.
+- 19/10 23:38 UTC: **app zerado** a pedido do Diego. Ficaram só o login dele (01), as empresas e os cargos.
+  Backup: `/data/backups/antes-zerar-20261019-233829.db` e `storage-antes-zerar.tgz`.
+
+**Pendências da auditoria fechadas em 20/10/2026 (Claude Code, no PR #8)**
+- **Limite de tentativas de login** (`pb_hooks/login-limite.pb.js` + `login-limite-lib.js`): 5 senhas erradas
+  seguidas na mesma conta travam por 15 minutos (vale para as abas E-mail, Usuário e ID); senha certa zera o
+  contador; conta "Bloqueado" pelo administrador não é mexida. A tela mostra "Muitas tentativas… use Esqueci minha
+  senha". Além disso o PocketBase já limita 20 logins a cada 5 minutos por IP (as abas ID e Usuário não passam
+  por esse limite do PocketBase — por isso o limite por conta).
+- **Estoque de EPI pelo servidor** (`pb_hooks/estoque-epi.pb.js` + `estoque-epi-lib.js`): entrega e reposição
+  tiram do estoque e devolução aprovada para reutilizar devolve, numa transação, recusando sem saldo; a entrega
+  não é devolvida duas vezes; EPI de outra empresa é recusado; só a gestão (incluindo RH) ajusta a quantidade
+  direto. A tela de EPIs não grava mais o saldo (antes fazia a conta e gravava) e relê o EPI depois de cada
+  operação.
+- Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
+- Ainda da auditoria (Etapa 5, limpeza): "dono do sistema" como campo em vez do e-mail fixo
+  `dnmltda@hotmail.com` (aparece em 18 arquivos), juntar tabelas repetidas e campos inglês/português,
+  QR Code gerado no app.
+
+**Pendente / ideias do Diego**
+- Câmera no almoxarifado: foto ou vídeo curto na entrega do material (futuro).
+- Hierarquia: já existe em todos os cargos, sem limite por nível; pergunta aberta se cargos de obra também usam
+  Júnior/Pleno/Sênior.
+- E-mails no spam: Diego aceita por enquanto (domínio próprio no futuro).
 
 ## 0. Atualização 19/10/2026 (Claude Code) — o que aconteceu depois da primeira versão deste documento
 

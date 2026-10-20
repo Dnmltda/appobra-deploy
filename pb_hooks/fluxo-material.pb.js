@@ -1,20 +1,27 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 // ============================================================
-// Etapa 4.1 (documento mestre, fluxo 1 — material de consumo):
-//   pedir → aprovar → separar → entregar (baixa no estoque) → confirmar
-//   recebimento.
+// Etapa 4.1 (documento mestre, fluxo 1 — material de consumo), ajustado
+// a pedido do Diego (19/10/2026):
+//   pedir → estoque confirma que recebeu o pedido → separa → "Pronto para
+//   retirada" → quem pediu confere e ACEITA na retirada (só aí o material
+//   sai do estoque) ou recusa com o motivo (volta para separação).
 //
 // - solicitacoes_itens: os materiais e quantidades de cada solicitação.
-// - Status novos em solicitacoes: "Em separação" e "Entregue".
+// - Status novos em solicitacoes: "Em separação", "Pronto para retirada" e
+//   "Entregue" (este só para pedidos antigos, do fluxo anterior).
 // - Numa solicitação COM itens o servidor exige a ordem dos passos:
 //     Aberta/Em análise/Aguardando aprovação → Aprovada | Rejeitada | Cancelada
 //     Aprovada → Em separação | Cancelada
-//     Em separação → Entregue | Cancelada
-//     Entregue → Concluída   (confirmação de recebimento)
-//   Ao virar "Entregue", cada item gera uma saída de estoque (Consumo de Obra
-//   se tiver obra, senão Saída), ligada à solicitação; sem saldo, a entrega é
-//   recusada e nada é gravado (transação).
+//     Em separação → Pronto para retirada | Cancelada
+//     Pronto para retirada → Concluída (aceite) | Em separação (recusa) | Cancelada
+//     Entregue → Concluída   (pedidos antigos)
+//   No aceite, cada item gera uma saída de estoque ligada à solicitação. Se
+//   quem pediu tem cadastro de funcionário, é "Retirada por Funcionário" e o
+//   material entra no saldo dele (depois ele registra onde usou); senão é
+//   Consumo de Obra (com obra) ou Saída. Sem saldo, o aceite é recusado e nada
+//   é gravado (transação).
+// - Aceitar ou recusar na retirada: só quem pediu (ou o administrador).
 // - Itens só podem ser incluídos/alterados enquanto a solicitação não foi
 //   aprovada.
 // Solicitações sem itens (RH, transporte...) continuam com o fluxo livre.
@@ -29,8 +36,19 @@ onBootstrap((e) => {
     const valores = [];
     for (let i = 0; i < st.values.length; i++) valores.push(String(st.values[i]));
     let mudou = false;
-    ["Em separação", "Entregue"].forEach((v) => { if (!valores.includes(v)) { valores.push(v); mudou = true; } });
+    ["Em separação", "Pronto para retirada", "Entregue"].forEach((v) => { if (!valores.includes(v)) { valores.push(v); mudou = true; } });
     if (mudou) { st.values = valores; app.save(sol); }
+    const solAtual = app.findCollectionByNameOrId("solicitacoes");
+    let novos = false;
+    if (!solAtual.fields.getByName("retirada_recusa_motivo")) {
+      solAtual.fields.add(new TextField({ name: "retirada_recusa_motivo", max: 1000 }));
+      novos = true;
+    }
+    if (!solAtual.fields.getByName("separado_por")) {
+      solAtual.fields.add(new RelationField({ name: "separado_por", collectionId: app.findCollectionByNameOrId("users").id, maxSelect: 1 }));
+      novos = true;
+    }
+    if (novos) app.save(solAtual);
 
     const mov = app.findCollectionByNameOrId("movimentacoes");
     if (!mov.fields.getByName("solicitacao_id")) {
@@ -108,8 +126,34 @@ onRecordDeleteRequest((e) => {
   e.next();
 }, "solicitacoes_itens");
 
-// Mudança de status em transação (a entrega grava várias saídas).
+// Mudança de status em transação (o aceite grava várias saídas).
 onRecordUpdateRequest((e) => {
+  const a = e.auth;
+  const r = e.record;
+  const antes = r.original().get("status");
+  const depois = r.get("status");
+  if (a && !a.isSuperuser() && antes !== depois) {
+    const lib = require(`${__hooks}/uso-material-lib.js`);
+    if (antes === "Pronto para retirada" && ["Concluída", "Em separação"].includes(depois)) {
+      if (r.get("solicitante_id") !== a.id && !lib.ehAdmin(a)) {
+        throw new ForbiddenError("Quem confere e aceita o material é a pessoa que fez o pedido.");
+      }
+      if (depois === "Em separação" && !String(r.get("retirada_recusa_motivo") || "").trim()) {
+        throw new BadRequestError("Diga o que está errado no material para o estoque corrigir.");
+      }
+    } else if (["Em separação", "Pronto para retirada"].includes(depois) && !lib.ehGestao(a)) {
+      throw new ForbiddenError("Só o almoxarifado separa o material.");
+    }
+    if (depois === "Pronto para retirada") {
+      r.set("separado_por", a.id);
+      r.set("retirada_recusa_motivo", "");
+    }
+  }
+  // De qual estoque sai (geral ou da obra): quem separa escolhe ao marcar
+  // "Pronto para retirada"; depois disso ninguém troca.
+  if (a && !a.isSuperuser() && !(antes !== depois && depois === "Pronto para retirada")) {
+    r.set("estoque_obra_id", r.original().get("estoque_obra_id"));
+  }
   e.app.runInTransaction((txApp) => {
     e.app = txApp;
     e.next();
@@ -130,30 +174,50 @@ onRecordUpdateExecute((e) => {
     "Em análise": ["Aprovada", "Rejeitada", "Cancelada", "Aguardando aprovação"],
     "Aguardando aprovação": ["Aprovada", "Rejeitada", "Cancelada"],
     "Aprovada": ["Em separação", "Cancelada"],
-    "Em separação": ["Entregue", "Cancelada"],
+    "Em separação": ["Pronto para retirada", "Cancelada"],
+    "Pronto para retirada": ["Concluída", "Em separação", "Cancelada"],
     "Entregue": ["Concluída"],
   };
   if (!(PODE[antes] || []).includes(depois)) {
     throw new BadRequestError(`Passo fora de ordem: de "${antes}" não dá para ir para "${depois}".`);
   }
 
-  if (depois === "Entregue") {
+  const lib = require(`${__hooks}/uso-material-lib.js`);
+  const ref = "solicitacao:" + r.id;
+  const numero = r.get("numero_solicitacao") || r.id;
+
+  if (antes === "Pronto para retirada" && depois === "Concluída") {
+    // Quem pediu tem cadastro de funcionário? Então o material vai para o
+    // saldo dele, e depois ele registra onde usou.
+    let funcId = "";
+    try {
+      const sol = e.app.findRecordById("users", r.get("solicitante_id"));
+      const f = sol.get("funcionario_id");
+      if (f) {
+        const func = e.app.findRecordById("funcionarios", f);
+        if (!func.getString("deleted_at")) funcId = f;
+      }
+    } catch (_) {}
     const movCol = e.app.findCollectionByNameOrId("movimentacoes");
+    const saldoCol = e.app.findCollectionByNameOrId("saldo_funcionario");
+    const agora = new Date();
     itens.forEach((it) => {
       const mat = e.app.findRecordById("materiais", it.get("material_id"));
       const mov = new Record(movCol);
       mov.set("company_id", r.get("company_id"));
       mov.set("material_id", it.get("material_id"));
-      mov.set("tipo", r.get("obra_id") ? "Consumo de Obra" : "Saída");
+      mov.set("tipo", funcId ? "Retirada por Funcionário" : (r.get("obra_id") ? "Consumo de Obra" : "Saída"));
       mov.set("quantidade", it.get("quantidade"));
       mov.set("unidade", it.get("unidade") || mat.get("unit") || "un");
       mov.set("valor_unitario", mat.get("unit_cost") || 0);
       mov.set("valor_total", Number(((mat.get("unit_cost") || 0) * it.get("quantidade")).toFixed(2)));
       mov.set("obra_id", r.get("obra_id") || "");
-      mov.set("origem", "Almoxarifado");
-      mov.set("destino", r.get("obra_id") ? "Obra" : "Funcionário");
+      mov.set("estoque_obra_id", r.get("estoque_obra_id") || "");
+      mov.set("origem", r.get("estoque_obra_id") ? "Estoque da obra" : "Almoxarifado");
+      mov.set("destino", funcId || !r.get("obra_id") ? "Funcionário" : "Obra");
+      mov.set("funcionario_id", funcId);
       mov.set("solicitante_id", r.get("solicitante_id") || "");
-      mov.set("responsavel_id", r.get("atualizado_por") || "");
+      mov.set("responsavel_id", r.get("separado_por") || r.get("atualizado_por") || "");
       mov.set("solicitacao_id", r.id);
       mov.set("status", "Aprovado");
       mov.set("observacoes", "Entrega da solicitação " + (r.get("numero_solicitacao") || r.id));
@@ -163,10 +227,34 @@ onRecordUpdateExecute((e) => {
       } catch (err) {
         throw new BadRequestError(`Não foi possível entregar "${mat.get("name")}": ${err.message || err}`);
       }
+      if (funcId) {
+        const sf = new Record(saldoCol);
+        sf.set("company_id", r.get("company_id"));
+        sf.set("funcionario_id", funcId);
+        sf.set("material_id", it.get("material_id"));
+        sf.set("tipo_operacao", "Retirada");
+        sf.set("quantidade", it.get("quantidade"));
+        sf.set("data_operacao", agora.toISOString().replace("T", " "));
+        sf.set("hora_operacao", agora.toISOString().slice(11, 16));
+        sf.set("obra_id", r.get("obra_id") || "");
+        sf.set("movimentacao_id", mov.id);
+        sf.set("responsavel_id", r.get("separado_por") || "");
+        sf.set("criado_por", r.get("solicitante_id") || "");
+        sf.set("observacoes", "Pedido " + numero);
+        e.app.save(sf);
+      }
       it.set("quantidade_entregue", it.get("quantidade"));
       it.set("movimentacao_id", mov.id);
       e.app.saveNoValidate(it);
     });
+    lib.notificar(e.app, r.get("separado_por"), `Pedido ${numero}: material conferido e aceito na retirada.`, ref);
+  } else if (depois === "Pronto para retirada") {
+    lib.notificar(e.app, r.get("solicitante_id"), `Pedido ${numero}: material separado. Confira e aceite na retirada.`, ref);
+  } else if (antes === "Pronto para retirada" && depois === "Em separação") {
+    lib.notificar(e.app, r.get("separado_por"),
+      `Pedido ${numero}: quem pediu recusou o material. Motivo: ${r.get("retirada_recusa_motivo")}`, ref);
+  } else if (depois === "Aprovada") {
+    lib.notificar(e.app, r.get("solicitante_id"), `Pedido ${numero}: o estoque recebeu o seu pedido.`, ref);
   }
   e.next();
 }, "solicitacoes");
@@ -180,6 +268,20 @@ onRecordCreateRequest((e) => {
     const gestao = ["Administrador", "Diretoria", "Gerência", "Engenheiro", "Mestre de Obras", "Almoxarife", "Comprador"].includes(cargo)
       || a.get("role") === "admin" || a.get("email") === "dnmltda@hotmail.com";
     if (!gestao) e.record.set("status", "Aberta");
+  }
+  e.next();
+}, "solicitacoes");
+
+// Pedido de material novo: avisa no sininho quem cuida do estoque.
+onRecordAfterCreateSuccess((e) => {
+  if (e.record.get("tipo") === "Material") {
+    const lib = require(`${__hooks}/uso-material-lib.js`);
+    const numero = e.record.get("numero_solicitacao") || e.record.id;
+    lib.equipeDoEstoque(e.app, e.record.get("company_id")).forEach((u) => {
+      if (u.id !== e.record.get("solicitante_id")) {
+        lib.notificar(e.app, u.id, `Novo pedido de material: ${numero}. Confirme que recebeu e separe.`, "solicitacao:" + e.record.id);
+      }
+    });
   }
   e.next();
 }, "solicitacoes");

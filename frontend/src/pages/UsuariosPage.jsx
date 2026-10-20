@@ -722,12 +722,14 @@ const UsuariosPage = () => {
                 <Input value={form.username} onChange={(e) => set("username", e.target.value.toLowerCase())} placeholder="usuario.sobrenome" />
                 {formErrors.username && <p className="text-xs text-destructive">{formErrors.username}</p>}
               </div>
-              <div className="space-y-2">
-                <Label>ID</Label>
-                {/* Número por ordem de chegada na empresa, dado pelo servidor — não se edita. */}
-                <Input value={form.id_unico || 'gerado automaticamente'} readOnly tabIndex={-1} className="bg-muted/40" />
-                <p className="text-xs text-muted-foreground">Ordem de chegada na empresa. Não muda.</p>
-              </div>
+              {editing && (
+                <div className="space-y-2">
+                  <Label>ID</Label>
+                  {/* Número por ordem de chegada na empresa, dado pelo servidor — não se edita. */}
+                  <Input value={form.id_unico} readOnly tabIndex={-1} className="bg-muted/40" />
+                  <p className="text-xs text-muted-foreground">Ordem de chegada na empresa. Não muda.</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>CPF</Label>
                 <Input value={form.cpf} onChange={(e) => set("cpf", formatCPF(e.target.value))} placeholder="000.000.000-00" />

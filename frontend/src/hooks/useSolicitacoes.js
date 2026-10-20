@@ -320,9 +320,9 @@ export const useSolicitacoes = () => {
 
   // Próximo passo do fluxo de material (o servidor confere a ordem e, na
   // entrega, dá a baixa no estoque).
-  const mudarStatus = async (solicitacao, status) => {
+  const mudarStatus = async (solicitacao, status, extra = {}) => {
     try {
-      const rec = await pb.collection(COL).update(solicitacao.id, { status, atualizado_por: currentUser.id }, { $autoCancel: false });
+      const rec = await pb.collection(COL).update(solicitacao.id, { ...extra, status, atualizado_por: currentUser.id }, { $autoCancel: false });
       await auditLog("Solicitação: " + status, "Solicitações", `${solicitacao.numero_solicitacao}: ${solicitacao.status} → ${status}`, "success");
       return { success: true, record: rec };
     } catch (err) {
