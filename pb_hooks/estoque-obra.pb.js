@@ -23,12 +23,18 @@ onBootstrap((e) => {
     let col = null;
     try { col = app.findCollectionByNameOrId("estoque_obra"); } catch (_) {}
     if (!col) {
+      // Já nasce visível só para quem cuida do estoque (mesma regra de
+      // acesso-estoque.pb.js, que no primeiro boot roda antes desta criação).
       const SAME = '@request.auth.id != "" && @request.auth.company_id = company_id';
+      const VE = '(@request.auth.cargo = "Administrador" || @request.auth.cargo = "Diretoria" || @request.auth.cargo = "Gerência" || ' +
+        '@request.auth.cargo = "Engenheiro" || @request.auth.cargo = "Mestre de Obras" || @request.auth.cargo = "Almoxarife" || ' +
+        '@request.auth.cargo = "Comprador" || @request.auth.cargo = "Financeiro" || ' +
+        '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.email = "dnmltda@hotmail.com")';
       col = new Collection({
         type: "base",
         name: "estoque_obra",
-        listRule: SAME,
-        viewRule: SAME,
+        listRule: `${SAME} && ${VE}`,
+        viewRule: `${SAME} && ${VE}`,
         createRule: null,
         updateRule: null,
         deleteRule: null,

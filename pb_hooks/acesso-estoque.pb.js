@@ -28,8 +28,11 @@ onBootstrap((e) => {
     '@request.auth.role = "admin" || @request.auth.role = "Administrador" || @request.auth.email = "dnmltda@hotmail.com")';
   const SAME = '@request.auth.id != "" && @request.auth.company_id = company_id';
   const ajustar = (nome, fn) => {
+    let col;
+    // No primeiro boot estoque_obra ainda não existe: estoque-obra.pb.js a cria
+    // logo depois já com esta regra.
+    try { col = app.findCollectionByNameOrId(nome); } catch (_) { return; }
     try {
-      const col = app.findCollectionByNameOrId(nome);
       fn(col);
       app.save(col);
     } catch (err) {

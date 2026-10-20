@@ -789,6 +789,82 @@ s, r = call("POST", "/api/collections/users/records", tB, {"email": "recontratad
             "passwordConfirm": "Senha12345", "company_id": cB, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Ativo"})
 check("acesso", "E-mail usado em outra empresa: recusado sem dizer qual", s >= 400 and "outra empresa" in r.get("message", ""), r.get("message", "")[:80])
 
+# ------------------------------------------------------------------ estoque de EPI pelo servidor (20/10/2026)
+def epi_saldo(i):
+    return call("GET", f"/api/collections/epis/records/{i}", tA)[1].get("quantidade_estoque")
+s, epi = call("POST", "/api/collections/epis/records", tA, {"nome": "Capacete de teste", "tipo": "Capacete", "id_unico": "EPI-T1",
+              "quantidade_estoque": 10, "estoque_minimo": 2, "company_id": cA})
+check("epi", "EPI cadastrado com estoque inicial 10", s == 200 and epi_saldo(epi.get("id")) == 10, err(epi) if s >= 400 else "")
+def entrega(q, tok=None, cid=None, col="epis_entregas", extra=None):
+    num = "T-" + uuid.uuid4().hex[:6]
+    body = {"funcionario_id": funE.get("id"), "epi_id": epi.get("id"), "quantidade": q, "company_id": cid or cA,
+            "responsavel_id": uA["id"], "numero_entrega": num, "numero_reposicao": num,
+            "data_entrega": "2026-10-20 12:00:00.000Z", "hora_entrega": "08:00", "data_reposicao": "2026-10-20 12:00:00.000Z"}
+    body.update(extra or {})
+    return call("POST", f"/api/collections/{col}/records", tok or tA, body)
+s, en1 = entrega(4)
+check("epi", "Entrega de 4 baixa o estoque no servidor (10 -> 6)", s == 200 and epi_saldo(epi.get("id")) == 6, err(en1) if s >= 400 else f"saldo {epi_saldo(epi.get('id'))}")
+s, rp = entrega(2, col="epis_reposicoes", extra={"tipo_reposicao": "Troca por desgaste"})
+check("epi", "Reposição de 2 também baixa (6 -> 4)", s == 200 and epi_saldo(epi.get("id")) == 4, err(rp) if s >= 400 else f"saldo {epi_saldo(epi.get('id'))}")
+s, r = entrega(99)
+check("epi", "Entrega maior que o estoque é recusada e nada muda", s >= 400 and "Estoque insuficiente" in r.get("message", "")
+      and epi_saldo(epi.get("id")) == 4, r.get("message", "")[:80])
+s, dv = call("POST", "/api/collections/epis_devolucoes/records", tA, {"entrega_id": en1.get("id"), "funcionario_id": funE.get("id"),
+             "company_id": cA, "aprovado_reutilizacao": True, "responsavel_id": uA["id"], "numero_devolucao": "D-" + uuid.uuid4().hex[:6],
+             "data_devolucao": "2026-10-20 12:00:00.000Z", "hora_devolucao": "17:00", "estado_epi": "Bom", "motivo": "fim da obra"})
+ent = call("GET", f"/api/collections/epis_entregas/records/{en1.get('id')}", tA)[1]
+check("epi", "Devolução aprovada para reutilizar volta ao estoque (4 -> 8) e a entrega fica Devolvido", s == 200
+      and epi_saldo(epi.get("id")) == 8 and ent.get("situacao") == "Devolvido", err(dv) if s >= 400 else f"saldo {epi_saldo(epi.get('id'))}")
+s, r = call("POST", "/api/collections/epis_devolucoes/records", tA, {"entrega_id": en1.get("id"), "funcionario_id": funE.get("id"),
+            "company_id": cA, "aprovado_reutilizacao": True, "responsavel_id": uA["id"], "numero_devolucao": "D-" + uuid.uuid4().hex[:6],
+             "data_devolucao": "2026-10-20 12:00:00.000Z", "hora_devolucao": "17:00", "estado_epi": "Bom", "motivo": "de novo"})
+check("epi", "A mesma entrega não é devolvida duas vezes", s >= 400 and epi_saldo(epi.get("id")) == 8, r.get("message", "")[:60])
+s, r = call("PATCH", f"/api/collections/epis/records/{epi.get('id')}", tPed, {"quantidade_estoque": 500})
+check("epi", "Pedreiro não muda a quantidade do EPI por fora", epi_saldo(epi.get("id")) == 8, f"status {s} saldo {epi_saldo(epi.get('id'))}")
+s, r = call("PATCH", f"/api/collections/epis/records/{epi.get('id')}", tA, {"quantidade_estoque": 12})
+check("epi", "Gestão ajusta a quantidade (inventário)", s == 200 and epi_saldo(epi.get("id")) == 12, f"status {s}")
+s, r = entrega(1, tok=tB, cid=cB)
+check("permissao", "Empresa B não entrega EPI da Empresa A", s >= 400 and epi_saldo(epi.get("id")) == 12, f"status {s}")
+
+# ------------------------------------------------------------------ limite de tentativas de login (20/10/2026)
+# O PocketBase já limita logins por IP (20 a cada 5 min). Para testar o limite POR CONTA sem
+# esbarrar nele, o IP local fica fora do limite só nesta seção (restaurado no fim).
+_rl = call("GET", "/api/settings", tSU)[1].get("rateLimits", {}) if tSU else {}
+check("login", "Limite por IP do PocketBase está ligado (20 logins a cada 5 min)", _rl.get("enabled") is True
+      and any(r.get("label") == "*:auth" for r in _rl.get("rules", [])), str(_rl.get("enabled")))
+if tSU:
+    call("PATCH", "/api/settings", tSU, {"rateLimits": {**_rl, "excludedIPs": ["127.0.0.1"]}})
+s, ul = call("POST", "/api/collections/users/records", tA, {"email": "limite@teste.local", "username": "limiteteste", "password": "Senha12345",
+             "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Ativo"})
+def tenta(senha, ident="limite@teste.local"):
+    return call("POST", "/api/collections/users/auth-with-password", body={"identity": ident, "password": senha})
+for _ in range(3):
+    tenta("errada")
+s, r = tenta("Senha12345")
+check("login", "Senha certa zera o contador de erros", s == 200, f"status {s}")
+for _ in range(4):
+    tenta("errada")
+s, r = tenta("Senha12345")
+check("login", "4 erros seguidos ainda deixam entrar", s == 200, f"status {s}")
+for _ in range(5):
+    s5, r5 = tenta("errada")
+s, r = tenta("Senha12345")
+check("login", "5 erros seguidos travam a conta (nem a senha certa entra)", s >= 400 and "Muitas tentativas" in r.get("message", ""), r.get("message", "")[:90])
+s, r = call("POST", "/api/custom/login-usuario", None, {"username": "limiteteste", "password": "Senha12345"})
+check("login", "Conta travada também não entra pela aba Usuário", s >= 400 and "Muitas tentativas" in r.get("message", ""), f"status {s}")
+if tSU:
+    call("PATCH", f"/api/collections/users/records/{ul.get('id')}", tSU, {"locked_until": "2020-01-01 00:00:00.000Z"})
+    s, r = tenta("Senha12345")
+    check("login", "Passado o tempo da trava, a senha certa volta a entrar", s == 200, f"status {s}")
+    s, b = call("POST", "/api/collections/users/records", tA, {"email": "bloq@teste.local", "username": "bloqteste", "password": "Senha12345",
+                "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Ativo"})
+    call("PATCH", f"/api/collections/users/records/{b.get('id')}", tSU, {"status": "Bloqueado", "locked_until": "2126-01-01 00:00:00.000Z"})
+    for _ in range(6):
+        tenta("errada", "bloq@teste.local")
+    s, r = call("GET", f"/api/collections/users/records/{b.get('id')}", tSU)
+    check("login", "Bloqueio feito pelo administrador não é mexido pelo limite de tentativas", str(r.get("locked_until", "")).startswith("2126"), r.get("locked_until"))
+    call("PATCH", "/api/settings", tSU, {"rateLimits": _rl})
+
 # ------------------------------------------------------------------ login e recuperação de senha
 s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "adminb", "password": "Senha12345"})
 check("telas", "Login pelo nome de usuário", s == 200 and r.get("record", {}).get("company_id") == cB, f"status {s}")

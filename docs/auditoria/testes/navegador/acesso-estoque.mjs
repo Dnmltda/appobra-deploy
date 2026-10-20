@@ -1,6 +1,6 @@
 // Quem vê o estoque: servente e cargos de obra veem só o próprio material;
 // almoxarife e administração veem tudo. Material pronto no cadastro (computador).
-import { abrir, api, apiLogin, check } from "./lib.mjs";
+import { abrir, api, apiLogin, check, FRONT } from "./lib.mjs";
 const { token, user } = await apiLogin("a@teste.local");
 const cid = user.company_id;
 const cargo = ((await api("GET", "/api/collections/cargos/records?perPage=1", token)).data.items || [{}])[0].id || "";
@@ -56,7 +56,7 @@ await s.browser.close();
 // 3. Material pronto no cadastro (computador)
 s = await abrir();
 page = s.page;
-await page.goto(process.env.FRONT + "/materiais"); await page.waitForTimeout(1500);
+await page.goto(FRONT + "/materiais"); await page.waitForTimeout(1500);
 await page.getByRole("button", { name: /Adicionar Material/ }).first().click();
 await page.waitForTimeout(1500);
 check("Cadastro mostra materiais prontos sem precisar escolher categoria",

@@ -80,6 +80,22 @@
 - 19/10 23:38 UTC: **app zerado** a pedido do Diego. Ficaram só o login dele (01), as empresas e os cargos.
   Backup: `/data/backups/antes-zerar-20261019-233829.db` e `storage-antes-zerar.tgz`.
 
+**Pendências da auditoria fechadas em 20/10/2026 (Claude Code, no PR #8)**
+- **Limite de tentativas de login** (`pb_hooks/login-limite.pb.js` + `login-limite-lib.js`): 5 senhas erradas
+  seguidas na mesma conta travam por 15 minutos (vale para as abas E-mail, Usuário e ID); senha certa zera o
+  contador; conta "Bloqueado" pelo administrador não é mexida. A tela mostra "Muitas tentativas… use Esqueci minha
+  senha". Além disso o PocketBase já limita 20 logins a cada 5 minutos por IP (as abas ID e Usuário não passam
+  por esse limite do PocketBase — por isso o limite por conta).
+- **Estoque de EPI pelo servidor** (`pb_hooks/estoque-epi.pb.js` + `estoque-epi-lib.js`): entrega e reposição
+  tiram do estoque e devolução aprovada para reutilizar devolve, numa transação, recusando sem saldo; a entrega
+  não é devolvida duas vezes; EPI de outra empresa é recusado; só a gestão (incluindo RH) ajusta a quantidade
+  direto. A tela de EPIs não grava mais o saldo (antes fazia a conta e gravava) e relê o EPI depois de cada
+  operação.
+- Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
+- Ainda da auditoria (Etapa 5, limpeza): "dono do sistema" como campo em vez do e-mail fixo
+  `dnmltda@hotmail.com` (aparece em 18 arquivos), juntar tabelas repetidas e campos inglês/português,
+  QR Code gerado no app.
+
 **Pendente / ideias do Diego**
 - Câmera no almoxarifado: foto ou vídeo curto na entrega do material (futuro).
 - Hierarquia: já existe em todos os cargos, sem limite por nível; pergunta aberta se cargos de obra também usam

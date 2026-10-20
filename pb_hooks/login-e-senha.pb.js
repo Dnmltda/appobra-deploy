@@ -152,16 +152,25 @@ routerAdd("POST", "/api/custom/login-id", (e) => {
       { a: id, b: n, c: n.padStart(2, "0") }
     );
   } catch (_) {}
+  // Limite de tentativas (login-limite-lib.js): conta travada não entra.
+  const lim = require(`${__hooks}/login-limite-lib.js`);
+  if (candidatos.length === 1) lim.conferir(candidatos[0]);
   const certos = [];
   for (let i = 0; i < candidatos.length; i++) {
     if (candidatos[i].validatePassword(senha)) certos.push(candidatos[i]);
   }
-  if (!certos.length) throw new BadRequestError("ID ou senha incorretos.");
+  if (!certos.length) {
+    // Só conta a tentativa quando o ID aponta para uma pessoa só.
+    if (candidatos.length === 1) lim.errou($app, candidatos[0]);
+    throw new BadRequestError("ID ou senha incorretos.");
+  }
   // Mesmo ID e mesma senha em empresas diferentes: não adivinha qual é.
   if (certos.length > 1) {
     throw new BadRequestError("Este ID existe em mais de uma empresa. Entre com o e-mail ou o usuário.");
   }
   const certo = certos[0];
+  lim.conferir(certo);
+  lim.acertou($app, certo);
 
   return $apis.recordAuthResponse(e, certo, "password", null);
 });
@@ -181,12 +190,17 @@ routerAdd("POST", "/api/custom/login-usuario", (e) => {
   try {
     candidatos = $app.findRecordsByFilter("users", "username ~ {:u}", "", 20, 0, { u: username });
   } catch (_) {}
-  for (let i = 0; i < candidatos.length; i++) {
-    const u = candidatos[i];
-    if (lib.normaliza(u.get("username")) === username && u.validatePassword(senha)) {
+  const lim = require(`${__hooks}/login-limite-lib.js`);
+  const mesmos = candidatos.filter((u) => lib.normaliza(u.get("username")) === username);
+  for (let i = 0; i < mesmos.length; i++) {
+    const u = mesmos[i];
+    lim.conferir(u);
+    if (u.validatePassword(senha)) {
+      lim.acertou($app, u);
       return $apis.recordAuthResponse(e, u, "password", null);
     }
   }
+  if (mesmos.length === 1) lim.errou($app, mesmos[0]);
   throw new BadRequestError("Usuário ou senha incorretos.");
 });
 
