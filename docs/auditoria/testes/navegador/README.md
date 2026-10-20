@@ -41,4 +41,5 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 | `usuario.mjs` | aba ID aceita "1", aba Usuário sem diferenciar maiúscula, pessoa troca o próprio usuário no perfil |
 | `fluxo-material.mjs` | pedido de material: pedir → estoque confirma que recebeu → separa → pronto para retirada → quem pediu recusa (material errado) ou aceita (baixa no estoque, vai para o saldo dele) → registra o uso na obra → Materiais por Obra |
 | `estoque-obra.mjs` | estoque geral + estoque por obra: transferir do geral, consumir e devolver na tela Estoque por Obra; pedido de material separado do estoque da obra; gasto em Materiais por Obra |
-| `materiais-cor.mjs` | cadastro de material por lista: categoria e cor (fio nas cores da norma), código gerado quando fica vazio, mesmo fio em duas cores, troca de cor na edição |
+| `materiais-cor.mjs` | cadastro de material por lista: categoria, cor (fio nas cores da norma) e marca; código sempre gerado pelo servidor (ELE-001, ELE-002), mesmo fio em duas cores, troca de cor na edição |
+| `obra-mural.mjs` | página da obra: Minha Obra do pedreiro, mural só para quem está na obra, aviso no sininho, recado vazio recusado, foto da obra, Tirar da obra / Colocar na obra |

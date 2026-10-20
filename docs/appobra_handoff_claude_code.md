@@ -52,6 +52,20 @@
   Azul claro") e do código. Categoria virou lista; código / SKU é opcional (o sistema gera). Diego quer o máximo
   de "escolher" e o mínimo de "digitar".
 
+- **Código do material sempre automático** (`pb_hooks/materiais-cor.pb.js`): o servidor dá prefixo da categoria +
+  sequência na empresa (ELE-001, ELE-002...); cada cor é um material com código próprio; editar não muda o código.
+- **Marca por lista** (`frontend/src/lib/marcasMaterial.js`): a lista muda pelo nome/categoria do material (tintas,
+  fios, cimento...); "Outra marca" deixa digitar.
+- **Página da obra** (`/obras/:id`, e **Minha Obra** `/minha-obra` para o funcionário): fotos da obra (`obras.fotos`)
+  e **mural da equipe** (coleção `obra_mensagens`, `pb_hooks/obra-mural.pb.js`): assunto e andar por lista, recado,
+  até 4 fotos. Só quem está na obra (funcionário com `obraId`) e a gestão leem e escrevem; novo recado avisa a
+  equipe no sininho. Na obra e em "Ver Equipe": **Tirar da obra** e **Colocar na obra**.
+- **Painel inicial novo** (`DashboardPage.jsx` + `components/dashboard/`): só dados reais da empresa (nada de
+  exemplo). Gestão: números do dia, "Precisa da sua atenção", obras, gasto por obra, movimentações dos últimos
+  30 dias, pedidos por status. Funcionário de obra: minha obra, botões grandes, meus pedidos, material comigo.
+  Empresa vazia mostra "Vamos começar". Cada bloco só aparece se o cargo pode abrir aquela tela.
+- Câmera que lê código de barras do material: ideia para o futuro (não feito).
+
 **Feito em produção depois (com o sim do Diego, 19/10 22:58 UTC)**
 - dn-moraes passou para **02** (acesso e funcionário). Apagados de vez os testes 08/09 e o acesso de teste 08; o
   cadastro antigo arquivado do dn-moraes ficou com `ARQ-w0o3c940sf1are9` (guarda histórico de teste) e soltou o 07.
