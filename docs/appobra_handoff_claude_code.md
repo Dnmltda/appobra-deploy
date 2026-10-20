@@ -104,6 +104,9 @@
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
 **Etapa 5 e câmera (20/10/2026, Claude Code, pedido do Diego "faça tudo antes dos testes")**
+- Publicado em 20/10/2026 ~23h: PR #9 (merge ba88ee4), Fly **v21** (snapshot antes: `vs_jRRDMv7eYpes2PAbj6w`),
+  boot sem `Erro`; nenhuma das tabelas duplicadas travadas tinha dados em produção. Hostinger atualizada
+  (`assets/index-DfxfHyCW.js`). Falta o teste do Diego em produção.
 - **Foto de quem retira** (`pb_hooks/foto-retirada.pb.js`, regra do aceite em `fluxo-material.pb.js`; tela
   `components/FotoRetirada.jsx` e `FotoProtegida.jsx`): na retirada do material (aceite de quem pediu ou registro
   do almoxarifado no balcão), na entrega de EPI e no empréstimo de equipamento a câmera do aparelho abre, conta
