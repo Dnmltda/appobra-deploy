@@ -104,6 +104,8 @@
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
 **Ficha de EPI, código de barras e assinatura (21/10/2026, Claude Code)**
+- Publicado em 21/10/2026 ~05h: PR #10 (merge 2fa7ff4), Fly **v22** (snapshot antes: `vs_RmmByep69G6skY4YVLB2`), boot
+  sem `Erro`; Hostinger atualizada (`assets/index-Pl4xQ9ru.js`). Falta o teste do Diego em produção.
 - **Ficha de EPI (cautela) em PDF** (`frontend/src/lib/fichaEpi.js`; EPIs → aba Entregas → "Ficha de EPI do
   funcionário"): todas as entregas do funcionário (data, EPI, CA, quantidade, devolução), assinatura e foto de cada
   uma e o termo de responsabilidade da NR-6 (6.6.1), com linhas para assinar.
