@@ -114,8 +114,12 @@
   campo `materiais.codigo_barras` (sem repetir na empresa), lido pela câmera no cadastro do material; no Estoque,
   "Registrar Entrada/Saída" tem "Ler código de barras" que escolhe o material; a tela QR Code também lê o código
   de barras e abre o material.
-- Editar o próprio cadastro de funcionário (pendência antiga): simulado como administrador dono do sistema com
-  cadastro de funcionário — salva normalmente (o formulário exige CPF). Aguardando o Diego dizer a tela/mensagem.
+- **Quem muda o quê nos dados das pessoas** (`pb_hooks/meus-dados.pb.js`, regra do Diego 21/10): no Meu Perfil a
+  pessoa muda só nome de login, telefone, foto e senha; **e-mail e ID nunca mudam**; nome completo, cargo, empresa
+  e situação só pelo administrador (pedido para mudar o próprio cargo/ID é recusado). Cadastro de funcionário:
+  antes **qualquer pessoa da empresa alterava qualquer cadastro** (CPF, salário); agora Administrador, RH e Mestre
+  de Obras cadastram e editam; Diretoria, Gerência, Engenheiro e Almoxarife só colocam/tiram da obra; os demais
+  nada. Tela Meu Perfil: nome completo e e-mail só leitura.
 
 **Etapa 5 e câmera (20/10/2026, Claude Code, pedido do Diego "faça tudo antes dos testes")**
 - Publicado em 20/10/2026 ~23h: PR #9 (merge ba88ee4), Fly **v21** (snapshot antes: `vs_jRRDMv7eYpes2PAbj6w`),

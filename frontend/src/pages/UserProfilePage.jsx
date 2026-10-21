@@ -28,7 +28,9 @@ const UserProfilePage = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await updateProfile(formData);
+      // Só o simples muda aqui (telefone e nome de login); nome completo,
+      // e-mail e ID ficam com o administrador (pb_hooks/meus-dados.pb.js).
+      await updateProfile({ telefone: formData.telefone, username: formData.username });
       toast.success('Perfil atualizado com sucesso');
       setIsEditing(false);
     } catch (error) {
@@ -178,15 +180,8 @@ const UserProfilePage = () => {
                       <User className="w-4 h-4 text-muted-foreground" />
                       Nome Completo
                     </Label>
-                    {isEditing ? (
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="bg-background"
-                      />
-                    ) : (
-                      <p className="text-foreground py-2">{currentUser?.name || '-'}</p>
-                    )}
+                    <p className="text-foreground py-2">{currentUser?.name || '-'}</p>
+                    {isEditing && <p className="text-xs text-muted-foreground">Para corrigir o nome, fale com o administrador.</p>}
                   </div>
                   
                   <div className="space-y-2">
@@ -194,16 +189,8 @@ const UserProfilePage = () => {
                       <Mail className="w-4 h-4 text-muted-foreground" />
                       Email
                     </Label>
-                    {isEditing ? (
-                      <Input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        className="bg-background"
-                      />
-                    ) : (
-                      <p className="text-foreground py-2">{currentUser?.email || '-'}</p>
-                    )}
+                    <p className="text-foreground py-2">{currentUser?.email || '-'}</p>
+                    {isEditing && <p className="text-xs text-muted-foreground">O e-mail não muda (é o seu login).</p>}
                   </div>
                   
                   <div className="space-y-2">

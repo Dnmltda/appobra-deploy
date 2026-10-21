@@ -1005,5 +1005,30 @@ check("barras", "Outra empresa pode usar o mesmo código de barras", s == 200, e
 s, r = call("GET", "/api/collections/materiais/records?filter=" + q('codigo_barras="7891234567895"'), tA)
 check("barras", "A busca pelo código de barras acha só o material da própria empresa", r.get("totalItems") == 1 and r["items"][0]["id"] == cb1.get("id"), f"{r.get('totalItems')}")
 
+# ------------------------------------------------------------------ quem muda o quê nos dados das pessoas (21/10/2026)
+tPerf = usuario("perfil@teste.local", "Servente")
+_uPerf = call("POST", "/api/collections/users/auth-with-password", body={"identity": "perfil@teste.local", "password": "Senha12345"})[1]["record"]
+s, eu = call("PATCH", f"/api/collections/users/records/{_uPerf['id']}", tPerf, {"telefone": "(11) 98888-0000", "username": "funcnovo",
+             "email": "outro@teste.local", "name": "Nome Trocado"})
+check("dados", "Meu Perfil: a pessoa muda telefone e nome de login", s == 200 and eu.get("telefone") == "(11) 98888-0000" and eu.get("username") == "funcnovo", err(eu) if s >= 400 else "")
+_eu = call("GET", f"/api/collections/users/records/{_uPerf['id']}", tA)[1]
+check("dados", "Meu Perfil: e-mail e nome completo não mudam pela própria pessoa", _eu.get("email") == "perfil@teste.local" and _eu.get("name") != "Nome Trocado",
+      str({k: _eu.get(k) for k in ("email", "name")}))
+s, r = call("PATCH", f"/api/collections/users/records/{_uPerf['id']}", tPerf, {"id_unico": "999", "cargo": "Administrador"})
+_eu = call("GET", f"/api/collections/users/records/{_uPerf['id']}", tA)[1]
+check("dados", "Meu Perfil: pedido para mudar o próprio ID ou cargo é recusado", s >= 400 and _eu.get("cargo") == "Servente" and _eu.get("id_unico") != "999", f"status {s}")
+s, eu = call("PATCH", f"/api/collections/users/records/{uA['id']}", tA, {"telefone": "(11) 97777-0000", "email": "trocado@teste.local"})
+check("dados", "Nem o administrador muda o próprio e-mail", s == 200 and eu.get("email") != "trocado@teste.local", f"status {s}")
+s, fx = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-DADOS", "nome": "Cadastro Teste", "nome_completo": "Cadastro Teste",
+             "cargoId": cargo1, "cpf": "111.222.333-44", "company_id": cA})
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tPed, {"cpf": "999.999.999-99"})
+check("dados", "Pedreiro não altera o cadastro de outro funcionário (CPF)", s >= 400, f"status {s}")
+s, r = call("POST", "/api/collections/funcionarios/records", tPed, {"matricula": "M-PED", "nome": "Fantasma", "nome_completo": "Fantasma", "cargoId": cargo1, "company_id": cA})
+check("dados", "Pedreiro não cadastra funcionário", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tEng, {"cpf": "999.999.999-99", "obraId": obra.get("id")})
+check("dados", "Engenheiro coloca na obra, mas não muda o CPF", s == 200 and r.get("obraId") == obra.get("id") and r.get("cpf") == "111.222.333-44", err(r) if s >= 400 else r.get("cpf"))
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tA, {"telefone": "(11) 96666-0000"})
+check("dados", "Administrador edita o cadastro do funcionário", s == 200 and r.get("telefone") == "(11) 96666-0000", err(r) if s >= 400 else "")
+
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)

@@ -231,13 +231,9 @@ export const AuthProvider = ({ children }) => {
     }
     try {
       
-      const updated = await pb.collection('users').update(currentUser.id, {
-        ...data,
-        role: data.role || currentUser.role || currentUser.cargo,
-        status: data.status || currentUser.status,
-        id_unico: data.id_unico || currentUser.id_unico,
-        created_by: currentUser.created_by
-      }, { $autoCancel: false });
+      // Manda só o que a pessoa mudou: o resto da própria conta o servidor não
+      // deixa mudar (pb_hooks/meus-dados.pb.js).
+      const updated = await pb.collection('users').update(currentUser.id, data, { $autoCancel: false });
       
       setCurrentUser(updated);
       
