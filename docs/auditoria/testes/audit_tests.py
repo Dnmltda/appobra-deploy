@@ -906,6 +906,9 @@ s, r = call("PATCH", f"/api/collections/epis/records/{epi.get('id')}", tA, {"qua
 check("epi", "Gestão ajusta a quantidade (inventário)", s == 200 and epi_saldo(epi.get("id")) == 12, f"status {s}")
 s, r = entrega(1, tok=tB, cid=cB)
 check("permissao", "Empresa B não entrega EPI da Empresa A", s >= 400 and epi_saldo(epi.get("id")) == 12, f"status {s}")
+s, r = entrega(1, extra={"assinatura_digital": "data:image/png;base64," + "A" * 40000})
+check("epi", "Entrega com a assinatura desenhada (imagem grande) é salva", s == 200 and len(r.get("assinatura_digital", "")) > 40000
+      and epi_saldo(epi.get("id")) == 11, err(r) if s >= 400 else "")
 
 # ------------------------------------------------------------------ limite de tentativas de login (20/10/2026)
 # O PocketBase já limita logins por IP (20 a cada 5 min). Para testar o limite POR CONTA sem
@@ -987,6 +990,20 @@ if tSU:
 for _t in ("pedidos_compra", "solicitacoes_compra", "recebimentos", "veiculo"):
     s, r = call("POST", f"/api/collections/{_t}/records", tA, {"company_id": cA})
     check("permissao", f"Ninguém grava na tabela duplicada '{_t}' (o app usa a outra)", s >= 400, f"status {s}")
+
+# ------------------------------------------------------------------ código de barras do material (21/10/2026)
+s, cb1 = call("POST", "/api/collections/materiais/records", tA, {"name": "Cimento CP II (barras)", "unit": "sc", "category": "Materiais de Construção",
+              "codigo_barras": " 7891234567895 ", "status": "active", "company_id": cA})
+check("barras", "Material guarda o código de barras da embalagem (sem espaços)", s == 200 and cb1.get("codigo_barras") == "7891234567895", err(cb1) if s >= 400 else "")
+s, r = call("POST", "/api/collections/materiais/records", tA, {"name": "Outro cimento", "unit": "sc", "category": "Materiais de Construção",
+            "codigo_barras": "7891234567895", "status": "active", "company_id": cA})
+check("barras", "O mesmo código de barras não vai para dois materiais da empresa", s >= 400 and "Cimento CP II" in r.get("message", ""), r.get("message", "")[:90])
+_tB2 = login("b@teste.local", "SenhaB12345")[0] if tSU else tB  # a senha da B mudou mais acima
+s, r = call("POST", "/api/collections/materiais/records", _tB2, {"name": "Cimento da B", "unit": "sc", "category": "Materiais de Construção",
+            "codigo_barras": "7891234567895", "status": "active", "company_id": cB})
+check("barras", "Outra empresa pode usar o mesmo código de barras", s == 200, err(r) if s >= 400 else "")
+s, r = call("GET", "/api/collections/materiais/records?filter=" + q('codigo_barras="7891234567895"'), tA)
+check("barras", "A busca pelo código de barras acha só o material da própria empresa", r.get("totalItems") == 1 and r["items"][0]["id"] == cb1.get("id"), f"{r.get('totalItems')}")
 
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)

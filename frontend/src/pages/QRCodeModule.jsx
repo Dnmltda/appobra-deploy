@@ -11,7 +11,7 @@ import { QrCode, ScanLine, History, Download, Printer, HardHat, Wrench, Box, Ext
 import { toast } from 'sonner';
 import pb from '@/lib/pocketbaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats as F } from 'html5-qrcode';
 import { QrImagem, linkDoItem, lerConteudo, imprimirEtiqueta } from '@/components/CodigosItem.jsx';
 
 // QR Code dos itens (Etapa 5 da auditoria): a etiqueta é de um item real da
@@ -66,8 +66,16 @@ const QRCodeModule = () => {
   useEffect(() => { if (activeTab === 'track') carregarHistorico(); }, [activeTab, companyId]);
 
   const abrirItem = async (conteudo) => {
-    const c = lerConteudo(conteudo);
-    if (!c) { setLido({ erro: 'Este QR Code não é de um item do APP OBRA.' }); return; }
+    let c = lerConteudo(conteudo);
+    if (!c && companyId) {
+      // Código de barras da embalagem: procura o material com esse código.
+      const cod = String(conteudo || '').trim().replace(/"/g, '');
+      try {
+        const m = await pb.collection('materiais').getFirstListItem(`company_id = "${companyId}" && codigo_barras = "${cod}"`, { $autoCancel: false });
+        c = { tipo: 'material', id: m.id };
+      } catch (_) { /* não achou */ }
+    }
+    if (!c) { setLido({ erro: `Nenhum item do APP OBRA com este código (${String(conteudo).slice(0, 40)}). Cadastre o código de barras no material.` }); return; }
     try {
       const rec = await pb.collection(TIPOS[c.tipo].col).getOne(c.id, { $autoCancel: false });
       setLido({ tipo: c.tipo, rec });
@@ -96,7 +104,11 @@ const QRCodeModule = () => {
     if (activeTab !== 'scan' || lido) return undefined;
     const t = setTimeout(() => {
       try {
-        const scanner = new Html5QrcodeScanner('qr-reader', { qrbox: { width: 250, height: 250 }, fps: 10, rememberLastUsedCamera: true }, false);
+        const scanner = new Html5QrcodeScanner('qr-reader', {
+          // quadro largo: código de barras de embalagem é comprido
+          qrbox: (w, h) => ({ width: Math.max(200, Math.floor(w * 0.9)), height: Math.max(150, Math.floor(h * 0.6)) }), fps: 10, rememberLastUsedCamera: true,
+          formatsToSupport: [F.QR_CODE, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF],
+        }, false);
         scanner.render((texto) => {
           scanner.clear().catch(() => {});
           scannerRef.current = null;
@@ -198,7 +210,7 @@ const QRCodeModule = () => {
               <Card className="shadow-md max-w-2xl mx-auto">
                 <CardHeader className="text-center border-b bg-muted/30">
                   <CardTitle className="text-xl">Ler etiqueta</CardTitle>
-                  <CardDescription>Aponte a câmera para o QR Code do item</CardDescription>
+                  <CardDescription>Aponte a câmera para o QR Code do item ou para o código de barras da embalagem</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
                   {!lido ? (

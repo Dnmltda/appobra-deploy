@@ -72,6 +72,7 @@ import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
 import { coresPara, corPorNome, nomeComCor } from '@/lib/coresMaterial.js';
 import { marcasPara } from '@/lib/marcasMaterial.js';
+import { BotaoLerCodigo } from '@/components/LeitorCodigo.jsx';
 
 const AUDIT_MODULE = 'Materiais';
 
@@ -130,6 +131,7 @@ const emptyForm = {
   category: '',
   marca: '',
   cor: '',
+  codigo_barras: '',
   unit: 'un',
   quantity_in_stock: '',
   min_quantity: '0',
@@ -448,6 +450,7 @@ const MateriaisPage = () => {
       fd.append('description', formData.description.trim() || '');
       fd.append('category', formData.category.trim());
       fd.append('marca', formData.marca.trim());
+      fd.append('codigo_barras', (formData.codigo_barras || '').trim());
       fd.append('unit', formData.unit);
       // Saldo inicial só no cadastro (o servidor registra como Entrada).
       if (!editing) fd.append('quantity_in_stock', Number(formData.quantity_in_stock || 0));
@@ -509,6 +512,7 @@ const MateriaisPage = () => {
       category: material.category || '',
       marca: material.marca || '',
       cor: material.cor || '',
+      codigo_barras: material.codigo_barras || '',
       unit: material.unit || 'un',
       quantity_in_stock: material.quantity_in_stock ?? '',
       min_quantity: material.min_quantity ?? 0,
@@ -814,6 +818,16 @@ const MateriaisPage = () => {
                         </>
                       );
                     })()}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="mat_barras">Código de barras da embalagem</Label>
+                    <div className="flex gap-2">
+                      <Input id="mat_barras" inputMode="numeric" placeholder="Opcional (ex.: 7891234567890)" value={formData.codigo_barras || ''}
+                        onChange={(e) => setFormData({ ...formData, codigo_barras: e.target.value })} />
+                      <BotaoLerCodigo rotulo="Ler" onLer={(c) => setFormData((f) => ({ ...f, codigo_barras: c }))} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Com ele, dá para achar o material apontando a câmera para a embalagem.</p>
                   </div>
 
                   <div className="space-y-2">

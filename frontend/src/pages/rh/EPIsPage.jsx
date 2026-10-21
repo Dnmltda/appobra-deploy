@@ -91,6 +91,7 @@ import {
 import { ehAdmin, cargoDe } from '@/lib/permissoes.js';
 import FotoRetirada from '@/components/FotoRetirada.jsx';
 import FotoProtegida from '@/components/FotoProtegida.jsx';
+import { gerarFichaEpi } from '@/lib/fichaEpi.js';
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -764,6 +765,32 @@ const EPIsPage = () => {
     } catch (err) { toast.error('Erro ao exportar Excel'); }
   };
 
+  // Ficha de EPI (cautela) de um funcionário, para imprimir e assinar.
+  const [fichaFunc, setFichaFunc] = useState('');
+  const [gerandoFicha, setGerandoFicha] = useState(false);
+  const gerarFicha = async () => {
+    const funcionario = funcionarios.find((f) => f.id === fichaFunc);
+    if (!funcionario) { toast.error('Escolha o funcionário'); return; }
+    setGerandoFicha(true);
+    try {
+      let empresa = null;
+      try { empresa = await pb.collection('companies').getOne(companyId, { $autoCancel: false }); } catch (_) { /* sem nome da empresa */ }
+      await gerarFichaEpi({
+        empresa, funcionario,
+        // entrega recém-feita ainda vem sem o EPI expandido: completa pela lista
+        entregas: entregas.filter((e) => e.funcionario_id === funcionario.id)
+          .map((e) => ({ ...e, expand: { ...e.expand, epi_id: e.expand?.epi_id || epis.find((x) => x.id === e.epi_id) } })),
+        devolucoes: devolucoes.filter((d) => d.funcionario_id === funcionario.id),
+      });
+      await auditLog(AUDIT_ACTIONS.EXPORT_DATA, AUDIT_MODULES.HR, `Ficha de EPI: ${funcionario.nome_completo || funcionario.nome}`);
+      toast.success('Ficha de EPI gerada');
+    } catch (err) {
+      toast.error('Não foi possível gerar a ficha');
+    } finally {
+      setGerandoFicha(false);
+    }
+  };
+
   const exportPDF = async () => {
     try {
       const { jsPDF } = await import('jspdf');
@@ -1079,6 +1106,19 @@ const EPIsPage = () => {
 
             {/* ---------------- Entregas ---------------- */}
             <TabsContent value="entregas" className="space-y-4">
+              <Card className="shadow-sm"><CardContent className="p-4 flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="space-y-1.5 flex-1">
+                  <Label htmlFor="ficha-func">Ficha de EPI (cautela) do funcionário</Label>
+                  <Select value={fichaFunc || 'none'} onValueChange={(v) => setFichaFunc(v === 'none' ? '' : v)}>
+                    <SelectTrigger id="ficha-func" aria-label="Ficha de EPI do funcionário"><SelectValue placeholder="Escolha o funcionário" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Escolha o funcionário...</SelectItem>
+                      {funcionarios.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome_completo || f.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={gerarFicha} disabled={!fichaFunc || gerandoFicha}><FileText className="w-4 h-4 mr-1" />{gerandoFicha ? 'Gerando...' : 'Gerar ficha (PDF)'}</Button>
+              </CardContent></Card>
               <Card className="shadow-sm"><CardContent className="p-0">
                 {loading ? <div className="p-4 space-y-2">{[1,2,3,4].map((i) => <Skeleton key={i} className="h-12 w-full" />)}</div> : (
                   <div className="overflow-x-auto">
