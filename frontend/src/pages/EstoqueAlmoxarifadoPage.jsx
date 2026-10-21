@@ -31,6 +31,7 @@ import { mensagemErro } from '@/lib/erros.js';
 import { generateNumeroSolicitacao } from '@/utils/solicitacoesValidations.js';
 import { ehAdmin, cargoDe, podeAutorizarAjuste } from '@/lib/permissoes.js';
 import { MOTIVOS_DIVERGENCIA, TIPOS_DIVERGENCIA, QUEM_AUTORIZA } from '@/lib/divergencia.js';
+import { BotaoLerCodigo } from '@/components/LeitorCodigo.jsx';
 
 const AUDIT_MODULE = 'Estoque';
 const PER_PAGE = 10;
@@ -390,6 +391,15 @@ const EstoqueAlmoxarifadoPage = () => {
   }, [filteredMateriais, page]);
 
   // ---------- Abrir modais ----------
+  // Câmera na embalagem: acha o material pelo código de barras (ou pelo código do app).
+  const materialPorCodigo = (codigo, setForm) => {
+    const c = String(codigo || '').trim();
+    const m = materiais.find((x) => (x.codigo_barras && x.codigo_barras === c) || (x.code && x.code.toUpperCase() === c.toUpperCase()));
+    if (!m) { toast.error(`Nenhum material com o código ${c}. Cadastre o código de barras no material.`); return; }
+    setForm((f) => ({ ...f, material_id: m.id }));
+    toast.success(`Material: ${m.name}`);
+  };
+
   const openEntrada = (material = null) => {
     setEntradaForm({ ...emptyEntradaForm, material_id: material?.id || '' });
     setFormErrors({});
@@ -1131,6 +1141,7 @@ const EstoqueAlmoxarifadoPage = () => {
                   {materiais.map((m) => <SelectItem key={m.id} value={m.id}>{m.name} {m.code ? `(${m.code})` : ''}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <BotaoLerCodigo onLer={(c) => materialPorCodigo(c, setEntradaForm)} />
               {formErrors.material_id && <p className="text-xs text-destructive">{formErrors.material_id}</p>}
               {materiais.length === 0 && <p className="text-xs text-muted-foreground">Nenhum material cadastrado.</p>}
             </div>
@@ -1194,6 +1205,7 @@ const EstoqueAlmoxarifadoPage = () => {
                   {materiais.filter((m) => Number(m.quantity_in_stock || 0) > 0).map((m) => <SelectItem key={m.id} value={m.id}>{m.name} {m.code ? `(${m.code})` : ''} — {formatNumber(m.quantity_in_stock)} {m.unit || ''}</SelectItem>)}
                 </SelectContent>
               </Select>
+              <BotaoLerCodigo onLer={(c) => materialPorCodigo(c, setSaidaForm)} />
               {formErrors.material_id && <p className="text-xs text-destructive">{formErrors.material_id}</p>}
             </div>
 

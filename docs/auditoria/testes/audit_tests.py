@@ -906,6 +906,9 @@ s, r = call("PATCH", f"/api/collections/epis/records/{epi.get('id')}", tA, {"qua
 check("epi", "Gestão ajusta a quantidade (inventário)", s == 200 and epi_saldo(epi.get("id")) == 12, f"status {s}")
 s, r = entrega(1, tok=tB, cid=cB)
 check("permissao", "Empresa B não entrega EPI da Empresa A", s >= 400 and epi_saldo(epi.get("id")) == 12, f"status {s}")
+s, r = entrega(1, extra={"assinatura_digital": "data:image/png;base64," + "A" * 40000})
+check("epi", "Entrega com a assinatura desenhada (imagem grande) é salva", s == 200 and len(r.get("assinatura_digital", "")) > 40000
+      and epi_saldo(epi.get("id")) == 11, err(r) if s >= 400 else "")
 
 # ------------------------------------------------------------------ limite de tentativas de login (20/10/2026)
 # O PocketBase já limita logins por IP (20 a cada 5 min). Para testar o limite POR CONTA sem
@@ -987,6 +990,45 @@ if tSU:
 for _t in ("pedidos_compra", "solicitacoes_compra", "recebimentos", "veiculo"):
     s, r = call("POST", f"/api/collections/{_t}/records", tA, {"company_id": cA})
     check("permissao", f"Ninguém grava na tabela duplicada '{_t}' (o app usa a outra)", s >= 400, f"status {s}")
+
+# ------------------------------------------------------------------ código de barras do material (21/10/2026)
+s, cb1 = call("POST", "/api/collections/materiais/records", tA, {"name": "Cimento CP II (barras)", "unit": "sc", "category": "Materiais de Construção",
+              "codigo_barras": " 7891234567895 ", "status": "active", "company_id": cA})
+check("barras", "Material guarda o código de barras da embalagem (sem espaços)", s == 200 and cb1.get("codigo_barras") == "7891234567895", err(cb1) if s >= 400 else "")
+s, r = call("POST", "/api/collections/materiais/records", tA, {"name": "Outro cimento", "unit": "sc", "category": "Materiais de Construção",
+            "codigo_barras": "7891234567895", "status": "active", "company_id": cA})
+check("barras", "O mesmo código de barras não vai para dois materiais da empresa", s >= 400 and "Cimento CP II" in r.get("message", ""), r.get("message", "")[:90])
+_tB2 = login("b@teste.local", "SenhaB12345")[0] if tSU else tB  # a senha da B mudou mais acima
+s, r = call("POST", "/api/collections/materiais/records", _tB2, {"name": "Cimento da B", "unit": "sc", "category": "Materiais de Construção",
+            "codigo_barras": "7891234567895", "status": "active", "company_id": cB})
+check("barras", "Outra empresa pode usar o mesmo código de barras", s == 200, err(r) if s >= 400 else "")
+s, r = call("GET", "/api/collections/materiais/records?filter=" + q('codigo_barras="7891234567895"'), tA)
+check("barras", "A busca pelo código de barras acha só o material da própria empresa", r.get("totalItems") == 1 and r["items"][0]["id"] == cb1.get("id"), f"{r.get('totalItems')}")
+
+# ------------------------------------------------------------------ quem muda o quê nos dados das pessoas (21/10/2026)
+tPerf = usuario("perfil@teste.local", "Servente")
+_uPerf = call("POST", "/api/collections/users/auth-with-password", body={"identity": "perfil@teste.local", "password": "Senha12345"})[1]["record"]
+s, eu = call("PATCH", f"/api/collections/users/records/{_uPerf['id']}", tPerf, {"telefone": "(11) 98888-0000", "username": "funcnovo",
+             "email": "outro@teste.local", "name": "Nome Trocado"})
+check("dados", "Meu Perfil: a pessoa muda telefone e nome de login", s == 200 and eu.get("telefone") == "(11) 98888-0000" and eu.get("username") == "funcnovo", err(eu) if s >= 400 else "")
+_eu = call("GET", f"/api/collections/users/records/{_uPerf['id']}", tA)[1]
+check("dados", "Meu Perfil: e-mail e nome completo não mudam pela própria pessoa", _eu.get("email") == "perfil@teste.local" and _eu.get("name") != "Nome Trocado",
+      str({k: _eu.get(k) for k in ("email", "name")}))
+s, r = call("PATCH", f"/api/collections/users/records/{_uPerf['id']}", tPerf, {"id_unico": "999", "cargo": "Administrador"})
+_eu = call("GET", f"/api/collections/users/records/{_uPerf['id']}", tA)[1]
+check("dados", "Meu Perfil: pedido para mudar o próprio ID ou cargo é recusado", s >= 400 and _eu.get("cargo") == "Servente" and _eu.get("id_unico") != "999", f"status {s}")
+s, eu = call("PATCH", f"/api/collections/users/records/{uA['id']}", tA, {"telefone": "(11) 97777-0000", "email": "trocado@teste.local"})
+check("dados", "Nem o administrador muda o próprio e-mail", s == 200 and eu.get("email") != "trocado@teste.local", f"status {s}")
+s, fx = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-DADOS", "nome": "Cadastro Teste", "nome_completo": "Cadastro Teste",
+             "cargoId": cargo1, "cpf": "111.222.333-44", "company_id": cA})
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tPed, {"cpf": "999.999.999-99"})
+check("dados", "Pedreiro não altera o cadastro de outro funcionário (CPF)", s >= 400, f"status {s}")
+s, r = call("POST", "/api/collections/funcionarios/records", tPed, {"matricula": "M-PED", "nome": "Fantasma", "nome_completo": "Fantasma", "cargoId": cargo1, "company_id": cA})
+check("dados", "Pedreiro não cadastra funcionário", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tEng, {"cpf": "999.999.999-99", "obraId": obra.get("id")})
+check("dados", "Engenheiro coloca na obra, mas não muda o CPF", s == 200 and r.get("obraId") == obra.get("id") and r.get("cpf") == "111.222.333-44", err(r) if s >= 400 else r.get("cpf"))
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tA, {"telefone": "(11) 96666-0000"})
+check("dados", "Administrador edita o cadastro do funcionário", s == 200 and r.get("telefone") == "(11) 96666-0000", err(r) if s >= 400 else "")
 
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)

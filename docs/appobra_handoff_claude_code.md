@@ -103,7 +103,28 @@
   operação.
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
+**Ficha de EPI, código de barras e assinatura (21/10/2026, Claude Code)**
+- **Ficha de EPI (cautela) em PDF** (`frontend/src/lib/fichaEpi.js`; EPIs → aba Entregas → "Ficha de EPI do
+  funcionário"): todas as entregas do funcionário (data, EPI, CA, quantidade, devolução), assinatura e foto de cada
+  uma e o termo de responsabilidade da NR-6 (6.6.1), com linhas para assinar.
+- **Correção:** entrega de EPI **assinada não salvava** (campo `assinatura_digital` com limite de 5000 caracteres e
+  a assinatura é imagem em texto; aparecia "Must be no more than 5000 character(s)"). Limite agora 300000
+  (`foto-retirada.pb.js`).
+- **Código de barras da embalagem** (`pb_hooks/codigo-barras.pb.js` + `-lib.js`, `components/LeitorCodigo.jsx`):
+  campo `materiais.codigo_barras` (sem repetir na empresa), lido pela câmera no cadastro do material; no Estoque,
+  "Registrar Entrada/Saída" tem "Ler código de barras" que escolhe o material; a tela QR Code também lê o código
+  de barras e abre o material.
+- **Quem muda o quê nos dados das pessoas** (`pb_hooks/meus-dados.pb.js`, regra do Diego 21/10): no Meu Perfil a
+  pessoa muda só nome de login, telefone, foto e senha; **e-mail e ID nunca mudam**; nome completo, cargo, empresa
+  e situação só pelo administrador (pedido para mudar o próprio cargo/ID é recusado). Cadastro de funcionário:
+  antes **qualquer pessoa da empresa alterava qualquer cadastro** (CPF, salário); agora Administrador, RH e Mestre
+  de Obras cadastram e editam; Diretoria, Gerência, Engenheiro e Almoxarife só colocam/tiram da obra; os demais
+  nada. Tela Meu Perfil: nome completo e e-mail só leitura.
+
 **Etapa 5 e câmera (20/10/2026, Claude Code, pedido do Diego "faça tudo antes dos testes")**
+- Publicado em 20/10/2026 ~23h: PR #9 (merge ba88ee4), Fly **v21** (snapshot antes: `vs_jRRDMv7eYpes2PAbj6w`),
+  boot sem `Erro`; nenhuma das tabelas duplicadas travadas tinha dados em produção. Hostinger atualizada
+  (`assets/index-DfxfHyCW.js`). Falta o teste do Diego em produção.
 - **Foto de quem retira** (`pb_hooks/foto-retirada.pb.js`, regra do aceite em `fluxo-material.pb.js`; tela
   `components/FotoRetirada.jsx` e `FotoProtegida.jsx`): na retirada do material (aceite de quem pediu ou registro
   do almoxarifado no balcão), na entrega de EPI e no empréstimo de equipamento a câmera do aparelho abre, conta

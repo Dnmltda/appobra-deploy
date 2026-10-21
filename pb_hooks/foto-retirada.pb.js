@@ -9,7 +9,8 @@
 //  - epis_entregas.foto_retirada: na entrega do EPI.
 //  - emprestimos.foto_retirada: no empréstimo do equipamento.
 // A foto é obrigatória, não pode ser trocada depois e é protegida (só abre
-// com o login de quem tem acesso ao registro).
+// com o login de quem tem acesso ao registro). Também aumenta o tamanho da
+// assinatura desenhada na entrega de EPI (antes, entrega assinada não salvava).
 // ============================================================
 
 onBootstrap((e) => {
@@ -30,7 +31,11 @@ onBootstrap((e) => {
         col.fields.add(new RelationField({ name: "retirada_registrada_por", collectionId: app.findCollectionByNameOrId("users").id, maxSelect: 1 }));
         mudou = true;
       }
-      if (mudou) { app.save(col); console.log(`[foto-retirada] ${nome}: campo da foto criado.`); }
+      // A assinatura da entrega de EPI é um desenho (imagem em texto): com o
+      // limite antigo de 5000 caracteres, entrega assinada não salvava.
+      const ass = col.fields.getByName("assinatura_digital");
+      if (ass && ass.max && ass.max < 300000) { ass.max = 300000; mudou = true; }
+      if (mudou) { app.save(col); console.log(`[foto-retirada] ${nome}: campos da foto/assinatura ajustados.`); }
     } catch (err) {
       console.log(`[foto-retirada] Erro em ${nome}:`, err);
     }
