@@ -804,7 +804,7 @@ const SaldoFuncionarioPage = () => {
                             <span className="block text-xs text-muted-foreground">
                               Obra: {h.expand?.obra_id?.nome || '-'}
                               {h.local_uso ? ` · Local: ${h.local_uso}` : ''}
-                              {h.tipo_operacao === 'Utilização' ? ` · ${formatCurrency(h.valor_total)}` : ''}
+                              {h.tipo_operacao === 'Utilização' && h.valor_total != null ? ` · ${formatCurrency(h.valor_total)}` : ''}
                               {h.observacoes ? ` · ${h.observacoes}` : ''}
                             </span>
                           </div>
