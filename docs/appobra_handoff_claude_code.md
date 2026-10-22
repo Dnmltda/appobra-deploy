@@ -110,6 +110,8 @@
   Dn-moraes, a obra "Teste 1", o funcionário de teste, a "Empresa Principal" e os registros de auditoria de teste.
   Ficaram o titular (ID 00) na "DNM&LTDA OBRAS" e a "Construtora Teste DNM (não apagar)" com 15 logins
   (`docs/logins-teste.md`). Login do superusuário do titular conferido (200).
+- **Publicado em 22/10/2026:** PR #13 (merge a950d0c), Fly **v27** (snapshot `vs_x88DxQRjgajtkaMZa28w`), boot sem `Erro`;
+  Hostinger atualizada (`assets/index-te5nZPSz.js`).
 - **G1 (segurança) corrigido em 22/10/2026, aprovado pelo Diego** (`pb_hooks/acesso-dados.pb.js` + `-lib.js`): antes,
   dentro da mesma empresa, qualquer cargo (até Pedreiro e Cliente) lia pela API CPF e salário, contas a pagar/receber,
   compras, clientes, propostas e custos. Agora o servidor filtra no pedido (lista vazia / "não encontrado") as
