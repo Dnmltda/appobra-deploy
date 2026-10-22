@@ -78,6 +78,11 @@ tSU = su.get("token")
 tA, uA = login("a@teste.local")
 tB, uB = login("b@teste.local")
 cA, cB = uA["company_id"], uB["company_id"]
+# As empresas A e B do teste criam muitos acessos: ficam sem os limites de empresa de teste
+# (os limites são testados numa empresa à parte, no fim).
+if tSU:
+    for _c in (cA, cB):
+        call("PATCH", f"/api/collections/companies/records/{_c}", tSU, {"limite_usuarios": 0, "limite_funcionarios": 0, "limite_materiais": 0, "limite_obras": 0})
 
 # Funcionário comum da A (criado pelo admin, como na tela)
 s, r = call("POST", "/api/collections/users/records", tA, {
@@ -1029,6 +1034,39 @@ s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tE
 check("dados", "Engenheiro coloca na obra, mas não muda o CPF", s == 200 and r.get("obraId") == obra.get("id") and r.get("cpf") == "111.222.333-44", err(r) if s >= 400 else r.get("cpf"))
 s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tA, {"telefone": "(11) 96666-0000"})
 check("dados", "Administrador edita o cadastro do funcionário", s == 200 and r.get("telefone") == "(11) 96666-0000", err(r) if s >= 400 else "")
+
+# ------------------------------------------------------------------ titular protegido e limites das empresas de teste (21/10/2026)
+s, r = call("POST", "/api/custom/self-register-company", None, {"companyName": "Empresa Limite", "adminName": "Admin L", "adminEmail": "l@teste.local",
+            "username": "adminl", "password": "Senha12345"})
+tL, uL = login("l@teste.local")
+cL = uL["company_id"]
+_emp = call("GET", f"/api/collections/companies/records/{cL}", tL)[1]
+check("limites", "Empresa nova do cadastro nasce com os limites de teste (10 logins, 30 funcionários, 300 materiais, 5 obras)",
+      [_emp.get(k) for k in ("limite_usuarios", "limite_funcionarios", "limite_materiais", "limite_obras")] == [10, 30, 300, 5], str(_emp.get("limite_obras")))
+for i in range(5):
+    call("POST", "/api/collections/obras/records", tL, {"nome": f"Obra L{i}", "company_id": cL})
+s, r = call("POST", "/api/collections/obras/records", tL, {"nome": "Obra L6", "company_id": cL})
+check("limites", "A 6ª obra da empresa de teste é recusada com aviso claro", s >= 400 and "limite de 5 obras" in r.get("message", ""), r.get("message", "")[:90])
+s, r = call("PATCH", f"/api/collections/companies/records/{cL}", tL, {"limite_obras": 100})
+check("limites", "O administrador da empresa de teste não aumenta o próprio limite",
+      call("GET", f"/api/collections/companies/records/{cL}", tL)[1].get("limite_obras") == 5, f"status {s}")
+if tSU:
+    _dono = call("GET", "/api/collections/users/records?filter=" + q("dono_sistema=true"), tSU)[1].get("items", [{}])[0]
+    _cD = _dono.get("company_id")
+    call("POST", "/api/collections/users/records", tSU, {"email": "admdnm@teste.local", "username": "admdnm", "password": "Senha12345",
+         "passwordConfirm": "Senha12345", "company_id": _cD, "cargo": "Administrador", "role": "Administrador", "status": "Ativo"})
+    tD = login("admdnm@teste.local")[0]
+    s1, _ = call("PATCH", f"/api/collections/users/records/{_dono['id']}", tD, {"status": "Inativo"})
+    s2, _ = call("DELETE", f"/api/collections/users/records/{_dono['id']}", tD)
+    s3, _ = call("PATCH", f"/api/collections/users/records/{_dono['id']}", tD, {"cargo": "Servente", "role": "Servente"})
+    _d2 = call("GET", f"/api/collections/users/records/{_dono['id']}", tSU)[1]
+    check("titular", "Outro administrador não inativa, não apaga nem rebaixa o titular",
+          s1 >= 400 and s2 >= 400 and s3 >= 400 and _d2.get("status") == "Ativo" and _d2.get("cargo") == "Administrador" and not _d2.get("deleted_at"),
+          f"{s1} {s2} {s3}")
+    s, _ = call("DELETE", f"/api/collections/users/records/{_dono['id']}", tSU)
+    check("titular", "Nem o superusuário apaga a conta do titular", s >= 400 and call("GET", f"/api/collections/users/records/{_dono['id']}", tSU)[0] == 200, f"status {s}")
+    s, _ = call("DELETE", f"/api/collections/companies/records/{_cD}", tSU)
+    check("titular", "A empresa do titular não pode ser apagada", s >= 400, f"status {s}")
 
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)

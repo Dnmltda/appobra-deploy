@@ -46,6 +46,9 @@ routerAdd("POST", "/api/custom/self-register-company", (e) => {
   if (data.state) company.set("state", String(data.state).trim());
   company.set("subscription_tier", "basic");
   company.set("is_active", true);
+  // Empresa de teste: nasce com os limites padrão (limites-empresa.pb.js).
+  const padrao = require(`${__hooks}/limites-lib.js`).PADRAO_TESTE;
+  Object.keys(padrao).forEach((k) => { if (companiesCol.fields.getByName(k)) company.set(k, padrao[k]); });
 
   try {
     $app.save(company);

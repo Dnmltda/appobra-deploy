@@ -7,8 +7,9 @@
 // cada tabela. Não altera nada. Sai depois da limpeza.
 //
 // Também cria o superusuário do titular (dnmltda@hotmail.com) se ele não
-// existir, com uma senha aleatória que ninguém conhece: o Diego define a dele
-// no painel /_/ ("Forgot password", e-mail pelo Brevo). Nenhuma senha fica no
+// existir, com uma senha aleatória que ninguém conhece. A senha dele vem do
+// próprio Diego: "Forgot password" no painel /_/ ou o Secret do Fly
+// SENHA_SUPERUSUARIO_TITULAR (ele coloca, entra e tira). Nenhuma senha fica no
 // código. Os outros superusuários só saem depois que ele confirmar o acesso.
 // ============================================================
 
@@ -22,6 +23,7 @@ onBootstrap((e) => {
     return rows;
   };
   try {
+    require(`${__hooks}/dono-lib.js`).garantir(app); // a lista abaixo lê users.dono_sistema
     const TITULAR = "dnmltda@hotmail.com";
     let su = null;
     try { su = app.findAuthRecordByEmail("_superusers", TITULAR); } catch (_) {}
@@ -31,6 +33,17 @@ onBootstrap((e) => {
       su.setPassword($security.randomString(48));
       app.save(su);
       log(`superusuário ${TITULAR} criado (senha aleatória: defina a sua em /_/ → Forgot password).`);
+    }
+
+    // Senha do superusuário do titular definida pelo próprio Diego nos Secrets do Fly
+    // (SENHA_SUPERUSUARIO_TITULAR); depois de entrar em /_/, ele tira a variável.
+    const nova = String($os.getenv("SENHA_SUPERUSUARIO_TITULAR") || "");
+    if (nova.length >= 10) {
+      su.setPassword(nova);
+      app.save(su);
+      log("senha do superusuário do titular definida pelo Secret do Fly. Entre em /_/ e depois tire SENHA_SUPERUSUARIO_TITULAR dos Secrets.");
+    } else if (nova) {
+      log("SENHA_SUPERUSUARIO_TITULAR muito curta (mínimo 10 caracteres): nada foi mudado.");
     }
 
     linhas("SELECT email, created FROM _superusers ORDER BY created", { email: "", created: "" })

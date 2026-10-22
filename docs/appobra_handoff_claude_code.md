@@ -103,6 +103,25 @@
   operação.
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
+**Titular, limpeza dos testes, empresa de teste e limites (21–22/10/2026, Claude Code)**
+- **Estado real (levantamento em produção, v23):** um superusuário só (`dnmltda@hotmail.com`, desde 16/10); 2
+  empresas ("Default Company" = a do Diego, e "Empresa Principal", vazia); 2 logins (o titular e
+  `Dn-moraes@hotmail.com`, Servente de teste); 1 obra e 1 funcionário de teste. Nenhuma variável cria o
+  superusuário (Secrets do Fly: só `BREVO_SMTP_LOGIN`, `BREVO_SMTP_KEY`, `FRONT_URL`).
+- **Titular protegido** (`pb_hooks/titular.pb.js`): a conta dona do sistema não pode ser apagada, arquivada,
+  inativada, bloqueada nem perder cargo/empresa/marca de dono, nem pelo superusuário; a empresa dele não pode
+  ser apagada nem arquivada; o ID dele só muda pelo superusuário. E-mails para `*.invalid` não são enviados.
+- **Limpeza dos testes** (`pb_hooks/limpeza-testes.pb.js`): roda uma vez com `LIMPEZA_TESTES=sim` nos Secrets do
+  Fly (marca em `sistema_execucoes`); faz backup completo antes (`pb_data/backups`); deixa só o titular, a empresa
+  dele (renomeada "DNM&LTDA OBRAS", titular com nome e **ID 00**) e a "Construtora Teste DNM (não apagar)".
+- **Limites por empresa** (`limites-empresa.pb.js` + `limites-lib.js`): empresa criada pelo cadastro nasce com 10
+  logins, 30 funcionários, 300 materiais e 5 obras (0 = sem limite); só titular/superusuário muda.
+- **Empresa de teste:** `docs/auditoria/testes/empresa-teste.py` (criar e conferir); logins
+  `<cargo>@teste-appobra.invalid` (15 cargos); senhas só com o Diego, fora do repositório.
+- **Superusuário:** o Diego não conseguiu entrar em `/_/` pelo "Forgot password" — pendente.
+- Ideias para depois em `docs/ideias-futuras.md` (módulos por empresa, demonstração, aviso de protótipo, opinião,
+  LGPD, regra do titular quando o app for vendido).
+
 **Ficha de EPI, código de barras e assinatura (21/10/2026, Claude Code)**
 - Publicado em 21/10/2026 ~05h: PR #10 (merge 2fa7ff4), Fly **v22** (snapshot antes: `vs_RmmByep69G6skY4YVLB2`), boot
   sem `Erro`; Hostinger atualizada (`assets/index-Pl4xQ9ru.js`). Falta o teste do Diego em produção.
