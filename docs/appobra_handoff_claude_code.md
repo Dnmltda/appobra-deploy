@@ -104,6 +104,17 @@
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
 **Titular, limpeza dos testes, empresa de teste e limites (21–22/10/2026, Claude Code)**
+- **Publicado e executado em 22/10/2026:** PR #12 (Fly v24); `LIMPEZA_TESTES` e `SENHA_SUPERUSUARIO_TITULAR` colocados
+  pelo Claude Code com `flyctl secrets set` a pedido do Diego (v25) e retirados depois (v26). Limpeza feita (backup
+  `antes-limpeza-testes-2026-10-22.zip` em pb_data/backups; snapshot `vs_mppD3jlAKVAty1X4aY9D`): saíram o login
+  Dn-moraes, a obra "Teste 1", o funcionário de teste, a "Empresa Principal" e os registros de auditoria de teste.
+  Ficaram o titular (ID 00) na "DNM&LTDA OBRAS" e a "Construtora Teste DNM (não apagar)" com 15 logins
+  (`docs/logins-teste.md`). Login do superusuário do titular conferido (200).
+- **G1 aberto (segurança, achado pela checagem seguranca-app-obra/testar-app):** dentro da mesma empresa, qualquer
+  cargo (até Pedreiro e Cliente) lê pela API funcionários com CPF e salário, contas a pagar/receber, despesas,
+  receitas, compras, clientes, propostas e o custo dos materiais. Reproduzido no servidor local. Entre empresas o
+  isolamento está certo. Correção aguardando aprovação do Diego.
+
 - **Estado real (levantamento em produção, v23):** um superusuário só (`dnmltda@hotmail.com`, desde 16/10); 2
   empresas ("Default Company" = a do Diego, e "Empresa Principal", vazia); 2 logins (o titular e
   `Dn-moraes@hotmail.com`, Servente de teste); 1 obra e 1 funcionário de teste. Nenhuma variável cria o
