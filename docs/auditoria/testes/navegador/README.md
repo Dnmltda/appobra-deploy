@@ -13,7 +13,9 @@ npx vite preview --outDir /tmp/front_dist --port 4173 &
 # 2. Servidor de e-mail falso (captura os e-mails de recuperação de senha e "Fale conosco")
 python3 docs/auditoria/testes/navegador/smtp_sink.py /tmp/emails 2525 &
 
-# 3. Cada teste com banco novo (o teste altera os dados)
+# 3. Cada teste com banco novo (o teste altera os dados). Empresa criada pelo cadastro nasce com os limites de
+#    empresa de teste (10 logins, 30 funcionários, 300 materiais, 5 obras): zere os limites das empresas A e B
+#    como superusuário (PATCH /api/collections/companies/records/<id> com limite_* = 0) antes dos testes.
 cd docs/auditoria/testes/navegador
 SINK=/tmp/emails node login.mjs
 ```
@@ -52,3 +54,5 @@ Chromium), `PLAYWRIGHT_DIR` (pasta onde o pacote `playwright` está instalado).
 
 A câmera dos testes é a câmera de teste do Chromium (`--use-fake-device-for-media-stream`): a foto da retirada
 (material, EPI e equipamento) é tirada por ela (`tirarFoto` em `lib.mjs`).
+
+Empresa de teste do Diego em produção: `../empresa-teste.py` (criar / conferir logins e isolamento entre empresas).
