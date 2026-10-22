@@ -10,9 +10,12 @@
 // são enviados — evita devolução de e-mail na conta Brevo.
 // ============================================================
 
+// A trava total (nem o superusuário) vale só para a conta do titular
+// (dnmltda@hotmail.com). Outra conta marcada como dona pode ser desmarcada
+// pelo superusuário; pela API ninguém mexe (dono-sistema.pb.js).
 onRecordUpdate((e) => {
   const o = e.record.original();
-  if (o.get("dono_sistema") === true) {
+  if (o.get("dono_sistema") === true && String(o.get("email") || "").toLowerCase() === "dnmltda@hotmail.com") {
     const r = e.record;
     const tirou = r.get("dono_sistema") !== true || r.getString("deleted_at") || r.get("is_blocked") === true
       || (o.get("status") === "Ativo" && r.get("status") !== "Ativo")
@@ -24,7 +27,9 @@ onRecordUpdate((e) => {
 }, "users");
 
 onRecordDelete((e) => {
-  if (e.record.get("dono_sistema") === true) throw new ForbiddenError("A conta do titular não pode ser apagada.");
+  if (e.record.get("dono_sistema") === true && String(e.record.get("email") || "").toLowerCase() === "dnmltda@hotmail.com") {
+    throw new ForbiddenError("A conta do titular não pode ser apagada.");
+  }
   e.next();
 }, "users");
 

@@ -110,10 +110,15 @@
   Dn-moraes, a obra "Teste 1", o funcionário de teste, a "Empresa Principal" e os registros de auditoria de teste.
   Ficaram o titular (ID 00) na "DNM&LTDA OBRAS" e a "Construtora Teste DNM (não apagar)" com 15 logins
   (`docs/logins-teste.md`). Login do superusuário do titular conferido (200).
-- **G1 aberto (segurança, achado pela checagem seguranca-app-obra/testar-app):** dentro da mesma empresa, qualquer
-  cargo (até Pedreiro e Cliente) lê pela API funcionários com CPF e salário, contas a pagar/receber, despesas,
-  receitas, compras, clientes, propostas e o custo dos materiais. Reproduzido no servidor local. Entre empresas o
-  isolamento está certo. Correção aguardando aprovação do Diego.
+- **G1 (segurança) corrigido em 22/10/2026, aprovado pelo Diego** (`pb_hooks/acesso-dados.pb.js` + `-lib.js`): antes,
+  dentro da mesma empresa, qualquer cargo (até Pedreiro e Cliente) lia pela API CPF e salário, contas a pagar/receber,
+  compras, clientes, propostas e custos. Agora o servidor filtra no pedido (lista vazia / "não encontrado") as
+  tabelas de financeiro, compras, fornecedores, comercial, frota, documentos e perdas/ganhos para quem não é do grupo
+  (mesmos cargos que abrem a tela), e esconde na resposta CPF/salário/endereço dos funcionários (só Administrador,
+  Diretoria, Gerência, RH e Mestre de Obras), CPF dos acessos (Administrador e RH) e custos/valores de materiais,
+  equipamentos, EPIs, obras e saldo do funcionário (gestão). Filtro no pedido, não nas regras, porque outros arquivos
+  regravam regras ao ligar. Proteção total do titular ficou presa ao e-mail `dnmltda@hotmail.com` (outra conta marcada
+  como dona pode ser desmarcada pelo superusuário).
 
 - **Estado real (levantamento em produção, v23):** um superusuário só (`dnmltda@hotmail.com`, desde 16/10); 2
   empresas ("Default Company" = a do Diego, e "Empresa Principal", vazia); 2 logins (o titular e

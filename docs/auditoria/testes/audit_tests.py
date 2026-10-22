@@ -673,6 +673,8 @@ check("uso", "Registrar uso exige a obra", s >= 400, f"status {s}")
 s, r = uso(tEl, 5)
 check("uso", "Não dá para usar mais do que está em posse (3)", s >= 400 and "em posse" in r.get("message", ""), r.get("message", "")[:80])
 s, r = uso(tEl, 2)
+if s == 200:  # o valor não vai para o eletricista (só para quem cuida do estoque): confere pelo administrador
+    r = call("GET", f"/api/collections/saldo_funcionario/records/{r.get('id')}", tA)[1]
 s_m, fio2 = call("GET", f"/api/collections/materiais/records/{fio.get('id')}", tA)
 check("uso", "Eletricista registra o uso de 2 rolos no 3º andar: vale 2 x 250 e o estoque não muda (7)",
       s == 200 and r.get("valor_total") == 500 and r.get("responsavel_id") == uEl["id"] and fio2.get("quantity_in_stock") == 7,
@@ -1031,7 +1033,8 @@ check("dados", "Pedreiro não altera o cadastro de outro funcionário (CPF)", s 
 s, r = call("POST", "/api/collections/funcionarios/records", tPed, {"matricula": "M-PED", "nome": "Fantasma", "nome_completo": "Fantasma", "cargoId": cargo1, "company_id": cA})
 check("dados", "Pedreiro não cadastra funcionário", s >= 400, f"status {s}")
 s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tEng, {"cpf": "999.999.999-99", "obraId": obra.get("id")})
-check("dados", "Engenheiro coloca na obra, mas não muda o CPF", s == 200 and r.get("obraId") == obra.get("id") and r.get("cpf") == "111.222.333-44", err(r) if s >= 400 else r.get("cpf"))
+_fx = call("GET", f"/api/collections/funcionarios/records/{fx.get('id')}", tA)[1]  # o engenheiro não recebe o CPF; confere pelo administrador
+check("dados", "Engenheiro coloca na obra, mas não muda o CPF", s == 200 and r.get("obraId") == obra.get("id") and _fx.get("cpf") == "111.222.333-44", err(r) if s >= 400 else _fx.get("cpf"))
 s, r = call("PATCH", f"/api/collections/funcionarios/records/{fx.get('id')}", tA, {"telefone": "(11) 96666-0000"})
 check("dados", "Administrador edita o cadastro do funcionário", s == 200 and r.get("telefone") == "(11) 96666-0000", err(r) if s >= 400 else "")
 
@@ -1067,6 +1070,33 @@ if tSU:
     check("titular", "Nem o superusuário apaga a conta do titular", s >= 400 and call("GET", f"/api/collections/users/records/{_dono['id']}", tSU)[0] == 200, f"status {s}")
     s, _ = call("DELETE", f"/api/collections/companies/records/{_cD}", tSU)
     check("titular", "A empresa do titular não pode ser apagada", s >= 400, f"status {s}")
+
+# ------------------------------------------------------------------ quem recebe o quê do servidor (G1, 22/10/2026)
+_cg = (call("GET", "/api/collections/cargos/records?perPage=1", tA)[1].get("items") or [{}])[0].get("id", "")
+s, _fg = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-G1", "nome": "Sigiloso", "nome_completo": "Sigiloso da Silva",
+              "cpf": "987.654.321-00", "salario": 4200, "cargoId": _cg, "company_id": cA})
+call("POST", "/api/collections/contas_pagar/records", tA, {"descricao": "Aluguel G1", "valor": 5000, "data_vencimento": "2026-11-10 12:00:00", "company_id": cA})
+call("POST", "/api/collections/clientes/records", tA, {"nome": "Cliente G1", "company_id": cA})
+call("POST", "/api/collections/materiais/records", tA, {"name": "Material G1", "unit": "un", "category": "Outros", "unit_cost": 99.9, "status": "active", "company_id": cA})
+_tok = {c: usuario(f"g1.{c.lower().replace(' ', '')}@teste.local", c) for c in ("Cliente", "Servente", "Financeiro", "Almoxarife", "RH", "Engenheiro")}
+def _lista(tok, col, filtro=""):
+    s, r = call("GET", f"/api/collections/{col}/records?perPage=200" + ("&filter=" + q(filtro) if filtro else ""), tok)
+    return r.get("items", []) if s == 200 else []
+for c in ("Cliente", "Servente"):
+    vis = {col: len(_lista(_tok[c], col)) for col in ("contas_pagar", "clientes", "compras", "fornecedores", "documentos")}
+    check("g1", f"{c} não recebe contas, clientes, compras, fornecedores nem documentos", not any(vis.values()), str(vis))
+    f = next((x for x in _lista(_tok[c], "funcionarios") if x.get("id") == _fg.get("id")), {})
+    check("g1", f"{c} vê o colega, mas sem CPF nem salário", f.get("nome_completo") == "Sigiloso da Silva" and "cpf" not in f and "salario" not in f, str(sorted(f))[:120])
+    m = next((x for x in _lista(_tok[c], "materiais") if x.get("name") == "Material G1"), {})
+    check("g1", f"{c} não recebe o custo do material", m and "unit_cost" not in m, str(m.get("unit_cost")))
+check("g1", "Financeiro lê as contas a pagar", any(x.get("descricao") == "Aluguel G1" for x in _lista(_tok["Financeiro"], "contas_pagar")))
+check("g1", "Almoxarife lê compras e fornecedores (e não as contas)", s == 200 and not _lista(_tok["Almoxarife"], "contas_pagar")
+      and call("GET", "/api/collections/compras/records?perPage=1", _tok["Almoxarife"])[0] == 200)
+_f = lambda t: next((x for x in _lista(t, "funcionarios") if x.get("id") == _fg.get("id")), {})
+check("g1", "RH vê CPF e salário do funcionário", _f(_tok["RH"]).get("cpf") == "987.654.321-00" and _f(_tok["RH"]).get("salario") == 4200)
+check("g1", "Engenheiro vê o funcionário sem CPF nem salário", _f(_tok["Engenheiro"]) and "salario" not in _f(_tok["Engenheiro"]))
+check("g1", "Administrador continua vendo tudo", _f(tA).get("salario") == 4200 and any(x.get("descricao") == "Aluguel G1" for x in _lista(tA, "contas_pagar")))
+check("g1", "Empresa B continua sem ver nada da A", not _lista(login("b@teste.local", "SenhaB12345")[0] if tSU else tB, "funcionarios", f'id="{_fg.get("id")}"'))
 
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)
