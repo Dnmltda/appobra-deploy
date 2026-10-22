@@ -51,6 +51,17 @@ def call(base, method, path, token=None, body=None):
             return e.code, {"raw": t}
 
 
+def entrar(base, email, s):
+    """Login respeitando o limite do PocketBase (20 logins a cada 5 min por endereço): no 429, espera e tenta de novo."""
+    import time
+    for _ in range(12):
+        st, a = call(base, "POST", "/api/collections/users/auth-with-password", body={"identity": email, "password": s})
+        if st != 429:
+            return st, a
+        time.sleep(30)
+    return st, a
+
+
 def senha():
     simbolos = "!@#%*-_"
     while True:
@@ -64,19 +75,26 @@ def ler(arq):
 
 
 def criar(base, arq):
-    logins = []
+    """Cria a empresa e os logins. Se o arquivo de senhas já existe, só completa os logins que faltam
+    (ex.: a empresa nasce com o limite de 10 logins; depois da limpeza ela fica sem limite)."""
+    import os
+    logins = [tuple(l) for l in ler(arq)] if os.path.exists(arq) else []
     cargo0, nome0 = CARGOS[0]
-    email0, s0 = f"{nome0}@{DOMINIO}", senha()
-    st, r = call(base, "POST", "/api/custom/self-register-company", body={
-        "companyName": EMPRESA, "adminName": f"Teste {cargo0}", "adminEmail": email0, "username": f"teste.{nome0}", "password": s0})
-    if st != 200:
-        sys.exit(f"Não consegui cadastrar a empresa: {st} {r}")
-    st, a = call(base, "POST", "/api/collections/users/auth-with-password", body={"identity": email0, "password": s0})
+    if not logins:
+        email0, s0 = f"{nome0}@{DOMINIO}", senha()
+        st, r = call(base, "POST", "/api/custom/self-register-company", body={
+            "companyName": EMPRESA, "adminName": f"Teste {cargo0}", "adminEmail": email0, "username": f"teste.{nome0}", "password": s0})
+        if st != 200:
+            sys.exit(f"Não consegui cadastrar a empresa: {st} {r}")
+        logins.append((cargo0, email0, f"teste.{nome0}", s0))
+    st, a = entrar(base, logins[0][1], logins[0][3])
     if st != 200:
         sys.exit(f"O administrador de teste não entrou: {st} {a}")
     tok, cid = a["token"], a["record"]["company_id"]
-    logins.append((cargo0, email0, f"teste.{nome0}", s0))
+    feitos = {l[0] for l in logins}
     for cargo, nome in CARGOS[1:]:
+        if cargo in feitos:
+            continue
         email, s = f"{nome}@{DOMINIO}", senha()
         st, r = call(base, "POST", "/api/collections/users/records", tok, {
             "email": email, "username": f"teste.{nome}", "password": s, "passwordConfirm": s, "name": f"Teste {cargo}",
@@ -97,7 +115,7 @@ def conferir(base, arq, outro=None):
     ok = falha = 0
     empresas = {}
     for cargo, email, _user, s in ler(arq):
-        st, a = call(base, "POST", "/api/collections/users/auth-with-password", body={"identity": email, "password": s})
+        st, a = entrar(base, email, s)
         if st != 200:
             print(f"FALHA {cargo}: não entrou ({st})"); falha += 1; continue
         tok, cid = a["token"], a["record"]["company_id"]
@@ -117,7 +135,7 @@ def conferir(base, arq, outro=None):
             print(f"OK    {cargo}: entra e só vê a própria empresa"); ok += 1
     if outro:
         for cargo, email, _u, s in ler(outro)[:1]:
-            st, a = call(base, "POST", "/api/collections/users/auth-with-password", body={"identity": email, "password": s})
+            st, a = entrar(base, email, s)
             if st == 200:
                 cid2, tok2 = a["record"]["company_id"], a["token"]
                 for cid, tok in list(empresas.items())[:1]:
