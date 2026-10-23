@@ -75,7 +75,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
 
         {['email', 'id', 'username'].map((m) => (
           <TabsContent key={m} value={m} className="space-y-2 mt-4">
-            <Label htmlFor={`lf-${m}`} className="text-[#1a3a52] font-semibold">
+            <Label htmlFor={`lf-${m}`} className="text-marinho font-semibold">
               {m === 'email' ? 'Email' : m === 'id' ? 'ID do funcionário' : 'Nome de usuário'}
             </Label>
             <div className="relative">
@@ -96,7 +96,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
                   if (fieldErrors.identifier) clearError();
                 }}
                 required
-                className="bg-white border-gray-200 focus-visible:ring-[#d4af37] h-11 text-foreground pl-9"
+                className="bg-white border-gray-200 focus-visible:ring-ouro h-11 text-foreground pl-9"
                 autoComplete={m === 'email' ? 'email' : 'username'}
               />
             </div>
@@ -109,13 +109,13 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="lf-password" className="text-[#1a3a52] font-semibold">
+          <Label htmlFor="lf-password" className="text-marinho font-semibold">
             Senha
           </Label>
           <button
             type="button"
             onClick={onRecovery}
-            className="text-sm font-medium text-[#d4af37] hover:underline"
+            className="text-sm font-medium text-ouro hover:underline"
           >
             Esqueci minha senha
           </button>
@@ -131,7 +131,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
               if (fieldErrors.password) clearError();
             }}
             required
-            className="bg-white border-gray-200 focus-visible:ring-[#d4af37] h-11 text-foreground pr-10"
+            className="bg-white border-gray-200 focus-visible:ring-ouro h-11 text-foreground pr-10"
             autoComplete="current-password"
           />
           <button
@@ -158,7 +158,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
       <Button
         type="submit"
         disabled={loading}
-        className="w-full h-12 text-base font-bold bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] transition-all active:scale-[0.98] mt-2"
+        className="w-full h-12 text-base font-bold bg-ouro text-marinho hover:bg-ouro-escuro transition-all active:scale-[0.98] mt-2"
       >
         {loading ? (
           <span className="flex items-center gap-2">
@@ -176,7 +176,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
           <button
             type="button"
             onClick={onCreateAccount}
-            className="font-medium text-[#1a3a52] hover:text-[#d4af37] transition-colors"
+            className="font-medium text-marinho hover:text-ouro transition-colors"
           >
             Criar conta
           </button>
@@ -184,7 +184,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
           <button
             type="button"
             onClick={onContact}
-            className="font-medium text-[#1a3a52] hover:text-[#d4af37] transition-colors"
+            className="font-medium text-marinho hover:text-ouro transition-colors"
           >
             Contato
           </button>

@@ -121,8 +121,8 @@ const CreateAccountModal = ({ open, onClose }) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-[#d4af37]" />
-            <DialogTitle className="text-[#1a3a52]">Criar Conta</DialogTitle>
+            <UserPlus className="w-5 h-5 text-ouro" />
+            <DialogTitle className="text-marinho">Criar Conta</DialogTitle>
           </div>
           <DialogDescription>
             Cadastre sua empresa e sua conta de administrador. Seus dados ficam
@@ -277,7 +277,7 @@ const CreateAccountModal = ({ open, onClose }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] font-bold"
+              className="flex-1 bg-ouro text-marinho hover:bg-ouro-escuro font-bold"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

@@ -18,7 +18,7 @@ import PasswordRecoveryModal from '@/components/Login/PasswordRecoveryModal.jsx'
 import CreateAccountModal from '@/components/Login/CreateAccountModal.jsx';
 import ContactModal from '@/components/Login/ContactModal.jsx';
 
-import Logo from '@/components/Logo.jsx';
+import BotaoInstalar from '@/components/marca/BotaoInstalar.jsx';
 
 const INSTITUTIONAL_IMAGE =
   'https://images.hostinger.com/737561dd-cbc6-443f-adeb-dd0a499eeb70.png';
@@ -85,23 +85,14 @@ const LoginPage = () => {
               className="w-full h-full object-cover"
               loading="eager"
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-[#1a3a52]/90 via-[#1a3a52]/70 to-[#1a3a52]/40" />
+            <div className="absolute inset-0 bg-gradient-to-br from-marinho/90 via-marinho/70 to-marinho/40" />
           </div>
 
           <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
-            <div className="flex items-center gap-3">
-              <img
-                src="https://horizons-cdn.hostinger.com/3cd53c25-c948-4ae2-89ce-121b834cf36a/8a20c8622dcb6e5d12be7d542ac08e6d.png"
-                alt="DNM&LTDA"
-                className="w-12 h-12 object-contain"
-              />
-              <div className="flex flex-col">
-                <span className="font-bold text-xl tracking-tight">DNM&LTDA</span>
-                <span className="text-[#d4af37] font-semibold uppercase text-xs tracking-wide">
-                  APP OBRA
-                </span>
-              </div>
-            </div>
+            {/* Logo oficial da DNM&LTDA, inteiro e sem alteração (pedido do Diego). */}
+            <span className="brilho-ouro block w-56 rounded-xl shadow-lg">
+              <img src="/logo-dnm.webp" alt="DNM&LTDA — Tecnologia & Soluções Digitais" className="block w-full h-auto rounded-xl" draggable="false" />
+            </span>
 
             <div className="space-y-6 max-w-md">
               <h2 className="text-4xl font-bold leading-tight text-white">
@@ -114,8 +105,8 @@ const LoginPage = () => {
               <ul className="space-y-4">
                 {FEATURES.map((f) => (
                   <li key={f.title} className="flex items-start gap-3">
-                    <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/30 shrink-0">
-                      <f.icon className="w-5 h-5 text-[#d4af37]" />
+                    <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-ouro/20 border border-ouro/30 shrink-0">
+                      <f.icon className="w-5 h-5 text-ouro" />
                     </span>
                     <div>
                       <p className="font-semibold text-white">{f.title}</p>
@@ -135,7 +126,7 @@ const LoginPage = () => {
         {/* Painel de login (direita) */}
         <main className="flex-1 flex flex-col items-center justify-center px-4 py-8 sm:px-6 lg:px-12 relative">
           {/* Fundo decorativo */}
-          <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#1a3a52_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
+          <div className="absolute inset-0 opacity-[0.02] bg-[radial-gradient(#0A1F4D_1px,transparent_1px)] [background-size:20px_20px] pointer-events-none" />
 
           {/* Toggle de tema (estrutura preparada para dark mode) */}
           <div className="absolute top-4 right-4 z-20">
@@ -145,7 +136,7 @@ const LoginPage = () => {
               size="icon"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               title={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
-              className="rounded-full text-[#1a3a52] hover:bg-[#d4af37]/10"
+              className="rounded-full text-marinho hover:bg-ouro/10"
             >
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
@@ -169,6 +160,10 @@ const LoginPage = () => {
                 <SocialLoginButtons />
               </div>
 
+              <div className="mt-4 flex justify-center">
+                <BotaoInstalar className="w-full h-11" />
+              </div>
+
               <LoginFooter
                 serverStatus={session.serverStatus}
                 latency={session.latency}
@@ -188,15 +183,15 @@ const LoginPage = () => {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <div className="flex justify-center mb-2">
-              <Logo size="md" variant="dark" />
+              <img src="/logo-dnm.webp" alt="DNM&LTDA — Tecnologia & Soluções Digitais" className="w-64 h-auto rounded-xl shadow-md" draggable="false" />
             </div>
-            <DialogTitle className="text-center text-[#1a3a52]">DNM&LTDA</DialogTitle>
+            <DialogTitle className="text-center text-marinho">DNM&LTDA</DialogTitle>
           </DialogHeader>
           <p className="text-muted-foreground text-center -mt-2 mb-2">
             Empresa de tecnologia especializada em soluções digitais para negócios de todos os portes.
           </p>
           <div className="mb-2">
-            <h2 className="text-sm font-bold text-[#1a3a52] uppercase tracking-wide mb-3 text-center">
+            <h2 className="text-sm font-bold text-marinho uppercase tracking-wide mb-3 text-center">
               Serviços Oferecidos
             </h2>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -212,17 +207,17 @@ const LoginPage = () => {
                   key={servico}
                   className="flex items-center gap-2 text-sm text-foreground bg-white rounded-lg px-3 py-2 border border-border/50"
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] shrink-0"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-ouro shrink-0"></span>
                   {servico}
                 </li>
               ))}
             </ul>
           </div>
           <div className="text-center">
-            <h2 className="text-sm font-bold text-[#1a3a52] uppercase tracking-wide mb-2">Contato</h2>
+            <h2 className="text-sm font-bold text-marinho uppercase tracking-wide mb-2">Contato</h2>
             <a
               href="mailto:dnmltda@hotmail.com"
-              className="text-sm text-[#1a3a52] hover:text-[#d4af37] hover:underline transition-colors"
+              className="text-sm text-marinho hover:text-ouro hover:underline transition-colors"
             >
               dnmltda@hotmail.com
             </a>

@@ -23,6 +23,7 @@ import {
   Plus, Search, Pencil, Eye, Copy, Trash2, Ban, FileText, FileDown,
   ShoppingCart, TrendingUp, Clock, CheckCircle2, XCircle, Package, Filter, X,
 } from "lucide-react";
+import IconeModulo3D from "@/components/marca/IconeModulo3D.jsx";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 
 const emptyForm = {
@@ -185,7 +186,7 @@ const ComprasPage = () => {
     h.exportAudit("Impressão");
   };
 
-  const COLORS = ["#1a3a52", "#d4af37", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+  const COLORS = ["#0A1F4D", "#D09C26", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
   const nomeFornecedor = (c) => c.expand?.fornecedor_id?.nome || c.expand?.fornecedor_id?.razao_social || "-";
   const nomeSolicitante = (c) => c.expand?.solicitante_id?.nome_completo || c.expand?.solicitante_id?.name || "-";
@@ -202,7 +203,7 @@ const ComprasPage = () => {
         <div className="app-container">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-primary">Gestão de Compras</h1>
+              <h1 className="text-3xl font-bold text-marinho flex items-center gap-3"><IconeModulo3D icon={ShoppingCart} />Gestão de Compras</h1>
               <p className="text-muted-foreground">Controle completo do ciclo de compras da obra</p>
             </div>
             <div className="flex gap-2 flex-wrap">
@@ -239,7 +240,7 @@ const ComprasPage = () => {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `R$${v / 1000}k`} />
                     <Tooltip formatter={(v) => formatCurrency(v)} />
-                    <Line type="monotone" dataKey="valor" name="Valor" stroke="#1a3a52" strokeWidth={3} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="valor" name="Valor" stroke="#0A1F4D" strokeWidth={3} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -272,7 +273,7 @@ const ComprasPage = () => {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `R$${v / 1000}k`} />
                     <Tooltip formatter={(v) => formatCurrency(v)} />
-                    <Bar dataKey="valor" name="Valor" fill="#d4af37" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="valor" name="Valor" fill="#D09C26" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

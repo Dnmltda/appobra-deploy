@@ -30,6 +30,7 @@ import {
   Package, Wrench, QrCode, Barcode, Copy, ArrowRightLeft, Archive, FileSpreadsheet, Printer, Filter, X, Truck, CheckCircle2,
   TrendingDown, Boxes, AlertTriangle, HandHelping, Undo2, Repeat,
 } from 'lucide-react';
+import IconeModulo3D from '@/components/marca/IconeModulo3D.jsx';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -68,7 +69,7 @@ const ESTADO_COLORS = {
   'Excelente': '#16a34a', 'Bom': '#2563eb', 'Regular': '#d97706',
   'Ruim': '#ea580c', 'Crítico': '#dc2626',
 };
-const PIE_COLORS = ['#1a3a52', '#d4af37', '#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#6b7280'];
+const PIE_COLORS = ['#0A1F4D', '#D09C26', '#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#6b7280'];
 
 const formatCurrency = (v) =>
   Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -1184,7 +1185,7 @@ const EquipamentosPage = () => {
         {/* Cabeçalho */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-1">Equipamentos</h1>
+            <h1 className="text-3xl font-bold mb-1 text-marinho flex items-center gap-3"><IconeModulo3D icon={Wrench} />Equipamentos</h1>
             <p className="text-muted-foreground">Gestão completa de equipamentos — cadastro, transferências, manutenção e baixa</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1242,7 +1243,7 @@ const EquipamentosPage = () => {
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={90} />
                     <Tooltip />
-                    <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#1a3a52" />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#0A1F4D" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : <div className="h-[240px] flex items-center justify-center text-sm text-muted-foreground">Sem dados</div>}
@@ -1276,7 +1277,7 @@ const EquipamentosPage = () => {
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
                     <Tooltip />
-                    <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#d4af37" />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#D09C26" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">Sem dados</div>}
@@ -2060,7 +2061,7 @@ const EquipamentosPage = () => {
                 ].map(([valor, texto]) => (
                   <button key={valor} type="button" aria-pressed={devData.estado_devolucao === valor}
                     className={`flex items-center justify-center gap-1 rounded-md border px-3 py-2 text-sm font-medium ${devData.estado_devolucao === valor
-                      ? 'border-[#1a3a52] bg-[#1a3a52] text-white' : 'bg-background hover:bg-muted'}`}
+                      ? 'border-marinho bg-marinho text-white' : 'bg-background hover:bg-muted'}`}
                     onClick={() => setDevData({ ...devData, estado_devolucao: valor })}>
                     {devData.estado_devolucao === valor && <CheckCircle2 className="w-4 h-4" />}{texto}
                   </button>

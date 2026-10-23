@@ -70,7 +70,7 @@ const Header = () => {
       )}
 
       <header 
-        className="sticky top-0 z-40 w-full bg-[#1a3a52] text-white shadow-md"
+        className="sticky top-0 z-40 w-full bg-marinho text-white shadow-md"
       >
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
@@ -92,7 +92,7 @@ const Header = () => {
                 <>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-[#d4af37]">
+                      <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 hover:text-ouro">
                         <Globe className="w-5 h-5" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -114,7 +114,7 @@ const Header = () => {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="gap-2 text-white hover:bg-white/10 hover:text-[#d4af37] transition-all px-2 sm:px-4">
+                      <Button variant="ghost" className="gap-2 text-white hover:bg-white/10 hover:text-ouro transition-all px-2 sm:px-4">
                         <User className="w-5 h-5" />
                         <div className="hidden sm:flex flex-col items-start">
                           <span className="font-medium max-w-[120px] truncate text-sm">
@@ -155,7 +155,7 @@ const Header = () => {
                   </DropdownMenu>
                 </>
               ) : (
-                <Button asChild className="bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] font-bold transition-all shadow-sm">
+                <Button asChild className="bg-ouro text-marinho hover:bg-ouro-escuro font-bold transition-all shadow-sm">
                   <Link to="/login">{t('adminLogin', language)}</Link>
                 </Button>
               )}

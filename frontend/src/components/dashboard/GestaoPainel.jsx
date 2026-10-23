@@ -8,6 +8,7 @@ import {
 import {
   KpiCard, BlockCard, EmptyState, BlockError, BlockSkeleton, ListRow, StatusPill,
 } from './DashboardBlocks.jsx';
+import { ListaEntrada } from '@/components/marca/Entrada.jsx';
 import { GastoPorObraChart, MovimentacoesDiaChart, PedidosStatusChart } from './DashboardCharts.jsx';
 import {
   useBlock, STATUS_FECHADOS, TIPOS_ENTRADA, TIPOS_SAIDA, ORDEM_STATUS_PEDIDO, PROXIMO_PASSO_GESTAO,
@@ -240,7 +241,7 @@ const GestaoPainel = ({ user, refreshKey }) => {
     kpis.push(
       <KpiCard
         key="mat" to={rotaMateriais} icon={PackageMinus} label="Materiais com estoque baixo"
-        tone={nBaixo > 0 ? 'amber' : 'green'} value={nBaixo}
+        tone={nBaixo > 0 ? 'red' : 'green'} value={nBaixo}
         loading={materiais.loading} error={materiais.error}
         hint={materiais.data && materiais.data.total === 0 ? 'Nenhum material cadastrado' : undefined}
       />,
@@ -300,9 +301,9 @@ const GestaoPainel = ({ user, refreshKey }) => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {kpis.length > 0 && (
-        <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${kpis.length >= 5 ? 'md:grid-cols-3 xl:grid-cols-5' : kpis.length === 4 ? 'lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+        <ListaEntrada className={`grid grid-cols-2 gap-3 sm:gap-4 ${kpis.length >= 5 ? 'md:grid-cols-3 xl:grid-cols-5' : kpis.length === 4 ? 'lg:grid-cols-4' : 'md:grid-cols-3'}`}>
           {kpis}
-        </div>
+        </ListaEntrada>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">

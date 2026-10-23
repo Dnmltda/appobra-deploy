@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   BlockCard, EmptyState, BlockError, BlockSkeleton, ListRow, StatusPill, QuickAction,
 } from './DashboardBlocks.jsx';
+import { ListaEntrada } from '@/components/marca/Entrada.jsx';
 import { useBlock, formatDate, formatNumber, statusPedidoClasse } from './dashboardUtils.js';
 
 // Painel simples de quem trabalha na obra (Pedreiro, Servente, Encanador,
@@ -147,9 +148,9 @@ const ObraPainel = ({ user, refreshKey }) => {
       </Card>
 
       {acoes.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <ListaEntrada className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {acoes.map((a) => <QuickAction key={a.to} {...a} />)}
-        </div>
+        </ListaEntrada>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

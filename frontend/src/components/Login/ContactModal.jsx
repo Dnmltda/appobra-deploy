@@ -63,7 +63,7 @@ const ContactModal = ({ open, onClose }) => {
     <Dialog open={open} onOpenChange={(o) => (o ? null : handleClose())}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-[#1a3a52]">Contato</DialogTitle>
+          <DialogTitle className="text-marinho">Contato</DialogTitle>
           <DialogDescription>
             Fale com a equipe do APP OBRA. Respondemos em até 24 horas úteis.
           </DialogDescription>
@@ -72,15 +72,15 @@ const ContactModal = ({ open, onClose }) => {
         <div className="space-y-3 mb-2">
           <a
             href="mailto:dnmltda@hotmail.com"
-            className="flex items-center gap-2 text-sm text-foreground hover:text-[#d4af37] transition-colors"
+            className="flex items-center gap-2 text-sm text-foreground hover:text-ouro transition-colors"
           >
-            <Mail className="w-4 h-4 text-[#d4af37]" /> dnmltda@hotmail.com
+            <Mail className="w-4 h-4 text-ouro" /> dnmltda@hotmail.com
           </a>
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Phone className="w-4 h-4 text-[#d4af37]" /> (00) 00000-0000
+            <Phone className="w-4 h-4 text-ouro" /> (00) 00000-0000
           </p>
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <MapPin className="w-4 h-4 text-[#d4af37]" /> Brasil
+            <MapPin className="w-4 h-4 text-ouro" /> Brasil
           </p>
         </div>
 
@@ -129,7 +129,7 @@ const ContactModal = ({ open, onClose }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-[#1a3a52] text-white hover:bg-[#1a3a52]/90 font-bold"
+              className="flex-1 bg-marinho text-white hover:bg-marinho/90 font-bold"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

@@ -103,6 +103,32 @@
   operação.
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
+**Identidade visual DNM&LTDA e app instalável (23/10/2026, Claude Code) — PR aguardando o Diego, não publicado**
+- **Só visual** (pedido do Diego): logo oficial (original em `docs/marca/logo-dnm-original.png`; recortes sem
+  redesenhar em `frontend/public/`: `logo-dnm.webp` abertura, `marca-dnm.webp` coroa+nome no login, `coroa-dnm.webp`
+  menu/carregando). Paleta no `tailwind.config.js`: `marinho` #0A1F4D, `royal` #1E40AF (menu/aba ativa, bordas),
+  `ouro` #D09C26 / `ouro-escuro` #A87111 (tirados da coroa; o Diego pediu "mais dourado" que o #E5B339), `creme`
+  #F7EFDC só nos cartões do painel. Vermelho só para alerta e estoque baixo. Títulos Playfair Display, textos
+  Montserrat. Botão padrão (`ui/button`) dourado.
+- Animações em `frontend/src/components/marca/` (Framer Motion, `MotionConfig reducedMotion="user"` no App):
+  cartões do painel com inclinação 3D e número contando, ícones dourados 3D em Obras/Materiais/Equipamentos/EPIs/
+  Compras, barra animada no andamento do pedido, entrada suave de telas (só opacidade: o menu é fixo) e listas,
+  coroa com brilho no login e girando no carregando. CSS respeita `prefers-reduced-motion`.
+- **Instalar o app** (pedido do Diego): `public/manifest.json`, ícones `icone-*.png`, `public/sw.js` (guarda só
+  `/assets` e imagens da marca; telas e `/api` sempre da internet) e botão "Instalar app" no login e no rodapé do
+  menu (`components/marca/BotaoInstalar.jsx`, `lib/instalarApp.js`; no iPhone mostra Compartilhar → Adicionar à
+  Tela de Início). Também um cartão "Instalar o APP OBRA" no topo de Configurações (pedido do Diego;
+  `CartaoInstalarApp.jsx`, sempre aparece e explica o caminho quando o navegador não oferece o botão). Chrome
+  confirmou: instalável, sem erros de manifesto.
+- Testes: navegador 26 arquivos, 237 OK / 0 falha; depois dos ajustes, login/pedido/permissões/equipamento 67 OK;
+  servidor 310/0.
+- **Logo do APP OBRA** (aprovado pelo Diego, 23/10): capacete de obra com volume e a coroa DNM em cima, "APP OBRA"
+  (Playfair Black) e "BY DNM&LTDA" (Montserrat Bold). 5 versões + símbolo em `docs/marca/app-obra/` (SVG com letras
+  em contorno e PNG 3x, LEIA-ME, gerador `gera-logo.py`) e `docs/marca/app-obra-logo.zip`. No app: ícone de
+  instalação/favicon, abertura, login, menu e carregando.
+- **Regra do Diego:** onde aparece a empresa, usar **sempre o logo oficial da DNM&LTDA inteiro** (`logo-dnm.webp`,
+  sem recorte): painel esquerdo do login e "Sobre a Empresa". Nada de recortes da coroa.
+
 **Titular, limpeza dos testes, empresa de teste e limites (21–22/10/2026, Claude Code)**
 - **Publicado e executado em 22/10/2026:** PR #12 (Fly v24); `LIMPEZA_TESTES` e `SENHA_SUPERUSUARIO_TITULAR` colocados
   pelo Claude Code com `flyctl secrets set` a pedido do Diego (v25) e retirados depois (v26). Limpeza feita (backup
@@ -110,6 +136,8 @@
   Dn-moraes, a obra "Teste 1", o funcionário de teste, a "Empresa Principal" e os registros de auditoria de teste.
   Ficaram o titular (ID 00) na "DNM&LTDA OBRAS" e a "Construtora Teste DNM (não apagar)" com 15 logins
   (`docs/logins-teste.md`). Login do superusuário do titular conferido (200).
+- **Publicado em 22/10/2026:** PR #13 (merge a950d0c), Fly **v27** (snapshot `vs_x88DxQRjgajtkaMZa28w`), boot sem `Erro`;
+  Hostinger atualizada (`assets/index-te5nZPSz.js`).
 - **G1 (segurança) corrigido em 22/10/2026, aprovado pelo Diego** (`pb_hooks/acesso-dados.pb.js` + `-lib.js`): antes,
   dentro da mesma empresa, qualquer cargo (até Pedreiro e Cliente) lia pela API CPF e salário, contas a pagar/receber,
   compras, clientes, propostas e custos. Agora o servidor filtra no pedido (lista vazia / "não encontrado") as

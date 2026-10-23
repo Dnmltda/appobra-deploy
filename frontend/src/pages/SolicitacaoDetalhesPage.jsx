@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Helmet } from "react-helmet";
 import pb from "@/lib/pocketbaseClient.js";
 import { useAuth } from "@/contexts/AuthContext.jsx";
@@ -444,14 +445,25 @@ const FluxoMaterial = ({
         {encerrada ? (
           <p className="text-sm font-medium text-red-700">Pedido {st.toLowerCase()}.</p>
         ) : (
+          <>
+          <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden" role="progressbar" aria-label="Andamento"
+            aria-valuemin={0} aria-valuemax={PASSOS.length} aria-valuenow={Math.max(atual, 0) + 1}>
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-ouro-escuro via-ouro to-ouro"
+              initial={{ width: 0 }}
+              animate={{ width: `${((Math.max(atual, 0) + 1) / PASSOS.length) * 100}%` }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
+            />
+          </div>
           <ol className="flex flex-wrap gap-2" aria-label="Passos do pedido">
             {PASSOS.map((p, i) => (
               <li key={p.status} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${
-                i < atual ? "bg-green-50 border-green-300 text-green-800" : i === atual ? "bg-primary text-primary-foreground border-primary font-semibold" : "text-muted-foreground"}`}>
+                i < atual ? "bg-green-50 border-green-300 text-green-800" : i === atual ? "bg-primary text-primary-foreground border-royal font-semibold" : "text-muted-foreground"}`}>
                 <span className="w-5 h-5 rounded-full border flex items-center justify-center text-xs">{i < atual ? "✓" : i + 1}</span>{p.rotulo}
               </li>
             ))}
           </ol>
+          </>
         )}
 
         <div>

@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import Cartao3D from '@/components/marca/Cartao3D.jsx';
+import Contador from '@/components/marca/Contador.jsx';
+import IconeModulo3D from '@/components/marca/IconeModulo3D.jsx';
 
 // Peças visuais do painel. Cada bloco leva para a página do módulo.
 
@@ -17,17 +20,22 @@ const TONS = {
 };
 
 // Número grande + rótulo. Em erro mostra aviso, nunca um zero inventado.
+// Cartão creme que inclina em 3D; o número conta até o valor real. Alerta
+// (tom vermelho) mantém o ícone vermelho; os outros usam o selo dourado.
 export const KpiCard = ({ to, icon: Icon, label, value, hint, tone = 'primary', loading, error }) => (
+  <Cartao3D className="h-full min-w-0">
   <Link
     to={to}
-    className="group block rounded-xl min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    className="group block h-full rounded-xl min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
   >
-    <Card className="h-full shadow-sm border-border transition-colors group-hover:border-primary/40 group-active:bg-muted/40">
+    <Card className="cartao-creme h-full shadow-sm transition-shadow group-hover:shadow-lg group-hover:border-royal/50">
       <CardContent className="p-3.5 sm:p-4 flex flex-col gap-2 h-full">
         <div className="flex items-center justify-between gap-2">
-          <div className={cn('p-2 rounded-lg shrink-0', TONS[tone] || TONS.primary)}>
-            <Icon className="w-5 h-5" aria-hidden="true" />
-          </div>
+          {tone === 'red' ? (
+            <div className={cn('p-2 rounded-lg shrink-0', TONS.red)}>
+              <Icon className="w-5 h-5" aria-hidden="true" />
+            </div>
+          ) : <IconeModulo3D icon={Icon} size="sm" />}
           <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 opacity-60 group-hover:opacity-100" aria-hidden="true" />
         </div>
         <p className="text-xs sm:text-sm font-medium text-muted-foreground leading-snug min-h-[2.5em]">{label}</p>
@@ -36,12 +44,13 @@ export const KpiCard = ({ to, icon: Icon, label, value, hint, tone = 'primary', 
         ) : error ? (
           <p className="text-sm text-muted-foreground">Não foi possível carregar</p>
         ) : (
-          <p className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums leading-none">{value}</p>
+          <p className={cn('text-2xl sm:text-3xl font-bold tabular-nums leading-none', tone === 'red' ? 'text-red-700' : 'text-marinho')}><Contador valor={value} /></p>
         )}
         {hint && !loading && !error && <p className="text-xs text-muted-foreground line-clamp-2">{hint}</p>}
       </CardContent>
     </Card>
   </Link>
+  </Cartao3D>
 );
 
 // Cartão de bloco com título, ícone e link "Ver tudo".
@@ -49,8 +58,8 @@ export const BlockCard = ({ title, icon: Icon, to, linkLabel = 'Ver tudo', child
   <Card className={cn('shadow-sm border-border flex flex-col min-w-0', className)}>
     <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-2 flex flex-row items-start justify-between gap-2 space-y-0">
       <div className="min-w-0">
-        <CardTitle className="text-base sm:text-lg text-foreground flex items-center gap-2">
-          {Icon && <Icon className="w-5 h-5 text-primary shrink-0" aria-hidden="true" />}
+        <CardTitle className="text-base sm:text-lg text-marinho flex items-center gap-2">
+          {Icon && <Icon className="w-5 h-5 text-ouro-escuro shrink-0" aria-hidden="true" />}
           <span className="truncate">{title}</span>
         </CardTitle>
         {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
@@ -125,7 +134,7 @@ export const StatusPill = ({ className, children }) => (
 export const QuickAction = ({ to, icon: Icon, label }) => (
   <Button asChild variant="outline" className="h-auto min-h-[64px] py-3 flex-col gap-1.5 whitespace-normal text-center">
     <Link to={to}>
-      <Icon className="w-6 h-6 text-primary" aria-hidden="true" />
+      <IconeModulo3D icon={Icon} size="sm" />
       <span className="text-sm font-medium leading-tight">{label}</span>
     </Link>
   </Button>
