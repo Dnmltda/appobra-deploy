@@ -1,0 +1,8 @@
+# O Fly roda Linux: scripts e Dockerfile precisam de fim de linha LF mesmo quando o
+# repositório é baixado no Windows (com CRLF o "#!/bin/sh" vira "#!/bin/sh\r" e o
+# container não sobe: "failed to spawn (os error 2)").
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+fly.toml    text eol=lf
+pocketbase  binary
+*.zip       binary

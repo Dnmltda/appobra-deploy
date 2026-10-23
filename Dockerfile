@@ -12,7 +12,10 @@ RUN unzip -o appobra_deploy_final.zip -d /app/extracted \
     && chmod +x /app/extracted/pocketbase
 
 COPY fly-entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Tira o fim de linha do Windows (CRLF), se o repositório foi baixado no Windows:
+# com "\r" no "#!/bin/sh" o Linux não acha o interpretador ("os error 2").
+RUN sed -i 's/\r$//' /app/entrypoint.sh \
+    && chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
 ENTRYPOINT ["/app/entrypoint.sh"]

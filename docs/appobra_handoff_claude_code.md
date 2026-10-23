@@ -110,6 +110,11 @@
   `X-Auth-Rest`.
 - **Fly ainda não atualizado** (o PR não mexe em `pb_hooks`; só as telas do endereço fly.dev ficaram antigas):
   falta o token do Fly, que não fica guardado entre sessões.
+- **Deploy pelo Windows travava (23/10/2026):** o Cowork rodou `fly deploy` de um clone no Windows; o Git trocou o fim
+  de linha do `fly-entrypoint.sh` para CRLF, o `#!/bin/sh` virou `#!/bin/sh\r` e o container não subia ("failed to
+  spawn (os error 2)"; a Fly abortou e manteve a imagem pr13-a950d0c). Não tinha relação com o PR #14. Correção:
+  `.gitattributes` (LF para `*.sh`, Dockerfile e fly.toml) e o Dockerfile tira o `\r` do entrypoint. Testado:
+  imagem montada com arquivos CRLF falha do jeito antigo e sobe com a correção.
 - **Só visual** (pedido do Diego): logo oficial (original em `docs/marca/logo-dnm-original.png`; recortes sem
   redesenhar em `frontend/public/`: `logo-dnm.webp` abertura, `marca-dnm.webp` coroa+nome no login, `coroa-dnm.webp`
   menu/carregando). Paleta no `tailwind.config.js`: `marinho` #0A1F4D, `royal` #1E40AF (menu/aba ativa, bordas),
