@@ -185,7 +185,7 @@ const SolicitacoesPage = () => {
 
   const printList = () => { window.print(); h.exportAudit("Impressão"); };
 
-  const COLORS = ["#1a3a52", "#d4af37", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
+  const COLORS = ["#0A1F4D", "#E5B339", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"];
 
   const nomeSolicitante = (s) => s.expand?.solicitante_id?.nome_completo || s.expand?.solicitante_id?.name || "-";
   const nomeResponsavel = (s) => s.expand?.responsavel_id?.nome_completo || s.expand?.responsavel_id?.name || "-";
@@ -235,7 +235,7 @@ const SolicitacoesPage = () => {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
                     <Tooltip />
-                    <Line type="monotone" dataKey="total" name="Quantidade" stroke="#1a3a52" strokeWidth={3} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="total" name="Quantidade" stroke="#0A1F4D" strokeWidth={3} dot={{ r: 3 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -269,7 +269,7 @@ const SolicitacoesPage = () => {
                       <XAxis dataKey="name" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="total" name="Quantidade" fill="#1a3a52" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="total" name="Quantidade" fill="#0A1F4D" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -285,7 +285,7 @@ const SolicitacoesPage = () => {
                       <XAxis dataKey="name" axisLine={false} tickLine={false} />
                       <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip />
-                      <Bar dataKey="total" name="Quantidade" fill="#d4af37" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="total" name="Quantidade" fill="#E5B339" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

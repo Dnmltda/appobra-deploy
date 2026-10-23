@@ -27,6 +27,7 @@ import {
   Warehouse,
   MessagesSquare, QrCode } from 'lucide-react';
 import Logo from './Logo.jsx';
+import Coroa from '@/components/marca/Coroa.jsx';
 import { ehAdmin, podeAcessar, podeVerEstoque } from '@/lib/permissoes.js';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
@@ -140,7 +141,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           onClick={() => setIsCollapsed(true)}
         />
       )}
-      <aside className={`fixed left-0 top-0 h-screen bg-[#1a3a52] text-white shadow-xl z-50 transition-all duration-300 flex flex-col ${
+      <aside className={`fixed left-0 top-0 h-screen bg-marinho text-white shadow-xl z-50 transition-all duration-300 flex flex-col ${
         isMobile
           ? `w-64 ${isCollapsed ? '-translate-x-full' : 'translate-x-0'}`
           : (isCollapsed ? 'w-20' : 'w-64')
@@ -150,9 +151,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
           {(!isMobile && isCollapsed) ? (
-            <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center font-bold text-[#d4af37]">
-              DNM
-            </div>
+            <Coroa className="w-10 h-10" />
           ) : (
             <Logo size="md" variant="light" />
           )}
@@ -178,12 +177,12 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 onClick={handleNavClick}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
                   active 
-                    ? 'bg-[#d4af37] text-[#1a3a52] font-semibold shadow-sm' 
-                    : 'text-white/80 hover:bg-white/10 hover:text-[#d4af37] font-medium'
+                    ? 'bg-royal text-white font-semibold shadow-sm border-l-4 border-ouro' 
+                    : 'text-white/80 hover:bg-white/10 hover:text-ouro font-medium'
                 }`}
                 title={(!isMobile && isCollapsed) ? item.label : undefined}
               >
-                <item.icon className={`w-5 h-5 shrink-0 ${active ? 'text-[#1a3a52]' : 'group-hover:text-[#d4af37]'}`} />
+                <item.icon className={`w-5 h-5 shrink-0 ${active ? 'text-ouro' : 'group-hover:text-ouro'}`} />
                 {(isMobile || !isCollapsed) && <span className="truncate">{item.label}</span>}
               </Link>
               </React.Fragment>

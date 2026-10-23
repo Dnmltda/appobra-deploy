@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { Skeleton } from '@/components/ui/skeleton';
+import CarregandoCoroa from '@/components/marca/CarregandoCoroa.jsx';
 import { auditLog, AUDIT_MODULES } from '@/lib/auditLogger.js';
 import { ehAdmin, cargoDe, podeAcessar } from '@/lib/permissoes.js';
 
@@ -28,15 +28,7 @@ const ProtectedRoute = ({ children, requiredRoles = [], module = null }) => {
   }, [accessDenied, location.pathname, userRole]);
 
   if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="space-y-4 w-full max-w-md px-4">
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <Skeleton className="h-64 w-full rounded-xl" />
-          <Skeleton className="h-12 w-full rounded-xl" />
-        </div>
-      </div>
-    );
+    return <CarregandoCoroa />;
   }
 
   if (!isAuthenticated || !currentUser) {

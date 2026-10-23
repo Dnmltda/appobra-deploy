@@ -79,7 +79,7 @@ const PasswordRecoveryModal = ({ open, onClose, mode = 'forgot' }) => {
       <Dialog open={open} onOpenChange={resetStateAndClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#1a3a52]">{t('alterarSenha', language)}</DialogTitle>
+            <DialogTitle className="text-marinho">{t('alterarSenha', language)}</DialogTitle>
             <DialogDescription>
               Atualize sua senha de acesso. A nova senha deve ter no mínimo 8 caracteres.
             </DialogDescription>
@@ -122,7 +122,7 @@ const PasswordRecoveryModal = ({ open, onClose, mode = 'forgot' }) => {
               <Button type="button" variant="outline" onClick={resetStateAndClose} className="flex-1">
                 {t('cancelar', language)}
               </Button>
-              <Button type="submit" disabled={loading} className="flex-1 bg-[#1a3a52] text-white hover:bg-[#1a3a52]/90 font-bold">
+              <Button type="submit" disabled={loading} className="flex-1 bg-marinho text-white hover:bg-marinho/90 font-bold">
                 {loading ? 'Salvando...' : t('salvar', language)}
               </Button>
             </div>
@@ -137,7 +137,7 @@ const PasswordRecoveryModal = ({ open, onClose, mode = 'forgot' }) => {
     <Dialog open={open} onOpenChange={resetStateAndClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-[#1a3a52]">{t('recuperarSenha', language)}</DialogTitle>
+          <DialogTitle className="text-marinho">{t('recuperarSenha', language)}</DialogTitle>
           <DialogDescription>
             Informe seu email, ID ou nome de usuário para receber instruções de recuperação.
           </DialogDescription>
@@ -209,7 +209,7 @@ const PasswordRecoveryModal = ({ open, onClose, mode = 'forgot' }) => {
             <Button 
               type="submit" 
               disabled={loading}
-              className="flex-1 bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] font-bold"
+              className="flex-1 bg-ouro text-marinho hover:bg-ouro-escuro font-bold"
             >
               {loading ? 'Enviando...' : t('enviar', language)}
             </Button>

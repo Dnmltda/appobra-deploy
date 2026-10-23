@@ -10,11 +10,11 @@ const LoginHeader = ({ companyName, onAbout }) => {
         <Logo size="lg" variant="dark" />
       </div>
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-[#1a3a52] tracking-tight">
+        <h1 className="text-2xl font-bold text-marinho tracking-tight">
           APP OBRA
         </h1>
         {companyName ? (
-          <p className="text-sm font-semibold text-[#d4af37] uppercase tracking-wide">
+          <p className="text-sm font-semibold text-ouro uppercase tracking-wide">
             {companyName}
           </p>
         ) : (
@@ -27,7 +27,7 @@ const LoginHeader = ({ companyName, onAbout }) => {
         <button
           type="button"
           onClick={onAbout}
-          className="mx-auto inline-flex items-center gap-1.5 text-xs font-semibold text-[#1a3a52] hover:text-[#d4af37] transition-colors"
+          className="mx-auto inline-flex items-center gap-1.5 text-xs font-semibold text-marinho hover:text-ouro transition-colors"
         >
           <Building2 className="w-3.5 h-3.5" />
           Sobre a Empresa

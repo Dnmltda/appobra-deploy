@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { MotionConfig, motion } from 'framer-motion';
 import { Helmet } from 'react-helmet';
-import { Route, Routes, BrowserRouter as Router, Navigate, useSearchParams, Link as RouterLink } from 'react-router-dom';
+import { Route, Routes, BrowserRouter as Router, Navigate, useSearchParams, useLocation, Link as RouterLink } from 'react-router-dom';
 import { CompanyProvider } from '@/contexts/CompanyContext.jsx';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext.jsx';
 import { LanguageProvider } from '@/contexts/LanguageContext.jsx';
@@ -619,8 +620,8 @@ const ResetPasswordPageInline = () => {
         <Card className="w-full max-w-md">
           <CardContent className="p-8">
             <div className="flex items-center gap-2 mb-2">
-              <KeyRound className="w-6 h-6 text-[#d4af37]" />
-              <h1 className="text-xl font-bold text-[#1a3a52]">Redefinir senha</h1>
+              <KeyRound className="w-6 h-6 text-ouro" />
+              <h1 className="text-xl font-bold text-marinho">Redefinir senha</h1>
             </div>
             <p className="text-sm text-muted-foreground mb-6">Escolha uma nova senha para sua conta.</p>
 
@@ -689,7 +690,7 @@ const ResetPasswordPageInline = () => {
                 )}
               </div>
 
-              <Button type="submit" disabled={rpLoading} className="w-full bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] font-bold">
+              <Button type="submit" disabled={rpLoading} className="w-full bg-ouro text-marinho hover:bg-ouro-escuro font-bold">
                 {rpLoading ? (
                   <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Salvando…</span>
                 ) : (
@@ -839,8 +840,8 @@ const AtivarContaPageInline = () => {
           <Card className="w-full max-w-md">
             <CardContent className="p-8">
               <div className="flex items-center gap-2 mb-2">
-                <UserCheck className="w-6 h-6 text-[#d4af37]" />
-                <h1 className="text-xl font-bold text-[#1a3a52]">Confirme seus dados</h1>
+                <UserCheck className="w-6 h-6 text-ouro" />
+                <h1 className="text-xl font-bold text-marinho">Confirme seus dados</h1>
               </div>
               <p className="text-sm text-muted-foreground mb-6">
                 Esses dados foram cadastrados pelo administrador. Confira se estão corretos antes de continuar.
@@ -875,7 +876,7 @@ const AtivarContaPageInline = () => {
                 Se algum dado estiver errado, avise o administrador antes de continuar — depois de criar a senha,
                 qualquer correção de cadastro só pode ser feita por ele.
               </p>
-              <Button onClick={handleConfirmData} className="w-full bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] font-bold">
+              <Button onClick={handleConfirmData} className="w-full bg-ouro text-marinho hover:bg-ouro-escuro font-bold">
                 Dados corretos, continuar
               </Button>
             </CardContent>
@@ -892,8 +893,8 @@ const AtivarContaPageInline = () => {
         <Card className="w-full max-w-md">
           <CardContent className="p-8">
             <div className="flex items-center gap-2 mb-2">
-              <KeyRound className="w-6 h-6 text-[#d4af37]" />
-              <h1 className="text-xl font-bold text-[#1a3a52]">Crie seu usuário e senha</h1>
+              <KeyRound className="w-6 h-6 text-ouro" />
+              <h1 className="text-xl font-bold text-marinho">Crie seu usuário e senha</h1>
             </div>
             <p className="text-sm text-muted-foreground mb-6">
               Para entrar no sistema você vai poder usar o seu e-mail{invite?.id_unico ? `, o seu ID (${invite.id_unico})` : ''} ou o nome de usuário abaixo.
@@ -976,7 +977,7 @@ const AtivarContaPageInline = () => {
                 )}
               </div>
 
-              <Button type="submit" disabled={acLoading} className="w-full bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] font-bold">
+              <Button type="submit" disabled={acLoading} className="w-full bg-ouro text-marinho hover:bg-ouro-escuro font-bold">
                 {acLoading ? (
                   <span className="flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Ativando…</span>
                 ) : (
@@ -991,13 +992,25 @@ const AtivarContaPageInline = () => {
   );
 };
 
+// Cada tela entra com um esmaecer rápido (sem deslocar: o menu lateral é fixo).
+const EntradaTela = ({ children }) => {
+  const { pathname } = useLocation();
+  return (
+    <motion.div key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+      {children}
+    </motion.div>
+  );
+};
+
 function App() {
   return (
     <CompanyProvider>
       <LanguageProvider>
         <AuthProvider>
+          <MotionConfig reducedMotion="user">
           <Router>
             <ScrollToTop />
+            <EntradaTela>
             <Routes>
               <Route path="/" element={<SplashScreen />} />
               <Route path="/login" element={<LoginPage />} />
@@ -1071,8 +1084,10 @@ function App() {
               {/* Catch-all */}
               <Route path="*" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             </Routes>
+            </EntradaTela>
             <Toaster position="top-right" richColors />
           </Router>
+          </MotionConfig>
         </AuthProvider>
       </LanguageProvider>
     </CompanyProvider>

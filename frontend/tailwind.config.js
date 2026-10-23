@@ -16,7 +16,16 @@ module.exports = {
       },
     },
     extend: {
+      // Identidade DNM&LTDA (logo oficial): marinho, royal, ouro e creme.
+      fontFamily: {
+        sans: ["Montserrat", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+        titulo: ["\"Playfair Display\"", "Georgia", "serif"],
+      },
       colors: {
+        marinho: "#0A1F4D",
+        royal: "#1E40AF",
+        ouro: { DEFAULT: "#E5B339", escuro: "#B8862B" },
+        creme: "#F7EFDC",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

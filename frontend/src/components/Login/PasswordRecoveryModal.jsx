@@ -71,8 +71,8 @@ const PasswordRecoveryModal = ({ open, onClose }) => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-[#d4af37]" />
-            <DialogTitle className="text-[#1a3a52]">Esqueci minha senha</DialogTitle>
+            <KeyRound className="w-5 h-5 text-ouro" />
+            <DialogTitle className="text-marinho">Esqueci minha senha</DialogTitle>
           </div>
           <DialogDescription>
             Informe seu email. Se houver uma conta associada, enviaremos um link para você criar uma nova senha.
@@ -101,7 +101,7 @@ const PasswordRecoveryModal = ({ open, onClose }) => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-[#d4af37] text-[#1a3a52] hover:bg-[#c9a227] font-bold"
+                className="flex-1 bg-ouro text-marinho hover:bg-ouro-escuro font-bold"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
@@ -122,7 +122,7 @@ const PasswordRecoveryModal = ({ open, onClose }) => {
               Se houver uma conta associada a <strong>{email}</strong>, um email com o link de redefinição foi enviado.
               Verifique também a caixa de spam.
             </p>
-            <Button onClick={handleClose} className="bg-[#1a3a52] text-white hover:bg-[#1a3a52]/90 font-bold">
+            <Button onClick={handleClose} className="bg-marinho text-white hover:bg-marinho/90 font-bold">
               Entendi
             </Button>
           </div>

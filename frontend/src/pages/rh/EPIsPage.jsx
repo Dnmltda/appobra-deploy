@@ -73,6 +73,7 @@ import {
   Save,
   Signature,
 } from 'lucide-react';
+import IconeModulo3D from '@/components/marca/IconeModulo3D.jsx';
 import { mensagemErro } from '@/lib/erros.js';
 import { toast } from 'sonner';
 import {
@@ -111,7 +112,7 @@ const TIPOS_REPOSICAO = [
 const TIPOS_OPERACAO = ['Entrega', 'Devolução', 'Reposição', 'Alteração', 'Exclusão'];
 const STATUS_EPI = ['Ativo', 'Inativo'];
 
-const CHART_COLORS = ['#1a3a52', '#d4af37', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#06b6d4', '#a855f7', '#f43f5e', '#eab308', '#64748b'];
+const CHART_COLORS = ['#0A1F4D', '#E5B339', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#06b6d4', '#a855f7', '#f43f5e', '#eab308', '#64748b'];
 
 const fmtCurrency = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
@@ -188,7 +189,7 @@ const SignaturePad = ({ value, onChange }) => {
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1a3a52';
+    ctx.strokeStyle = '#0A1F4D';
     if (value) {
       const img = new Image();
       img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -875,7 +876,7 @@ const EPIsPage = () => {
           {/* Cabeçalho */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-primary mb-1">Gestão de EPIs</h1>
+              <h1 className="text-3xl font-bold mb-1 text-marinho flex items-center gap-3"><IconeModulo3D icon={HardHat} />Gestão de EPIs</h1>
               <p className="text-muted-foreground">Controle completo de Equipamentos de Proteção Individual</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -960,7 +961,7 @@ const EPIsPage = () => {
                       <CardContent className="h-72">
                         {chartPorFuncionario.length === 0 ? <EmptyChart /> : (
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartPorFuncionario}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="value" fill="#1a3a52" radius={[6,6,0,0]} /></BarChart>
+                            <BarChart data={chartPorFuncionario}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="value" fill="#0A1F4D" radius={[6,6,0,0]} /></BarChart>
                           </ResponsiveContainer>
                         )}
                       </CardContent>
@@ -969,7 +970,7 @@ const EPIsPage = () => {
                       <CardContent className="h-72">
                         {chartPorObra.length === 0 ? <EmptyChart /> : (
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartPorObra}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="value" fill="#d4af37" radius={[6,6,0,0]} /></BarChart>
+                            <BarChart data={chartPorObra}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="value" fill="#E5B339" radius={[6,6,0,0]} /></BarChart>
                           </ResponsiveContainer>
                         )}
                       </CardContent>

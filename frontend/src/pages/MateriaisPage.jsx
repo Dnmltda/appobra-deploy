@@ -68,6 +68,7 @@ import {
   Upload,
   X,
 } from 'lucide-react';
+import IconeModulo3D from '@/components/marca/IconeModulo3D.jsx';
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
 import { coresPara, corPorNome, nomeComCor } from '@/lib/coresMaterial.js';
@@ -638,7 +639,7 @@ const MateriaisPage = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Materiais</h1>
+            <h1 className="text-3xl font-bold mb-2 text-marinho flex items-center gap-3"><IconeModulo3D icon={Package} />Materiais</h1>
             <p className="text-muted-foreground">Gerencie os materiais e o estoque da sua empresa</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>

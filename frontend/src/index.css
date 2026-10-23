@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,27 +6,34 @@
 
 @layer base {
   :root {
-    /* DNM&LTDA OBRAS Brand Colors */
-    --background: 0 0% 100%;
-    --foreground: 210 40% 16%;
-    
-    --card: 0 0% 98%;
-    --card-foreground: 210 40% 16%;
-    
+    /* Identidade DNM&LTDA (logo oficial):
+       marinho #0A1F4D (principal) · royal #1E40AF (bordas, aba e menu ativos)
+       ouro #E5B339 / #B8862B (botões e destaques) · creme #F7EFDC (cartões de destaque)
+       vermelho só para alerta e estoque baixo. */
+    --background: 40 33% 98%;
+    --foreground: 221 50% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 221 50% 14%;
+
     --popover: 0 0% 100%;
-    --popover-foreground: 210 40% 16%;
-    
-    /* Primary: Azul Escuro #1a3a52 */
-    --primary: 210 51% 22%;
+    --popover-foreground: 221 50% 14%;
+
+    /* Principal: marinho #0A1F4D */
+    --primary: 221 77% 17%;
     --primary-foreground: 0 0% 100%;
-    
-    /* Secondary/Accent: Dourado #d4af37 */
-    --secondary: 45 69% 52%;
-    --secondary-foreground: 210 51% 22%;
-    
-    --accent: 45 69% 52%;
-    --accent-foreground: 210 51% 22%;
-    
+
+    /* Destaque: ouro #E5B339 (texto em marinho) */
+    --secondary: 43 77% 56%;
+    --secondary-foreground: 221 77% 17%;
+
+    --accent: 43 77% 56%;
+    --accent-foreground: 221 77% 17%;
+
+    --royal: 226 71% 40%;
+    --ouro-escuro: 39 62% 45%;
+    --creme: 42 63% 92%;
+
     --muted: 210 20% 96%;
     --muted-foreground: 215 16% 47%;
     
@@ -42,9 +49,9 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
     
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 45 69% 52%;
+    --border: 222 25% 88%;
+    --input: 222 25% 86%;
+    --ring: 226 71% 40%;
     
     --radius: 0.75rem;
   }
@@ -80,7 +87,7 @@
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     overflow-x: hidden;
     font-variant-numeric: tabular-nums;
   }
@@ -91,6 +98,7 @@
 
   h1, h2, h3, h4, h5, h6 {
     text-wrap: balance;
+    font-family: "Playfair Display", Georgia, serif;
     font-weight: 700;
     color: hsl(var(--primary));
     letter-spacing: -0.02em;
@@ -139,4 +147,40 @@
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* ---------- Identidade DNM&LTDA: efeitos (leves: só transform/opacity) ---------- */
+@layer components {
+  /* Selo dourado em relevo para os ícones dos módulos */
+  .icone-3d {
+    background: linear-gradient(145deg, #F4D27A 0%, #E5B339 45%, #B8862B 100%);
+    box-shadow: inset 0 2px 1px rgba(255, 255, 255, 0.55), inset 0 -3px 4px rgba(122, 82, 16, 0.45),
+      0 6px 12px -4px rgba(10, 31, 77, 0.45);
+    color: #0A1F4D;
+  }
+  /* Cartão de destaque em creme com borda dourada fina */
+  .cartao-creme {
+    background-color: #F7EFDC;
+    border-color: rgba(184, 134, 43, 0.35);
+  }
+}
+
+@keyframes brilho-ouro {
+  0% { transform: translateX(-120%) skewX(-20deg); }
+  60%, 100% { transform: translateX(220%) skewX(-20deg); }
+}
+.brilho-ouro { position: relative; overflow: hidden; }
+.brilho-ouro::after {
+  content: ""; position: absolute; inset: 0; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 236, 170, 0.55), transparent);
+  animation: brilho-ouro 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes giro-coroa { to { transform: rotateY(360deg); } }
+.giro-coroa { animation: giro-coroa 1.6s linear infinite; transform-style: preserve-3d; }
+
+@media (prefers-reduced-motion: reduce) {
+  .brilho-ouro::after, .giro-coroa { animation: none; }
+  *, *::before, *::after { scroll-behavior: auto !important; }
 }
