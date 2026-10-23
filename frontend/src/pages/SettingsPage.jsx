@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import CartaoInstalarApp from '@/components/marca/CartaoInstalarApp.jsx';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -162,7 +163,9 @@ const SettingsPage = () => {
             </div>
 
             <div className="col-span-1 md:col-span-3 space-y-8">
-              
+              <CartaoInstalarApp />
+
+
               {activeTab === 'language' && (
                 <Card className="shadow-sm border-border bg-card">
                   <CardHeader className="border-b border-border pb-4 flex flex-row items-center gap-3">

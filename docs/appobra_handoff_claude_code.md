@@ -117,7 +117,9 @@
 - **Instalar o app** (pedido do Diego): `public/manifest.json`, ícones `icone-*.png`, `public/sw.js` (guarda só
   `/assets` e imagens da marca; telas e `/api` sempre da internet) e botão "Instalar app" no login e no rodapé do
   menu (`components/marca/BotaoInstalar.jsx`, `lib/instalarApp.js`; no iPhone mostra Compartilhar → Adicionar à
-  Tela de Início). Chrome confirmou: instalável, sem erros de manifesto.
+  Tela de Início). Também um cartão "Instalar o APP OBRA" no topo de Configurações (pedido do Diego;
+  `CartaoInstalarApp.jsx`, sempre aparece e explica o caminho quando o navegador não oferece o botão). Chrome
+  confirmou: instalável, sem erros de manifesto.
 - Testes: navegador 26 arquivos, 237 OK / 0 falha; depois dos ajustes, login/pedido/permissões/equipamento 67 OK;
   servidor 310/0.
 
