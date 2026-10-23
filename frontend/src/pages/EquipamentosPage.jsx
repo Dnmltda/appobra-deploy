@@ -69,7 +69,7 @@ const ESTADO_COLORS = {
   'Excelente': '#16a34a', 'Bom': '#2563eb', 'Regular': '#d97706',
   'Ruim': '#ea580c', 'Crítico': '#dc2626',
 };
-const PIE_COLORS = ['#0A1F4D', '#E5B339', '#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#6b7280'];
+const PIE_COLORS = ['#0A1F4D', '#D09C26', '#16a34a', '#2563eb', '#d97706', '#dc2626', '#7c3aed', '#0891b2', '#db2777', '#6b7280'];
 
 const formatCurrency = (v) =>
   Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -1277,7 +1277,7 @@ const EquipamentosPage = () => {
                     <XAxis type="number" tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
                     <Tooltip />
-                    <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#E5B339" />
+                    <Bar dataKey="value" radius={[0, 6, 6, 0]} fill="#D09C26" />
                   </BarChart>
                 </ResponsiveContainer>
               ) : <div className="h-[220px] flex items-center justify-center text-sm text-muted-foreground">Sem dados</div>}

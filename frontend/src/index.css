@@ -8,7 +8,7 @@
   :root {
     /* Identidade DNM&LTDA (logo oficial):
        marinho #0A1F4D (principal) · royal #1E40AF (bordas, aba e menu ativos)
-       ouro #E5B339 / #B8862B (botões e destaques) · creme #F7EFDC (cartões de destaque)
+       ouro #D09C26 / #A87111 (botões e destaques) · creme #F7EFDC (cartões de destaque)
        vermelho só para alerta e estoque baixo. */
     --background: 40 33% 98%;
     --foreground: 221 50% 14%;
@@ -23,15 +23,15 @@
     --primary: 221 77% 17%;
     --primary-foreground: 0 0% 100%;
 
-    /* Destaque: ouro #E5B339 (texto em marinho) */
-    --secondary: 43 77% 56%;
+    /* Destaque: ouro #D09C26 (texto em marinho) */
+    --secondary: 42 69% 48%;
     --secondary-foreground: 221 77% 17%;
 
-    --accent: 43 77% 56%;
+    --accent: 42 69% 48%;
     --accent-foreground: 221 77% 17%;
 
     --royal: 226 71% 40%;
-    --ouro-escuro: 39 62% 45%;
+    --ouro-escuro: 38 82% 36%;
     --creme: 42 63% 92%;
 
     --muted: 210 20% 96%;
@@ -153,7 +153,7 @@
 @layer components {
   /* Selo dourado em relevo para os ícones dos módulos */
   .icone-3d {
-    background: linear-gradient(145deg, #F4D27A 0%, #E5B339 45%, #B8862B 100%);
+    background: linear-gradient(145deg, #F1C658 0%, #D09C26 45%, #A87111 100%);
     box-shadow: inset 0 2px 1px rgba(255, 255, 255, 0.55), inset 0 -3px 4px rgba(122, 82, 16, 0.45),
       0 6px 12px -4px rgba(10, 31, 77, 0.45);
     color: #0A1F4D;

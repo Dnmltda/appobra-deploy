@@ -24,7 +24,7 @@ module.exports = {
       colors: {
         marinho: "#0A1F4D",
         royal: "#1E40AF",
-        ouro: { DEFAULT: "#E5B339", escuro: "#B8862B" },
+        ouro: { DEFAULT: "#D09C26", escuro: "#A87111" },
         creme: "#F7EFDC",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

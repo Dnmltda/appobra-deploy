@@ -186,7 +186,7 @@ const ComprasPage = () => {
     h.exportAudit("Impressão");
   };
 
-  const COLORS = ["#0A1F4D", "#E5B339", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
+  const COLORS = ["#0A1F4D", "#D09C26", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
   const nomeFornecedor = (c) => c.expand?.fornecedor_id?.nome || c.expand?.fornecedor_id?.razao_social || "-";
   const nomeSolicitante = (c) => c.expand?.solicitante_id?.nome_completo || c.expand?.solicitante_id?.name || "-";
@@ -273,7 +273,7 @@ const ComprasPage = () => {
                     <XAxis dataKey="name" axisLine={false} tickLine={false} />
                     <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `R$${v / 1000}k`} />
                     <Tooltip formatter={(v) => formatCurrency(v)} />
-                    <Bar dataKey="valor" name="Valor" fill="#E5B339" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="valor" name="Valor" fill="#D09C26" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

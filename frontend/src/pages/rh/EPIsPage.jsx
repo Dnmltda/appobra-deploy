@@ -112,7 +112,7 @@ const TIPOS_REPOSICAO = [
 const TIPOS_OPERACAO = ['Entrega', 'Devolução', 'Reposição', 'Alteração', 'Exclusão'];
 const STATUS_EPI = ['Ativo', 'Inativo'];
 
-const CHART_COLORS = ['#0A1F4D', '#E5B339', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#06b6d4', '#a855f7', '#f43f5e', '#eab308', '#64748b'];
+const CHART_COLORS = ['#0A1F4D', '#D09C26', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#06b6d4', '#a855f7', '#f43f5e', '#eab308', '#64748b'];
 
 const fmtCurrency = (v) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v || 0));
@@ -970,7 +970,7 @@ const EPIsPage = () => {
                       <CardContent className="h-72">
                         {chartPorObra.length === 0 ? <EmptyChart /> : (
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartPorObra}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="value" fill="#E5B339" radius={[6,6,0,0]} /></BarChart>
+                            <BarChart data={chartPorObra}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" axisLine={false} tickLine={false} /><YAxis axisLine={false} tickLine={false} /><Tooltip /><Bar dataKey="value" fill="#D09C26" radius={[6,6,0,0]} /></BarChart>
                           </ResponsiveContainer>
                         )}
                       </CardContent>
