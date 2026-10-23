@@ -1,38 +1,29 @@
 import React from 'react';
-import Coroa from '@/components/marca/Coroa.jsx';
 
-// Logotipo oficial da DNM&LTDA (arquivos em public/, recortados sem redesenhar):
-//  - sm/md: só a coroa, num selo, ao lado do nome do app (menu e cabeçalhos).
-//  - lg: coroa + nome, com brilho dourado (login).
+// Logo do APP OBRA (aprovado pelo Diego em 23/10/2026; arquivos em docs/marca/app-obra):
+//  - sm/md: símbolo (capacete com a coroa) + nome, no menu e cabeçalhos.
+//  - lg: versão vertical completa (login).
 const Logo = ({
   size = 'md',
   variant = 'dark'
 }) => {
   if (size === 'lg') {
-    return <span className="brilho-ouro inline-block rounded-2xl ring-1 ring-ouro-escuro/30 shadow-md">
-        <img src="/marca-dnm.webp" alt="DNM&LTDA" className="block w-56 sm:w-64 h-auto rounded-2xl" draggable="false" />
-      </span>;
+    return <img src={variant === 'light' ? '/app-obra-vertical-escuro.svg' : '/app-obra-vertical-claro.svg'} alt="APP OBRA by DNM&LTDA" className="block w-60 sm:w-64 h-auto" draggable="false" />;
   }
-  const sizeClasses = {
-    sm: 'text-lg',
-    md: 'text-2xl'
-  };
-  const variantClasses = {
-    dark: 'text-marinho',
-    light: 'text-white'
-  };
   const iconSizes = {
-    sm: 'w-8 h-8',
-    md: 'w-11 h-11'
+    sm: 'w-9 h-auto',
+    md: 'w-12 h-auto'
   };
+  const corNome = variant === 'light' ? 'text-creme' : 'text-marinho';
+  const corAssinatura = variant === 'light' ? 'text-ouro' : 'text-ouro-escuro';
   return <div className="flex items-center gap-3">
-      <Coroa className={iconSizes[size]} />
+      <img src="/app-obra-simbolo.svg" alt="" className={`shrink-0 ${iconSizes[size]}`} draggable="false" />
       <div className="flex flex-col">
-        <span className={`font-titulo font-bold tracking-tight leading-tight ${sizeClasses[size]} ${variantClasses[variant]}`}>
-          DNM&LTDA
-        </span>
-        <span className={`text-ouro font-semibold uppercase tracking-widest ${size === 'sm' ? 'text-[10px]' : 'text-xs'}`}>
+        <span className={`font-titulo font-black tracking-tight leading-tight ${size === 'sm' ? 'text-lg' : 'text-2xl'} ${corNome}`}>
           APP OBRA
+        </span>
+        <span className={`font-bold uppercase tracking-[0.2em] ${size === 'sm' ? 'text-[9px]' : 'text-[10px]'} ${corAssinatura}`}>
+          by DNM&LTDA
         </span>
       </div>
     </div>;

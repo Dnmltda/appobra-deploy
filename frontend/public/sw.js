@@ -2,8 +2,8 @@
 // Só guarda os arquivos fixos do app (pasta /assets, que mudam de nome a cada
 // versão) e as imagens da marca, para abrir mais rápido. Dados do servidor
 // (/api) e as telas nunca saem daqui: sempre vêm da internet, atualizados.
-const CACHE = "appobra-arquivos-v1";
-const FIXOS = /^\/(assets\/|logo-dnm|marca-dnm|coroa-dnm|icone-|favicon-coroa|apple-touch-icon)/;
+const CACHE = "appobra-arquivos-v2";
+const FIXOS = /^\/(assets\/|logo-dnm|app-obra-|icone-|favicon-app|apple-touch-icon)/;
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => {

@@ -27,7 +27,6 @@ import {
   Warehouse,
   MessagesSquare, QrCode } from 'lucide-react';
 import Logo from './Logo.jsx';
-import Coroa from '@/components/marca/Coroa.jsx';
 import BotaoInstalar from '@/components/marca/BotaoInstalar.jsx';
 import { ehAdmin, podeAcessar, podeVerEstoque } from '@/lib/permissoes.js';
 
@@ -152,7 +151,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
           onClick={() => setIsCollapsed(!isCollapsed)}
         >
           {(!isMobile && isCollapsed) ? (
-            <Coroa className="w-10 h-10" />
+            <img src="/app-obra-simbolo.svg" alt="APP OBRA" className="w-11 h-auto" draggable="false" />
           ) : (
             <Logo size="md" variant="light" />
           )}

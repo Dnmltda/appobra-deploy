@@ -10,9 +10,7 @@ const LoginHeader = ({ companyName, onAbout }) => {
         <Logo size="lg" variant="dark" />
       </div>
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-marinho tracking-tight">
-          APP OBRA
-        </h1>
+        <h1 className="sr-only">APP OBRA</h1>
         {companyName ? (
           <p className="text-sm font-semibold text-ouro uppercase tracking-wide">
             {companyName}

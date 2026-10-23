@@ -18,8 +18,6 @@ import PasswordRecoveryModal from '@/components/Login/PasswordRecoveryModal.jsx'
 import CreateAccountModal from '@/components/Login/CreateAccountModal.jsx';
 import ContactModal from '@/components/Login/ContactModal.jsx';
 
-import Logo from '@/components/Logo.jsx';
-import Coroa from '@/components/marca/Coroa.jsx';
 import BotaoInstalar from '@/components/marca/BotaoInstalar.jsx';
 
 const INSTITUTIONAL_IMAGE =
@@ -91,15 +89,10 @@ const LoginPage = () => {
           </div>
 
           <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
-            <div className="flex items-center gap-3">
-              <Coroa brilho className="w-12 h-12" />
-              <div className="flex flex-col">
-                <span className="font-titulo font-bold text-xl tracking-tight">DNM&LTDA</span>
-                <span className="text-ouro font-semibold uppercase text-xs tracking-wide">
-                  APP OBRA
-                </span>
-              </div>
-            </div>
+            {/* Logo oficial da DNM&LTDA, inteiro e sem alteração (pedido do Diego). */}
+            <span className="brilho-ouro block w-56 rounded-xl shadow-lg">
+              <img src="/logo-dnm.webp" alt="DNM&LTDA — Tecnologia & Soluções Digitais" className="block w-full h-auto rounded-xl" draggable="false" />
+            </span>
 
             <div className="space-y-6 max-w-md">
               <h2 className="text-4xl font-bold leading-tight text-white">
@@ -190,7 +183,7 @@ const LoginPage = () => {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <div className="flex justify-center mb-2">
-              <Logo size="md" variant="dark" />
+              <img src="/logo-dnm.webp" alt="DNM&LTDA — Tecnologia & Soluções Digitais" className="w-64 h-auto rounded-xl shadow-md" draggable="false" />
             </div>
             <DialogTitle className="text-center text-marinho">DNM&LTDA</DialogTitle>
           </DialogHeader>
