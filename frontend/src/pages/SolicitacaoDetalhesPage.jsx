@@ -447,11 +447,11 @@ const FluxoMaterial = ({
         ) : (
           <>
           <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden" role="progressbar" aria-label="Andamento"
-            aria-valuemin={0} aria-valuemax={PASSOS.length - 1} aria-valuenow={Math.max(atual, 0)}>
+            aria-valuemin={0} aria-valuemax={PASSOS.length} aria-valuenow={Math.max(atual, 0) + 1}>
             <motion.div
               className="h-full rounded-full bg-gradient-to-r from-ouro-escuro via-ouro to-ouro"
               initial={{ width: 0 }}
-              animate={{ width: `${(Math.max(atual, 0) / (PASSOS.length - 1)) * 100}%` }}
+              animate={{ width: `${((Math.max(atual, 0) + 1) / PASSOS.length) * 100}%` }}
               transition={{ duration: 0.9, ease: "easeOut" }}
             />
           </div>
