@@ -28,6 +28,7 @@ import {
   MessagesSquare, QrCode } from 'lucide-react';
 import Logo from './Logo.jsx';
 import Coroa from '@/components/marca/Coroa.jsx';
+import BotaoInstalar from '@/components/marca/BotaoInstalar.jsx';
 import { ehAdmin, podeAcessar, podeVerEstoque } from '@/lib/permissoes.js';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
@@ -191,8 +192,9 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         </div>
         
         {(isMobile || !isCollapsed) && (
-          <div className="p-4 border-t border-white/10 text-xs text-white/50 text-center">
-            DNM&LTDA © {new Date().getFullYear()}
+          <div className="p-4 border-t border-white/10 text-xs text-white/50 text-center space-y-3">
+            <BotaoInstalar variant="default" className="w-full" />
+            <div>DNM&LTDA © {new Date().getFullYear()}</div>
           </div>
         )}
       </aside>

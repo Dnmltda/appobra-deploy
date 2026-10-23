@@ -103,6 +103,24 @@
   operação.
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
+**Identidade visual DNM&LTDA e app instalável (23/10/2026, Claude Code) — PR aguardando o Diego, não publicado**
+- **Só visual** (pedido do Diego): logo oficial (original em `docs/marca/logo-dnm-original.png`; recortes sem
+  redesenhar em `frontend/public/`: `logo-dnm.webp` abertura, `marca-dnm.webp` coroa+nome no login, `coroa-dnm.webp`
+  menu/carregando). Paleta no `tailwind.config.js`: `marinho` #0A1F4D, `royal` #1E40AF (menu/aba ativa, bordas),
+  `ouro` #D09C26 / `ouro-escuro` #A87111 (tirados da coroa; o Diego pediu "mais dourado" que o #E5B339), `creme`
+  #F7EFDC só nos cartões do painel. Vermelho só para alerta e estoque baixo. Títulos Playfair Display, textos
+  Montserrat. Botão padrão (`ui/button`) dourado.
+- Animações em `frontend/src/components/marca/` (Framer Motion, `MotionConfig reducedMotion="user"` no App):
+  cartões do painel com inclinação 3D e número contando, ícones dourados 3D em Obras/Materiais/Equipamentos/EPIs/
+  Compras, barra animada no andamento do pedido, entrada suave de telas (só opacidade: o menu é fixo) e listas,
+  coroa com brilho no login e girando no carregando. CSS respeita `prefers-reduced-motion`.
+- **Instalar o app** (pedido do Diego): `public/manifest.json`, ícones `icone-*.png`, `public/sw.js` (guarda só
+  `/assets` e imagens da marca; telas e `/api` sempre da internet) e botão "Instalar app" no login e no rodapé do
+  menu (`components/marca/BotaoInstalar.jsx`, `lib/instalarApp.js`; no iPhone mostra Compartilhar → Adicionar à
+  Tela de Início). Chrome confirmou: instalável, sem erros de manifesto.
+- Testes: navegador 26 arquivos, 237 OK / 0 falha; depois dos ajustes, login/pedido/permissões/equipamento 67 OK;
+  servidor 310/0.
+
 **Titular, limpeza dos testes, empresa de teste e limites (21–22/10/2026, Claude Code)**
 - **Publicado e executado em 22/10/2026:** PR #12 (Fly v24); `LIMPEZA_TESTES` e `SENHA_SUPERUSUARIO_TITULAR` colocados
   pelo Claude Code com `flyctl secrets set` a pedido do Diego (v25) e retirados depois (v26). Limpeza feita (backup

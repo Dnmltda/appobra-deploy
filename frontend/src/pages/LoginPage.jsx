@@ -20,6 +20,7 @@ import ContactModal from '@/components/Login/ContactModal.jsx';
 
 import Logo from '@/components/Logo.jsx';
 import Coroa from '@/components/marca/Coroa.jsx';
+import BotaoInstalar from '@/components/marca/BotaoInstalar.jsx';
 
 const INSTITUTIONAL_IMAGE =
   'https://images.hostinger.com/737561dd-cbc6-443f-adeb-dd0a499eeb70.png';
@@ -164,6 +165,10 @@ const LoginPage = () => {
 
               <div className="mt-6">
                 <SocialLoginButtons />
+              </div>
+
+              <div className="mt-4 flex justify-center">
+                <BotaoInstalar className="w-full h-11" />
               </div>
 
               <LoginFooter

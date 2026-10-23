@@ -1,0 +1,18 @@
+{
+  "name": "APP OBRA — DNM&LTDA",
+  "short_name": "APP OBRA",
+  "description": "Gestão de obras, materiais, ferramentas, EPIs e compras.",
+  "id": "/",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "pt-BR",
+  "background_color": "#F7EFDC",
+  "theme_color": "#0A1F4D",
+  "icons": [
+    { "src": "/icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
