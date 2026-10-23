@@ -122,6 +122,12 @@
   confirmou: instalável, sem erros de manifesto.
 - Testes: navegador 26 arquivos, 237 OK / 0 falha; depois dos ajustes, login/pedido/permissões/equipamento 67 OK;
   servidor 310/0.
+- **Logo do APP OBRA** (aprovado pelo Diego, 23/10): capacete de obra com volume e a coroa DNM em cima, "APP OBRA"
+  (Playfair Black) e "BY DNM&LTDA" (Montserrat Bold). 5 versões + símbolo em `docs/marca/app-obra/` (SVG com letras
+  em contorno e PNG 3x, LEIA-ME, gerador `gera-logo.py`) e `docs/marca/app-obra-logo.zip`. No app: ícone de
+  instalação/favicon, abertura, login, menu e carregando.
+- **Regra do Diego:** onde aparece a empresa, usar **sempre o logo oficial da DNM&LTDA inteiro** (`logo-dnm.webp`,
+  sem recorte): painel esquerdo do login e "Sobre a Empresa". Nada de recortes da coroa.
 
 **Titular, limpeza dos testes, empresa de teste e limites (21–22/10/2026, Claude Code)**
 - **Publicado e executado em 22/10/2026:** PR #12 (Fly v24); `LIMPEZA_TESTES` e `SENHA_SUPERUSUARIO_TITULAR` colocados
