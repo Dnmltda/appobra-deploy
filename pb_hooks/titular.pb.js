@@ -33,6 +33,21 @@ onRecordDelete((e) => {
   e.next();
 }, "users");
 
+// Convite, senha e e-mail do titular só mudam pela própria conta ou pelo
+// suporte (auditoria de 24/10/2026, item A1): antes outro administrador da
+// empresa do titular podia gravar um convite na conta dele e "ativar" com uma
+// senha nova. O "Esqueci minha senha" do servidor grava direto, sem passar aqui.
+onRecordUpdateRequest((e) => {
+  if (!e.hasSuperuserAuth() && e.record.original().get("dono_sistema") === true && (!e.auth || e.auth.id !== e.record.id)) {
+    const body = e.requestInfo().body || {};
+    const sensiveis = ["password", "passwordConfirm", "oldPassword", "email", "password_reset_token", "password_reset_expires", "tokenKey"];
+    if (sensiveis.some((k) => Object.prototype.hasOwnProperty.call(body, k))) {
+      throw new ForbiddenError("A senha, o e-mail e o convite da conta do titular só podem ser alterados por ele mesmo.");
+    }
+  }
+  e.next();
+}, "users");
+
 // Ninguém além do superusuário muda o ID do titular pela API.
 onRecordUpdateRequest((e) => {
   if (!e.hasSuperuserAuth() && e.record.original().get("dono_sistema") === true) {

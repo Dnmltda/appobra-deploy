@@ -121,6 +121,9 @@
   funcionário, obra, equipamento...) precisa ser da mesma empresa do registro; na edição só as relações alteradas são
   conferidas (registros antigos seguem editáveis). Cadastros sem empresa (ex.: cargos) ficam de fora. Testes: grupo
   "empresa" (9 novos, nos dois sentidos).
+- **Bloco 1, item A1 (aprovado):** senha, e-mail e convite da conta do titular só mudam por ele mesmo ou pelo suporte
+  (`pb_hooks/titular.pb.js`). Antes outro administrador da empresa do titular podia gravar um convite na conta e
+  "ativar" com senha nova. O "Esqueci minha senha" do servidor não é afetado. Testes: grupo "titular" (+3).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

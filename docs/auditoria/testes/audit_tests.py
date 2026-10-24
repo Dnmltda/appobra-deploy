@@ -1066,6 +1066,14 @@ if tSU:
     check("titular", "Outro administrador não inativa, não apaga nem rebaixa o titular",
           s1 >= 400 and s2 >= 400 and s3 >= 400 and _d2.get("status") == "Ativo" and _d2.get("cargo") == "Administrador" and not _d2.get("deleted_at"),
           f"{s1} {s2} {s3}")
+    _tk = str(uuid.uuid4())
+    s4, r4 = call("PATCH", f"/api/collections/users/records/{_dono['id']}", tD, {"password_reset_token": _tk, "password_reset_expires": "2099-01-01 00:00:00.000Z"})
+    s5, r5 = call("POST", "/api/custom/activate-invite", None, {"token": _tk, "password": "Invasor12345", "passwordConfirm": "Invasor12345"})
+    check("titular", "Outro administrador não grava convite na conta do titular (não toma a conta)", s4 == 403 and s5 >= 400, f"gravar {s4}, ativar {s5}")
+    s6, _ = call("PATCH", f"/api/collections/users/records/{_dono['id']}", tD, {"email": "invasor@teste.local"})
+    check("titular", "Outro administrador não troca o e-mail do titular", s6 == 403, f"status {s6}")
+    s7, _ = call("POST", "/api/custom/esqueci-senha", None, {"identificador": _dono.get("email")})
+    check("titular", "O titular continua podendo pedir \"Esqueci minha senha\"", s7 == 200, f"status {s7}")
     s, _ = call("DELETE", f"/api/collections/users/records/{_dono['id']}", tSU)
     check("titular", "Nem o superusuário apaga a conta do titular", s >= 400 and call("GET", f"/api/collections/users/records/{_dono['id']}", tSU)[0] == 200, f"status {s}")
     s, _ = call("DELETE", f"/api/collections/companies/records/{_cD}", tSU)
