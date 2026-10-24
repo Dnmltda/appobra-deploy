@@ -131,13 +131,15 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       await auditLog(AUDIT_ACTIONS.LOGIN_FAILED, AUDIT_MODULES.AUTH, 'Tentativa de login sem sucesso').catch(() => {});
       // Mensagem do servidor que ajuda a pessoa (ex.: ID repetido em duas empresas,
-      // conta travada por senhas erradas — pb_hooks/login-limite.pb.js).
+      // conta travada por senhas erradas — pb_hooks/login-limite.pb.js — ou
+      // conta Inativa/Bloqueada, que o servidor só informa depois da senha certa
+      // — pb_hooks/login-situacao.pb.js).
       const doServidor = error?.response?.message || '';
       if (error?.status === 429) {
         // Limite por IP do próprio PocketBase (20 logins a cada 5 minutos).
         throw new Error('Muitas tentativas de login seguidas. Espere alguns minutos e tente de novo.');
       }
-      throw new Error(/mais de uma empresa|Muitas tentativas/.test(doServidor) ? doServidor : mensagemErro);
+      throw new Error(/mais de uma empresa|Muitas tentativas|Usuário inativo|Usuário bloqueado/.test(doServidor) ? doServidor : mensagemErro);
     }
     confereSituacao(authData.record);
     await handleLoginSuccess(authData);

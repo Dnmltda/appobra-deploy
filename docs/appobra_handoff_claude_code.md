@@ -103,6 +103,14 @@
   operação.
 - Testes: servidor `audit_tests.py` 254/0; navegador `login-limite.mjs` 2/2, `epi-estoque.mjs` 3/3.
 
+**Auditoria de 24/10/2026 e correções (Claude Code)**
+- Auditoria completa só leitura entregue ao Diego (`auditoria-appobra-2026-10-24.md`, fora do repositório): plano em
+  4 blocos, aprovado item a item. Fly e Hostinger na mesma versão (PR #14/#15, publicado pelo Cowork).
+- **Bloco 1, item C1 (aprovado):** conta Inativa ou Bloqueada não entra mais pelo servidor nas 3 formas de login
+  (e-mail, usuário, ID) nem renova a sessão; ao inativar, bloquear ou arquivar, a chave da conta é trocada e as
+  sessões abertas caem (`pb_hooks/login-situacao.pb.js` + `-lib.js`). O titular nunca é barrado. Testes:
+  `audit_tests.py` grupo "situacao" (13 novos).
+
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,
   logo do APP OBRA e logo oficial da DNM&LTDA no login, login do administrador de teste OK, cartão "Instalar" nas

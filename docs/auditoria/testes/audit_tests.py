@@ -1098,5 +1098,49 @@ check("g1", "Engenheiro vê o funcionário sem CPF nem salário", _f(_tok["Engen
 check("g1", "Administrador continua vendo tudo", _f(tA).get("salario") == 4200 and any(x.get("descricao") == "Aluguel G1" for x in _lista(tA, "contas_pagar")))
 check("g1", "Empresa B continua sem ver nada da A", not _lista(login("b@teste.local", "SenhaB12345")[0] if tSU else tB, "funcionarios", f'id="{_fg.get("id")}"'))
 
+# ------------------------------------------------------------------ C1: conta Inativa ou Bloqueada não entra (24/10/2026)
+# Antes o bloqueio existia só na tela. Agora o servidor recusa nas 3 formas de login e
+# derruba as sessões abertas de quem foi inativado.
+if tSU:
+    _rl = call("GET", "/api/settings", tSU)[1].get("rateLimits", {})
+    call("PATCH", "/api/settings", tSU, {"rateLimits": {**_rl, "excludedIPs": ["127.0.0.1"]}})
+    s, _sit = call("POST", "/api/collections/users/records", tA, {"email": "situacao@teste.local", "username": "situacaoteste", "password": "Senha12345",
+                   "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Ativo"})
+    _idu = call("GET", f"/api/collections/users/records/{_sit.get('id')}", tSU)[1].get("id_unico", "")
+    def _entra(como):
+        if como == "e-mail":
+            return call("POST", "/api/collections/users/auth-with-password", body={"identity": "situacao@teste.local", "password": "Senha12345"})
+        if como == "usuário":
+            return call("POST", "/api/custom/login-usuario", None, {"username": "situacaoteste", "password": "Senha12345"})
+        return call("POST", "/api/custom/login-id", None, {"id_unico": _idu, "password": "Senha12345"})
+    s, r = _entra("e-mail")
+    _tsit = r.get("token")
+    check("situacao", "Conta Ativa entra normalmente", s == 200 and _tsit, f"status {s}")
+    check("situacao", "Sessão da conta Ativa lê os dados", call("GET", "/api/collections/obras/records?perPage=1", _tsit)[0] == 200)
+    s, _ = call("PATCH", f"/api/collections/users/records/{_sit.get('id')}", tA, {"status": "Inativo"})
+    check("situacao", "Administrador inativa o usuário", s == 200, f"status {s}")
+    s, r = call("GET", "/api/collections/obras/records?perPage=1", _tsit)
+    s2, _ = call("POST", "/api/collections/users/auth-refresh", _tsit)
+    check("situacao", "Sessão aberta antes de inativar deixa de valer (leitura e renovação)", s == 401 or (s == 200 and not r.get("items") and s2 >= 400), f"leitura {s}, renovação {s2}")
+    for como in ("e-mail", "usuário", "ID"):
+        s, r = _entra(como)
+        check("situacao", f"Conta Inativa não entra pelo login por {como}", s >= 400 and "inativo" in r.get("message", "").lower(), f"status {s} {r.get('message', '')[:70]}")
+    call("PATCH", f"/api/collections/users/records/{_sit.get('id')}", tA, {"status": "Bloqueado"})
+    for como in ("e-mail", "usuário", "ID"):
+        s, r = _entra(como)
+        check("situacao", f"Conta Bloqueada não entra pelo login por {como}", s >= 400 and "bloqueado" in r.get("message", "").lower(), f"status {s} {r.get('message', '')[:70]}")
+    call("PATCH", f"/api/collections/users/records/{_sit.get('id')}", tA, {"status": "Ativo"})
+    s, r = _entra("e-mail")
+    check("situacao", "Conta reativada volta a entrar", s == 200, f"status {s}")
+    s, _ = call("DELETE", f"/api/collections/users/records/{_sit.get('id')}", tA)
+    s2, r2 = _entra("e-mail")
+    check("situacao", "Usuário excluído (inativado) não entra mais", s == 204 and s2 >= 400, f"excluir {s}, login {s2}")
+    _dn = call("GET", "/api/collections/users/records?filter=" + q("dono_sistema=true"), tSU)[1].get("items", [{}])[0]
+    if _dn.get("id"):
+        call("PATCH", f"/api/collections/users/records/{_dn['id']}", tSU, {"password": "Senha12345", "passwordConfirm": "Senha12345"})
+        s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": _dn.get("email"), "password": "Senha12345"})
+        check("situacao", "Titular continua entrando", s == 200, f"status {s}")
+    call("PATCH", "/api/settings", tSU, {"rateLimits": _rl})
+
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)
