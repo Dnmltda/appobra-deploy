@@ -1098,6 +1098,47 @@ check("g1", "Engenheiro vê o funcionário sem CPF nem salário", _f(_tok["Engen
 check("g1", "Administrador continua vendo tudo", _f(tA).get("salario") == 4200 and any(x.get("descricao") == "Aluguel G1" for x in _lista(tA, "contas_pagar")))
 check("g1", "Empresa B continua sem ver nada da A", not _lista(login("b@teste.local", "SenhaB12345")[0] if tSU else tB, "funcionarios", f'id="{_fg.get("id")}"'))
 
+# ------------------------------------------------------------------ A3: gravação por cargo no servidor (24/10/2026)
+# Antes qualquer pessoa da empresa criava/alterava qualquer tabela pela API. Agora só quem tem a tela.
+# "Recusado" = 403 com a mensagem do servidor; "aceito" = não é 403 (pode faltar campo obrigatório: 400).
+if tSU:
+    _rl3 = call("GET", "/api/settings", tSU)[1].get("rateLimits", {})
+    call("PATCH", "/api/settings", tSU, {"rateLimits": {**_rl3, "excludedIPs": ["127.0.0.1"]}})
+_GR = {
+    "contas_pagar": ["Financeiro", "Gerência"],
+    "compras": ["Almoxarife", "Comprador", "Financeiro", "Engenheiro", "Gerência", "Mestre de Obras"],
+    "fornecedores": ["Almoxarife", "Comprador", "Financeiro", "Engenheiro", "Gerência", "Mestre de Obras"],
+    "clientes": ["Gerência"],
+    "obras": ["Engenheiro", "Gerência", "Mestre de Obras", "Almoxarife"],
+    "equipamentos": ["Almoxarife", "Engenheiro", "Gerência", "Mestre de Obras"],
+    "epis": ["Almoxarife", "RH", "Gerência", "Mestre de Obras"],
+    "veiculos": ["Engenheiro", "Gerência", "Mestre de Obras"],
+    "documentos_central": ["Engenheiro", "RH", "Gerência"],
+    "treinamentos": ["RH", "Gerência"],
+    "perdas_ganhos": ["Almoxarife", "Engenheiro", "Gerência", "Mestre de Obras"],
+}
+_C3 = ["Pedreiro", "Cliente", "Funcionário", "Financeiro", "Almoxarife", "Comprador", "RH", "Engenheiro", "Mestre de Obras", "Gerência"]
+_t3 = {c: usuario(f"a3.{c.lower().replace(' ', '').replace('ê', 'e').replace('á', 'a')}@teste.local", c) for c in _C3}
+_reg = {}
+for col in _GR:
+    s, r = call("POST", f"/api/collections/{col}/records", tA, {"company_id": cA})
+    _reg[col] = r.get("id") if s == 200 else None
+for col, quem in _GR.items():
+    erros = []
+    for c in _C3:
+        s, r = call("POST", f"/api/collections/{col}/records", _t3[c], {"company_id": cA})
+        su_ = call("PATCH", f"/api/collections/{col}/records/{_reg[col]}", _t3[c], {})[0] if _reg[col] else None
+        negado = s == 403 and "permissão" in r.get("message", "")
+        if (c in quem) == negado or (su_ is not None and (c in quem) == (su_ == 403)):
+            erros.append(f"{c}: criar {s}, alterar {su_}")
+    check("a3", f"{col}: só {', '.join(quem)} (e o administrador) criam e alteram pela API", not erros, "; ".join(erros)[:200])
+s, r = call("POST", "/api/collections/contas_pagar/records", tA, {"company_id": cA})
+check("a3", "Administrador continua gravando em contas a pagar", s != 403, f"status {s}")
+s, r = call("POST", "/api/collections/cargos/records", tA, {"nome": "Cargo Inventado"})
+check("a3", "Administrador de empresa não cria cargo no catálogo comum (só o titular)", s >= 400, f"status {s}")
+if tSU:
+    call("PATCH", "/api/settings", tSU, {"rateLimits": _rl3})
+
 # ------------------------------------------------------------------ C1: conta Inativa ou Bloqueada não entra (24/10/2026)
 # Antes o bloqueio existia só na tela. Agora o servidor recusa nas 3 formas de login e
 # derruba as sessões abertas de quem foi inativado.

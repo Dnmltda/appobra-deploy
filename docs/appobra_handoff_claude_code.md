@@ -110,6 +110,12 @@
   (e-mail, usuário, ID) nem renova a sessão; ao inativar, bloquear ou arquivar, a chave da conta é trocada e as
   sessões abertas caem (`pb_hooks/login-situacao.pb.js` + `-lib.js`). O titular nunca é barrado. Testes:
   `audit_tests.py` grupo "situacao" (13 novos).
+  Publicado na Hostinger (PR #16); Fly pendente (Cowork).
+- **Bloco 1, item A3 (aprovado):** gravação por cargo no servidor (`pb_hooks/gravacao-cargo.pb.js` + `-lib.js`).
+  Criar/alterar/apagar pela API em financeiro, compras, fornecedores, comercial, obras, equipamentos, EPIs (cadastro e
+  reposição), frota, documentos, RH e perdas e ganhos só passa para quem tem a tela; admin e titular sempre. Tabelas do
+  dia a dia da obra (pedido, empréstimo, entrega de EPI, saldo, ocorrências, mural, QR) ficam com as regras próprias.
+  O catálogo `cargos` já era só do titular (regra da tabela). Testes: grupo "a3" (13 novos, matriz de 10 cargos).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,
