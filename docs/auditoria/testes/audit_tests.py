@@ -1098,6 +1098,30 @@ check("g1", "Engenheiro vê o funcionário sem CPF nem salário", _f(_tok["Engen
 check("g1", "Administrador continua vendo tudo", _f(tA).get("salario") == 4200 and any(x.get("descricao") == "Aluguel G1" for x in _lista(tA, "contas_pagar")))
 check("g1", "Empresa B continua sem ver nada da A", not _lista(login("b@teste.local", "SenhaB12345")[0] if tSU else tB, "funcionarios", f'id="{_fg.get("id")}"'))
 
+# ------------------------------------------------------------------ A2/A4: empresa travada nas gravações (24/10/2026)
+_tBv = _tB2  # a senha da B mudou mais acima: o token antigo não vale
+s, matB = call("POST", "/api/collections/materiais/records", _tBv, {"name": "Material da B", "code": "TST-B-1", "unit": "un", "company_id": cB})
+check("empresa", "(preparo) Empresa B cadastra um material", s == 200, err(matB) if s >= 400 else "")
+s1, r1 = mov("Entrada", 1, material_id=matB.get("id"))
+check("empresa", "A não lança movimentação com material da empresa B", s1 >= 400 and "outra empresa" in r1.get("message", ""), f"status {s1} {r1.get('message', '')[:60]}")
+s2, r2 = call("POST", "/api/collections/movimentacoes/records", _tBv, {"material_id": mid, "company_id": cB, "tipo": "Saída", "quantidade": 1,
+              "status": "Aprovado", "data": "2026-10-18", "criado_por": uB["id"]})
+check("empresa", "B não lança movimentação com material da empresa A (outro sentido)", s2 >= 400, f"status {s2} {r2.get('message', '')[:60]}")
+s3, r3 = mov("Entrada", 1)
+check("empresa", "Movimentação com material da própria empresa continua aceita", s3 == 200, err(r3) if s3 >= 400 else "")
+s, r = call("PATCH", f"/api/collections/obras/records/{obra.get('id')}", tA, {"company_id": cB})
+check("empresa", "Editar não troca a empresa da obra", s >= 400 and "não pode ser trocada" in r.get("message", "") and
+      call("GET", f"/api/collections/obras/records/{obra.get('id')}", tA)[1].get("company_id") == cA, f"status {s}")
+s, r = call("PATCH", f"/api/collections/materiais/records/{mid}", tA, {"company_id": cB})
+check("empresa", "Editar não troca a empresa do material", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/obras/records/{obra.get('id')}", tA, {"nome": obra.get("nome") or "Obra A"})
+check("empresa", "Editar a obra sem mexer na empresa continua aceito", s == 200, err(r) if s >= 400 else "")
+s, eqA = call("POST", "/api/collections/equipamentos/records", tA, {"nome": "Betoneira trava", "company_id": cA})
+s, r = call("PATCH", f"/api/collections/equipamentos/records/{eqA.get('id')}", tA, {"obra_atual_id": obraB.get("id")})
+check("empresa", "Equipamento não vai para obra de outra empresa", s >= 400 and "outra empresa" in r.get("message", ""), f"status {s}")
+s, r = call("PATCH", f"/api/collections/equipamentos/records/{eqA.get('id')}", tA, {"obra_atual_id": obra.get("id")})
+check("empresa", "Equipamento vai para obra da própria empresa", s == 200, err(r) if s >= 400 else "")
+
 # ------------------------------------------------------------------ A3: gravação por cargo no servidor (24/10/2026)
 # Antes qualquer pessoa da empresa criava/alterava qualquer tabela pela API. Agora só quem tem a tela.
 # "Recusado" = 403 com a mensagem do servidor; "aceito" = não é 403 (pode faltar campo obrigatório: 400).

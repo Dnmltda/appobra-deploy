@@ -116,6 +116,11 @@
   reposição), frota, documentos, RH e perdas e ganhos só passa para quem tem a tela; admin e titular sempre. Tabelas do
   dia a dia da obra (pedido, empréstimo, entrega de EPI, saldo, ocorrências, mural, QR) ficam com as regras próprias.
   O catálogo `cargos` já era só do titular (regra da tabela). Testes: grupo "a3" (13 novos, matriz de 10 cargos).
+- **Bloco 1, itens A2 e A4 (aprovado):** empresa travada nas gravações pela API (`pb_hooks/empresa-trava.pb.js` +
+  `-lib.js`). Editar não troca o `company_id` (só o suporte; o titular ainda move usuários). Toda relação (material,
+  funcionário, obra, equipamento...) precisa ser da mesma empresa do registro; na edição só as relações alteradas são
+  conferidas (registros antigos seguem editáveis). Cadastros sem empresa (ex.: cargos) ficam de fora. Testes: grupo
+  "empresa" (9 novos, nos dois sentidos).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,
