@@ -80,12 +80,13 @@ export async function tirarFoto(page, escopo) {
   const e = escopo || page;
   await e.getByRole("button", { name: /Abrir câmera/ }).click();
   const foto = e.getByAltText("Foto tirada");
+  // Com o computador carregado (rodada completa), a câmera de teste demora a abrir.
   try {
-    await foto.waitFor({ timeout: 8000 });
+    await foto.waitFor({ timeout: 12000 });
   } catch (_) {
     const agora = e.getByRole("button", { name: /Tirar agora/ });
     if (await agora.count()) await agora.click();
-    await foto.waitFor({ timeout: 8000 });
+    await foto.waitFor({ timeout: 20000 });
   }
 }
 
