@@ -61,3 +61,27 @@ onRecordUpdateRequest((e) => {
   }
   e.next();
 }, "funcionarios");
+
+// Meu Perfil, dados de RH (auditoria de 24/10/2026, item M6, aprovado pelo
+// Diego em 25/10/2026): CPF, RG, obra, departamento, centro de custo, datas de
+// admissão/demissão, observações e arquivamento só pelo administrador. Mudar
+// na própria conta é recusado e vira tentativa (sino do titular e do responsável).
+onRecordUpdateRequest((e) => {
+  const a = e.auth;
+  if (a && !a.isSuperuser() && a.id === e.record.id) {
+    const admin = a.get("dono_sistema") === true || a.get("cargo") === "Administrador" || a.get("role") === "admin" || a.get("role") === "Administrador";
+    if (!admin) {
+      const o = e.record.original();
+      const campos = e.record.collection().fields;
+      const mudou = ["cpf", "rg", "obra_vinculada_id", "departamento", "centro_custo", "nome_completo", "data_admissao",
+        "data_demissao", "observacoes", "deleted_at"]
+        .filter((f) => campos.getByName(f) && String(e.record.get(f) || "") !== String(o.get(f) || ""));
+      if (mudou.length) {
+        require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa(e.app, a, "editar", "users", a.id,
+          `Tentou mudar no próprio cadastro: ${mudou.join(", ")}`);
+        throw new ForbiddenError("Esses dados (CPF, RG, obra, departamento, centro de custo...) só o administrador altera.");
+      }
+    }
+  }
+  e.next();
+}, "users");

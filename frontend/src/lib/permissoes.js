@@ -62,6 +62,11 @@ export const podeVerEstoque = (user) =>
 export const podeGerirEstoque = (user) =>
   ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife'].includes(cargoDe(user));
 
+// Receber compra (dá entrada no estoque): quem lança movimentação — mesma lista
+// do servidor (pb_hooks/compra-recebida.pb.js).
+export const podeReceberCompra = (user) =>
+  ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador'].includes(cargoDe(user));
+
 // Aprovar, separar e entregar solicitações (mesma lista "gestão" do servidor).
 export const podeGerirSolicitacoes = (user) =>
   ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador'].includes(cargoDe(user));
