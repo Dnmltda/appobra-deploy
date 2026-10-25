@@ -638,7 +638,7 @@ const SolicitacoesPage = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Solicitação</AlertDialogTitle>
-            <AlertDialogDescription>Tem certeza que deseja excluir a solicitação {deleteTarget?.numero_solicitacao}? Esta ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogDescription>Tem certeza que deseja arquivar a solicitação {deleteTarget?.numero_solicitacao}? O registro sai da lista, mas fica guardado no histórico (nada é apagado).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

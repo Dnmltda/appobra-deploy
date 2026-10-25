@@ -147,6 +147,14 @@
   registros são a auditoria e ficam fixos; tentativa de adulterar avisa o titular e o responsável da empresa. Só o
   **fechamento da empresa** apaga tudo, depois do backup completo (`docs/ideias-futuras.md`). Substitui o M2.
   Os demais itens do Bloco 2 (M1, M3, M7, M6) seguem no plano.
+- **Regra "nada se apaga", parte 1 (aprovada pelo Diego):** `pb_hooks/nada-se-apaga.pb.js` + `-lib.js`. Apagar pela
+  API é recusado em todas as tabelas (nem o Administrador); os "Excluir" das telas seguem arquivando (lista em
+  `seguranca-etapa1.pb.js`, agora também notificações, mural e anexos). Exceção: itens de pedido/compra ainda não
+  aprovados (rascunho). Material no saldo de algum funcionário não pode ser alterado nem arquivado. Edição de
+  cadastro grava `historico_alteracoes` (quem, quando, campo, antes, depois). Toda tentativa barrada (apagar, gravar
+  sem permissão, trocar empresa, usar item de outra empresa, mexer em material no saldo) grava
+  `tentativas_bloqueadas` — base para a parte 2 (sino + "Movimentações do dia/semana"). Textos das telas: "excluir"
+  virou "arquivar"/"inativar" com o aviso de que nada é apagado. Testes: grupo "nada" (13).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

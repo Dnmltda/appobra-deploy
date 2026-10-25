@@ -540,12 +540,13 @@ const MateriaisPage = () => {
   const handleDelete = async (id, nome) => {
     try {
       await pb.collection('materiais').delete(id, { $autoCancel: false });
-      toast.success('Material excluído com sucesso');
+      toast.success('Material arquivado (fica guardado no histórico)');
       await auditLog(AUDIT_ACTIONS.RECORD_DELETED, AUDIT_MODULE, `Material excluído: ${nome}`);
       fetchMateriais(page);
     } catch (err) {
-      console.error('Erro ao excluir material:', err);
-      toast.error('Erro ao excluir material');
+      console.error('Erro ao arquivar material:', err);
+      // Ex.: material no saldo de funcionário não pode ser arquivado (o servidor explica).
+      toast.error(err?.response?.message && err.status === 403 ? err.response.message : 'Erro ao arquivar material');
     }
   };
 
@@ -1167,7 +1168,7 @@ const MateriaisPage = () => {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Excluir Material</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Tem certeza que deseja excluir o material <strong>{m.name}</strong>? Esta ação não pode ser desfeita.
+                                    Tem certeza que deseja arquivar o material <strong>{m.name}</strong>? O registro sai da lista, mas fica guardado no histórico (nada é apagado).
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>

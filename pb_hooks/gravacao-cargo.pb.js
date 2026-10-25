@@ -12,18 +12,27 @@
 
 onRecordCreateRequest((e) => {
   const lib = require(`${__hooks}/gravacao-cargo-lib.js`);
-  if (!lib.pode(e.auth, e.collection.name)) throw new ForbiddenError(lib.recusa(e.collection.name));
+  if (!lib.pode(e.auth, e.collection.name)) {
+    require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa(e.app, e.auth, "gravar sem permissão", e.collection.name, e.record && e.record.id, `Cargo sem permissão tentou gravar em ${e.collection.name}`);
+    throw new ForbiddenError(lib.recusa(e.collection.name));
+  }
   e.next();
 }, ...require(`${__hooks}/gravacao-cargo-lib.js`).TABELAS);
 
 onRecordUpdateRequest((e) => {
   const lib = require(`${__hooks}/gravacao-cargo-lib.js`);
-  if (!lib.pode(e.auth, e.collection.name)) throw new ForbiddenError(lib.recusa(e.collection.name));
+  if (!lib.pode(e.auth, e.collection.name)) {
+    require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa(e.app, e.auth, "gravar sem permissão", e.collection.name, e.record && e.record.id, `Cargo sem permissão tentou gravar em ${e.collection.name}`);
+    throw new ForbiddenError(lib.recusa(e.collection.name));
+  }
   e.next();
 }, ...require(`${__hooks}/gravacao-cargo-lib.js`).TABELAS);
 
 onRecordDeleteRequest((e) => {
   const lib = require(`${__hooks}/gravacao-cargo-lib.js`);
-  if (!lib.pode(e.auth, e.collection.name)) throw new ForbiddenError(lib.recusa(e.collection.name));
+  if (!lib.pode(e.auth, e.collection.name)) {
+    require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa(e.app, e.auth, "gravar sem permissão", e.collection.name, e.record && e.record.id, `Cargo sem permissão tentou gravar em ${e.collection.name}`);
+    throw new ForbiddenError(lib.recusa(e.collection.name));
+  }
   e.next();
 }, ...require(`${__hooks}/gravacao-cargo-lib.js`).TABELAS);

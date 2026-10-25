@@ -483,7 +483,7 @@ const ContasReceberPage = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Excluir Conta a Receber</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir a conta de {conta.cliente}? Esta ação não pode ser desfeita.
+                                  Tem certeza que deseja arquivar a conta de {conta.cliente}? O registro sai da lista, mas fica guardado no histórico (nada é apagado).
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

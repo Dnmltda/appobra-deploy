@@ -17,6 +17,7 @@ function conferirTroca(e) {
   const depois = e.record.get("company_id");
   if (String(antes || "") === String(depois || "")) return;
   if (col.name === "users" && e.auth.get("dono_sistema") === true) return;
+  require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa(e.app, e.auth, "trocar empresa", col.name, e.record.id, `Tentou trocar a empresa de um registro de ${col.name}`);
   throw new BadRequestError("A empresa do registro não pode ser trocada.");
 }
 
@@ -44,7 +45,10 @@ function conferirVinculos(e, criando) {
       let r;
       try { r = app.findRecordById(alvo.id, ids[j]); } catch (_) { continue; } // inexistente: o PocketBase já recusa
       const dela = String(r.get("company_id") || "");
-      if (dela && dela !== cid) throw new BadRequestError("Um dos itens escolhidos é de outra empresa.");
+      if (dela && dela !== cid) {
+        require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa(app, e.auth, "usar item de outra empresa", col.name, e.record.id, `Ligação ${f.name} com um item de outra empresa`);
+        throw new BadRequestError("Um dos itens escolhidos é de outra empresa.");
+      }
     }
   }
 }

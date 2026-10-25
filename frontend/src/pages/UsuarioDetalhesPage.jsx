@@ -406,7 +406,7 @@ const UsuarioDetalhesPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir <strong>{usuario.nome_completo}</strong>? Esta ação não pode ser desfeita.
+              Tem certeza que deseja inativar <strong>{usuario.nome_completo}</strong>? A pessoa perde o acesso, mas o cadastro e o histórico ficam guardados (nada é apagado). Dá para reativar depois.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

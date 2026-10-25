@@ -906,7 +906,7 @@ const EmployeeManagement = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Excluir Funcionário</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir {employee.nome}? Esta ação não pode ser desfeita.
+                                  Tem certeza que deseja arquivar {employee.nome}? O registro sai da lista, mas fica guardado no histórico (nada é apagado).
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

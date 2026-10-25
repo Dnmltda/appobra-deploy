@@ -1312,6 +1312,43 @@ if tSU:
         check("situacao", "Titular continua entrando", s == 200, f"status {s}")
     call("PATCH", "/api/settings", tSU, {"rateLimits": _rl})
 
+# ------------------------------------------------------------------ Regra do Diego: nada se apaga (25/10/2026)
+def _tentativas(reg_id):
+    return call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q(f'registro_id="{reg_id}"'), tSU)[1].get("items", []) if tSU else []
+s, _mv = mov("Entrada", 1)
+s, r = call("DELETE", f"/api/collections/movimentacoes/records/{_mv.get('id')}", tA)
+check("nada", "Nem o Administrador apaga uma movimentação", s == 403 and call("GET", f"/api/collections/movimentacoes/records/{_mv.get('id')}", tA)[0] == 200, f"status {s}")
+check("nada", "A tentativa de apagar fica registrada (quem, o quê)", any(t.get("acao") == "apagar" and t.get("usuario_id") == uA["id"] for t in _tentativas(_mv.get("id"))), str(len(_tentativas(_mv.get("id")))))
+s, _ob = call("POST", "/api/collections/obras/records", tA, {"nome": "Obra que não se apaga", "company_id": cA})
+s, r = call("DELETE", f"/api/collections/obras/records/{_ob.get('id')}", tA)
+check("nada", "Obra não é apagada", s == 403 and call("GET", f"/api/collections/obras/records/{_ob.get('id')}", tA)[0] == 200, f"status {s}")
+s, _fn = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor arquivável", "cnpj": "22333444000181", "company_id": cA})
+s, r = call("DELETE", f"/api/collections/fornecedores/records/{_fn.get('id')}", tA)
+_fv = call("GET", f"/api/collections/fornecedores/records/{_fn.get('id')}", tSU)[1] if tSU else {}
+check("nada", "\"Excluir\" fornecedor continua arquivando (some da lista, fica guardado)", s == 204 and _fv.get("deleted_at"), f"status {s}")
+s, _nt = call("POST", "/api/collections/notificacoes/records", tA, {"usuarioId": uA["id"], "tipo": "estoque", "mensagem": "Aviso que vai ser arquivado"})
+s, r = call("DELETE", f"/api/collections/notificacoes/records/{_nt.get('id')}", tA)
+check("nada", "Limpar uma notificação arquiva (não apaga)", s == 204 and (call("GET", f"/api/collections/notificacoes/records/{_nt.get('id')}", tSU)[0] == 200 if tSU else True), f"status {s}")
+s, _ms = call("POST", "/api/collections/materiais/records", tA, {"name": "Disco de corte 7pol", "code": "NADA-1", "unit": "un", "quantity_in_stock": 10, "status": "active", "company_id": cA})
+s2, r2 = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": funU.get("id"), "material_id": _ms.get("id"),
+              "tipo_operacao": "Retirada", "quantidade": 2, "data_operacao": "2026-10-25"})
+check("nada", "(preparo) material entregue ao saldo de um funcionário", s == 200 and s2 == 200, err(r2) if s2 >= 400 else "")
+s, r = call("PATCH", f"/api/collections/materiais/records/{_ms.get('id')}", tA, {"name": "Disco trocado de nome"})
+check("nada", "Material que está no saldo de funcionário não pode ser alterado (nem o nome)", s == 403 and "saldo" in r.get("message", ""), f"status {s}")
+s, r = call("DELETE", f"/api/collections/materiais/records/{_ms.get('id')}", tA)
+check("nada", "Material que está no saldo de funcionário não pode ser arquivado", s == 403, f"status {s}")
+s, r = call("PATCH", f"/api/collections/materiais/records/{fio.get('id')}", tA, {"name": "Fio flexível azul 2,5mm"})
+check("nada", "Material cujo saldo já foi todo usado volta a ser editável", s == 200, err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/materiais/records/{mid}", tA, {"name": "Areia média lavada m3"})
+check("nada", "Material fora de qualquer saldo continua editável", s == 200, err(r) if s >= 400 else "")
+_hist = call("GET", "/api/collections/historico_alteracoes/records?filter=" + q(f'registro_id="{mid}" && campo="name"'), tA)[1].get("items", [])
+check("nada", "A edição do cadastro fica no histórico (quem, antes e depois)", any(h.get("usuario_id") == uA["id"] and "Areia média lavada" in h.get("depois", "") for h in _hist), str(len(_hist)))
+s, r = call("GET", "/api/collections/historico_alteracoes/records?perPage=1", _tok["Servente"])
+check("nada", "Servente não lê o histórico nem as tentativas", s == 200 and not r.get("items") and not call("GET", "/api/collections/tentativas_bloqueadas/records?perPage=1", _tok["Servente"])[1].get("items"), f"status {s}")
+s, r = call("POST", "/api/collections/contas_pagar/records", _tok["Servente"], {"company_id": cA})
+_tc = call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q('tabela="contas_pagar"'), tSU)[1].get("items", []) if tSU else []
+check("nada", "Gravação sem permissão também fica registrada como tentativa", s == 403 and _tc, str(len(_tc)))
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:

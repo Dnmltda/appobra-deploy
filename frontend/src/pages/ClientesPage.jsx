@@ -786,7 +786,7 @@ const ClientesPage = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Excluir Cliente</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o cliente <strong>{c.nome}</strong>? Esta ação não pode ser desfeita.
+                                  Tem certeza que deseja arquivar o cliente <strong>{c.nome}</strong>? O registro sai da lista, mas fica guardado no histórico (nada é apagado).
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

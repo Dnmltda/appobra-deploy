@@ -1405,7 +1405,7 @@ const EPIsPage = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir EPI</AlertDialogTitle>
-            <AlertDialogDescription>Tem certeza que deseja excluir o EPI "{deleteTarget?.nome}"? Esta ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogDescription>Tem certeza que deseja arquivar o EPI "{deleteTarget?.nome}"? O registro sai da lista, mas fica guardado no histórico (nada é apagado).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

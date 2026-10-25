@@ -634,7 +634,7 @@ const ComprasPage = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Compra</AlertDialogTitle>
-            <AlertDialogDescription>Tem certeza que deseja excluir a compra {deleteTarget?.numero_compra}? Esta ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogDescription>Tem certeza que deseja arquivar a compra {deleteTarget?.numero_compra}? O registro sai da lista, mas fica guardado no histórico (nada é apagado).</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
