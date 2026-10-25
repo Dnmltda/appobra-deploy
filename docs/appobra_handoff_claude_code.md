@@ -134,6 +134,11 @@
   bloqueada para o cargo também é recusado (`acesso-dados.pb.js`, onFileDownloadRequest). Nas telas, o passe entra
   sozinho em todo `pb.files.getURL` (`frontend/src/lib/pocketbaseClient.js`, renovado a cada 30 min e antes das telas
   abrirem, em AuthContext). Testes: grupo "a6" (7) e `navegador/arquivos.mjs` (fotos e documentos nas telas).
+  Publicado na Hostinger (PR #20) antes do Fly (as telas novas funcionam com o servidor antigo; o contrário não).
+- **Bloco 1, item A7 (aprovado):** login pela aba "ID" com ID repetido em várias empresas agora também trava após 5
+  erros (contador do ID em memória do servidor, `login-limite-lib.js`; não trava o e-mail/usuário de ninguém); o
+  servidor usa o endereço real do Fly (`Fly-Client-IP`, `pb_hooks/endereco-real.pb.js`) no limite de logins por
+  endereço, em vez do `X-Real-IP` que o visitante podia inventar. Testes: grupo "a7" (5, no fim do arquivo).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

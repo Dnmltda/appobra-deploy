@@ -155,6 +155,8 @@ routerAdd("POST", "/api/custom/login-id", (e) => {
   // Limite de tentativas (login-limite-lib.js): conta travada não entra.
   const lim = require(`${__hooks}/login-limite-lib.js`);
   if (candidatos.length === 1) lim.conferir(candidatos[0]);
+  // ID repetido em várias empresas: trava de tentativas pelo próprio ID (A7).
+  if (candidatos.length > 1) lim.idConferir($app, n.padStart(2, "0"));
   const certos = [];
   for (let i = 0; i < candidatos.length; i++) {
     if (candidatos[i].validatePassword(senha)) certos.push(candidatos[i]);
@@ -162,6 +164,7 @@ routerAdd("POST", "/api/custom/login-id", (e) => {
   if (!certos.length) {
     // Só conta a tentativa quando o ID aponta para uma pessoa só.
     if (candidatos.length === 1) lim.errou($app, candidatos[0]);
+    if (candidatos.length > 1) lim.idErrou($app, n.padStart(2, "0"));
     throw new BadRequestError("ID ou senha incorretos.");
   }
   // Mesmo ID e mesma senha em empresas diferentes: não adivinha qual é.
@@ -171,6 +174,7 @@ routerAdd("POST", "/api/custom/login-id", (e) => {
   const certo = certos[0];
   lim.conferir(certo);
   lim.acertou($app, certo);
+  if (candidatos.length > 1) lim.idAcertou($app, n.padStart(2, "0"));
 
   return $apis.recordAuthResponse(e, certo, "password", null);
 });

@@ -1308,5 +1308,38 @@ if tSU:
         check("situacao", "Titular continua entrando", s == 200, f"status {s}")
     call("PATCH", "/api/settings", tSU, {"rateLimits": _rl})
 
+# ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
+# (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
+if tSU:
+    _us = call("GET", "/api/collections/users/records?perPage=500&filter=" + q('id_unico != ""'), tSU)[1].get("items", [])
+    _por = {}
+    for u in _us:
+        _por.setdefault(u.get("id_unico"), set()).add(u.get("company_id"))
+    _rep = next((i for i, cs in _por.items() if len(cs) > 1), None)
+    check("a7", "(preparo) existe um ID repetido em duas empresas", _rep, str(_rep))
+    _rl7 = call("GET", "/api/settings", tSU)[1].get("rateLimits", {})
+    call("PATCH", "/api/settings", tSU, {"rateLimits": {**_rl7, "excludedIPs": ["127.0.0.1"]}})
+    if _rep:
+        for _ in range(5):
+            call("POST", "/api/custom/login-id", None, {"id_unico": _rep, "password": "errada123"})
+        s, r = call("POST", "/api/custom/login-id", None, {"id_unico": _rep, "password": "Senha12345"})
+        check("a7", "5 senhas erradas pelo ID repetido travam o login por esse ID", s >= 400 and "Muitas tentativas" in r.get("message", ""), f"status {s} {r.get('message', '')[:60]}")
+        s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "a@teste.local", "password": "Senha12345"})
+        check("a7", "Login por e-mail continua funcionando (a trava é só do ID)", s == 200, f"status {s}")
+    _tp = call("GET", "/api/settings", tSU)[1].get("trustedProxy", {})
+    check("a7", "Servidor usa o endereço real do Fly (Fly-Client-IP)", _tp.get("headers") == ["Fly-Client-IP"], str(_tp))
+    call("PATCH", "/api/settings", tSU, {"rateLimits": _rl7})
+    _st = []
+    for i in range(30):
+        req = urllib.request.Request(B + "/api/collections/users/auth-with-password", method="POST",
+                                     data=json.dumps({"identity": "naoexiste@teste.local", "password": "x"}).encode(),
+                                     headers={"content-type": "application/json", "X-Real-IP": f"10.9.{i}.{i}", "X-Forwarded-For": f"10.8.{i}.{i}"})
+        try:
+            urllib.request.urlopen(req)
+            _st.append(200)
+        except urllib.error.HTTPError as e:
+            _st.append(e.code)
+    check("a7", "Endereço inventado (X-Real-IP) não escapa do limite de logins", 429 in _st, str(sorted(set(_st))))
+
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)
