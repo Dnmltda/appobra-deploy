@@ -49,4 +49,27 @@ function acertou(app, u) {
   app.db().newQuery("UPDATE users SET login_attempts = 0, locked_until = '' WHERE id = {:id}").bind({ id: u.id }).execute();
 }
 
-module.exports = { MAX, TRAVA_MIN, conferir, errou, acertou };
+// Login por ID repetido em várias empresas (auditoria de 24/10/2026, item A7):
+// o contador é do ID na aba "ID" (memória do servidor), não das contas, para
+// que errar pelo ID não trave o login por e-mail ou usuário de ninguém.
+function chaveId(id) { return "login-id:" + id; }
+
+function idConferir(app, id) {
+  const v = app.store().get(chaveId(id));
+  if (v && v.ate && v.ate > Date.now()) throw new BadRequestError(mensagem(v.ate));
+}
+
+function idErrou(app, id) {
+  const v = app.store().get(chaveId(id)) || { n: 0, ate: 0 };
+  const n = (v.ate && v.ate <= Date.now() ? 0 : Number(v.n || 0)) + 1;
+  if (n >= MAX) {
+    app.store().set(chaveId(id), { n: 0, ate: Date.now() + TRAVA_MIN * 60000 });
+    console.log(`[login-limite] login pelo ID ${id} travado por ${TRAVA_MIN} min (${MAX} senhas erradas).`);
+  } else {
+    app.store().set(chaveId(id), { n, ate: 0 });
+  }
+}
+
+function idAcertou(app, id) { app.store().remove(chaveId(id)); }
+
+module.exports = { MAX, TRAVA_MIN, conferir, errou, acertou, idConferir, idErrou, idAcertou };

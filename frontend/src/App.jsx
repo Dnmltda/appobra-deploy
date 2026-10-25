@@ -483,7 +483,7 @@ const ContasReceberPage = () => {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Excluir Conta a Receber</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja excluir a conta de {conta.cliente}? Esta ação não pode ser desfeita.
+                                  Tem certeza que deseja arquivar a conta de {conta.cliente}? O registro sai da lista, mas fica guardado no histórico (nada é apagado).
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -859,16 +859,10 @@ const AtivarContaPageInline = () => {
                   <span className="text-muted-foreground">Cargo</span>
                   <span className="font-medium text-right">{invite?.cargo || '-'}</span>
                 </div>
-                {invite?.funcionario?.cpf && (
+                {invite?.empresa && (
                   <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">CPF</span>
-                    <span className="font-medium text-right">{invite.funcionario.cpf}</span>
-                  </div>
-                )}
-                {(invite?.telefone || invite?.funcionario?.telefone) && (
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Telefone</span>
-                    <span className="font-medium text-right">{invite.telefone || invite.funcionario.telefone}</span>
+                    <span className="text-muted-foreground">Empresa</span>
+                    <span className="font-medium text-right">{invite.empresa}</span>
                   </div>
                 )}
               </div>

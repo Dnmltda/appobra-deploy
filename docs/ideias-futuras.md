@@ -17,6 +17,33 @@ Navarro). Até lá o app fica como está.
 - **Planos:** limites por empresa (logins, funcionários, materiais, obras) já começam a existir para as
   empresas de teste; os planos pagos só mudam os números.
 
+## Nada se apaga durante o uso; só o fechamento da empresa apaga tudo (pedido do Diego, 25/10/2026)
+
+**Regra:** enquanto a empresa usa o app, **ninguém apaga nada** (nem o Administrador). Os registros são a
+auditoria da obra e ficam fixos, para não ter risco de adulteração. Se alguém **tentar** adulterar (apagar ou
+mexer no que não pode), o sistema **avisa o dono do aplicativo (titular) e o responsável da empresa**.
+
+**Fechamento da empresa ("apagar 100%"):** quando a empresa não quer mais usar o app, o responsável faz o
+**backup completo** (dados, documentos e fotos) e só depois a empresa é apagada inteira, para ela não dizer que o
+app ficou com algum dado dela. Se tentar apagar sem o backup, o sistema manda um e-mail para ele confirmar que se
+responsabiliza pelos dados perdidos (a confirmar com o Diego: se essa opção existe ou se o backup é obrigatório).
+
+Substitui o item M2 da auditoria de 24/10 ("arquivar em vez de apagar").
+
+**Decisões do Diego (25/10/2026):**
+1. **Editar:** cadastros podem ser corrigidos, com histórico (quem, quando, valor antigo e novo); registros
+   fechados (movimentação aprovada, entrega de EPI, pedido concluído) não mudam, correção é lançamento novo.
+   **Material que está no saldo de qualquer funcionário não pode ser alterado** (nem nome, nem tamanho, nada); o
+   saldo só baixa pelo uso registrado.
+2. **Avisos:** sino do app sempre, na hora. No fim do expediente, **"Movimentações do dia"** de cada pessoa dentro
+   do app (o que ela movimentou, o que adicionou, o que mandaram para ela, o que tentaram fazer e foi barrado).
+   No fechamento da semana vira o **PDF "Movimentações da semana"**, para baixar. E-mail só o mínimo (economizar
+   a cota da Brevo). O Diego pediu um **exemplo** antes de construir.
+3. **Fechamento sem backup:** pode, mas aparece **outra página** em que o responsável confirma que está de acordo
+   e abre mão de todos os dados, que tudo será apagado sob a responsabilidade dele.
+
+Ainda em aberto: quem é o "responsável" (quem cadastrou a empresa); formato do backup.
+
 ## Regra do titular
 
 - **Hoje:** o e-mail `dnmltda@hotmail.com` é sempre o administrador (dono do sistema e superusuário do

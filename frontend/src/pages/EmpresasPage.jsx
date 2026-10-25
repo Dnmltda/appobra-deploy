@@ -856,7 +856,7 @@ const EmpresasPage = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Empresa</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir <strong>{deleteTarget?.razao_social}</strong>? Esta ação não pode ser desfeita.
+              Tem certeza que deseja arquivar <strong>{deleteTarget?.razao_social}</strong>? O registro sai da lista, mas fica guardado no histórico (nada é apagado).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

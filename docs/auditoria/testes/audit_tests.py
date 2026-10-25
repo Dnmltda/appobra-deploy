@@ -477,6 +477,10 @@ s, r = call("POST", "/api/collections/users/records", tA, {
 check("telas", "Convite: admin cria acesso com link", s == 200, err(r) if s >= 400 else "")
 s, r = call("POST", "/api/custom/get-invite-details", None, {"token": tok})
 check("telas", "Convite: link abre os dados", s == 200, err(r) if s >= 400 else "")
+check("a8", "Convite (tela pública) não devolve CPF nem telefone", s == 200 and "cpf" not in json.dumps(r) and "telefone" not in json.dumps(r), str(sorted(r))[:120])
+check("a8", "Convite mostra o e-mail escondido (co***@...)", r.get("email") == "co***@teste.local", str(r.get("email")))
+s2, r2 = call("POST", "/api/custom/get-invite-details", None, {"token": "token-que-nao-existe"})
+check("a8", "Link de convite inválido é recusado", s2 >= 400 and "inválido" in r2.get("message", ""), f"status {s2}")
 s, r = call("POST", "/api/custom/activate-invite", None, {"token": tok, "password": "Nova12345", "passwordConfirm": "Nova12345"})
 check("telas", "Convite: funcionário cria a própria senha", s == 200, err(r) if s >= 400 else "")
 s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "conv@teste.local", "password": "Nova12345"})
@@ -1307,6 +1311,76 @@ if tSU:
         s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": _dn.get("email"), "password": "Senha12345"})
         check("situacao", "Titular continua entrando", s == 200, f"status {s}")
     call("PATCH", "/api/settings", tSU, {"rateLimits": _rl})
+
+# ------------------------------------------------------------------ Regra do Diego: nada se apaga (25/10/2026)
+def _tentativas(reg_id):
+    return call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q(f'registro_id="{reg_id}"'), tSU)[1].get("items", []) if tSU else []
+s, _mv = mov("Entrada", 1)
+s, r = call("DELETE", f"/api/collections/movimentacoes/records/{_mv.get('id')}", tA)
+check("nada", "Nem o Administrador apaga uma movimentação", s == 403 and call("GET", f"/api/collections/movimentacoes/records/{_mv.get('id')}", tA)[0] == 200, f"status {s}")
+check("nada", "A tentativa de apagar fica registrada (quem, o quê)", any(t.get("acao") == "apagar" and t.get("usuario_id") == uA["id"] for t in _tentativas(_mv.get("id"))), str(len(_tentativas(_mv.get("id")))))
+s, _ob = call("POST", "/api/collections/obras/records", tA, {"nome": "Obra que não se apaga", "company_id": cA})
+s, r = call("DELETE", f"/api/collections/obras/records/{_ob.get('id')}", tA)
+check("nada", "Obra não é apagada", s == 403 and call("GET", f"/api/collections/obras/records/{_ob.get('id')}", tA)[0] == 200, f"status {s}")
+s, _fn = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor arquivável", "cnpj": "22333444000181", "company_id": cA})
+s, r = call("DELETE", f"/api/collections/fornecedores/records/{_fn.get('id')}", tA)
+_fv = call("GET", f"/api/collections/fornecedores/records/{_fn.get('id')}", tSU)[1] if tSU else {}
+check("nada", "\"Excluir\" fornecedor continua arquivando (some da lista, fica guardado)", s == 204 and _fv.get("deleted_at"), f"status {s}")
+s, _nt = call("POST", "/api/collections/notificacoes/records", tA, {"usuarioId": uA["id"], "tipo": "estoque", "mensagem": "Aviso que vai ser arquivado"})
+s, r = call("DELETE", f"/api/collections/notificacoes/records/{_nt.get('id')}", tA)
+check("nada", "Limpar uma notificação arquiva (não apaga)", s == 204 and (call("GET", f"/api/collections/notificacoes/records/{_nt.get('id')}", tSU)[0] == 200 if tSU else True), f"status {s}")
+s, _ms = call("POST", "/api/collections/materiais/records", tA, {"name": "Disco de corte 7pol", "code": "NADA-1", "unit": "un", "quantity_in_stock": 10, "status": "active", "company_id": cA})
+s2, r2 = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": funU.get("id"), "material_id": _ms.get("id"),
+              "tipo_operacao": "Retirada", "quantidade": 2, "data_operacao": "2026-10-25"})
+check("nada", "(preparo) material entregue ao saldo de um funcionário", s == 200 and s2 == 200, err(r2) if s2 >= 400 else "")
+s, r = call("PATCH", f"/api/collections/materiais/records/{_ms.get('id')}", tA, {"name": "Disco trocado de nome"})
+check("nada", "Material que está no saldo de funcionário não pode ser alterado (nem o nome)", s == 403 and "saldo" in r.get("message", ""), f"status {s}")
+s, r = call("DELETE", f"/api/collections/materiais/records/{_ms.get('id')}", tA)
+check("nada", "Material que está no saldo de funcionário não pode ser arquivado", s == 403, f"status {s}")
+s, r = call("PATCH", f"/api/collections/materiais/records/{fio.get('id')}", tA, {"name": "Fio flexível azul 2,5mm"})
+check("nada", "Material cujo saldo já foi todo usado volta a ser editável", s == 200, err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/materiais/records/{mid}", tA, {"name": "Areia média lavada m3"})
+check("nada", "Material fora de qualquer saldo continua editável", s == 200, err(r) if s >= 400 else "")
+_hist = call("GET", "/api/collections/historico_alteracoes/records?filter=" + q(f'registro_id="{mid}" && campo="name"'), tA)[1].get("items", [])
+check("nada", "A edição do cadastro fica no histórico (quem, antes e depois)", any(h.get("usuario_id") == uA["id"] and "Areia média lavada" in h.get("depois", "") for h in _hist), str(len(_hist)))
+s, r = call("GET", "/api/collections/historico_alteracoes/records?perPage=1", _tok["Servente"])
+check("nada", "Servente não lê o histórico nem as tentativas", s == 200 and not r.get("items") and not call("GET", "/api/collections/tentativas_bloqueadas/records?perPage=1", _tok["Servente"])[1].get("items"), f"status {s}")
+s, r = call("POST", "/api/collections/contas_pagar/records", _tok["Servente"], {"company_id": cA})
+_tc = call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q('tabela="contas_pagar"'), tSU)[1].get("items", []) if tSU else []
+check("nada", "Gravação sem permissão também fica registrada como tentativa", s == 403 and _tc, str(len(_tc)))
+
+# ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
+# (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
+if tSU:
+    _us = call("GET", "/api/collections/users/records?perPage=500&filter=" + q('id_unico != ""'), tSU)[1].get("items", [])
+    _por = {}
+    for u in _us:
+        _por.setdefault(u.get("id_unico"), set()).add(u.get("company_id"))
+    _rep = next((i for i, cs in _por.items() if len(cs) > 1), None)
+    check("a7", "(preparo) existe um ID repetido em duas empresas", _rep, str(_rep))
+    _rl7 = call("GET", "/api/settings", tSU)[1].get("rateLimits", {})
+    call("PATCH", "/api/settings", tSU, {"rateLimits": {**_rl7, "excludedIPs": ["127.0.0.1"]}})
+    if _rep:
+        for _ in range(5):
+            call("POST", "/api/custom/login-id", None, {"id_unico": _rep, "password": "errada123"})
+        s, r = call("POST", "/api/custom/login-id", None, {"id_unico": _rep, "password": "Senha12345"})
+        check("a7", "5 senhas erradas pelo ID repetido travam o login por esse ID", s >= 400 and "Muitas tentativas" in r.get("message", ""), f"status {s} {r.get('message', '')[:60]}")
+        s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "a@teste.local", "password": "Senha12345"})
+        check("a7", "Login por e-mail continua funcionando (a trava é só do ID)", s == 200, f"status {s}")
+    _tp = call("GET", "/api/settings", tSU)[1].get("trustedProxy", {})
+    check("a7", "Servidor usa o endereço real do Fly (Fly-Client-IP)", _tp.get("headers") == ["Fly-Client-IP"], str(_tp))
+    call("PATCH", "/api/settings", tSU, {"rateLimits": _rl7})
+    _st = []
+    for i in range(30):
+        req = urllib.request.Request(B + "/api/collections/users/auth-with-password", method="POST",
+                                     data=json.dumps({"identity": "naoexiste@teste.local", "password": "x"}).encode(),
+                                     headers={"content-type": "application/json", "X-Real-IP": f"10.9.{i}.{i}", "X-Forwarded-For": f"10.8.{i}.{i}"})
+        try:
+            urllib.request.urlopen(req)
+            _st.append(200)
+        except urllib.error.HTTPError as e:
+            _st.append(e.code)
+    check("a7", "Endereço inventado (X-Real-IP) não escapa do limite de logins", 429 in _st, str(sorted(set(_st))))
 
 print("\nRESUMO:", sum(1 for x in results if x["ok"]), "OK /", sum(1 for x in results if not x["ok"]), "FALHA")
 json.dump(results, open(sys.argv[1], "w"), ensure_ascii=False, indent=1)

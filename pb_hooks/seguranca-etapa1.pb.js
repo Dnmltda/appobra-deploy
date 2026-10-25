@@ -387,9 +387,13 @@ onBootstrap((e) => {
   const SEG_ARQUIVAVEIS = [
     "materiais", "funcionarios", "empresas", "epis", "equipamentos", "fornecedores", "clientes", "veiculos",
     "solicitacoes", "compras", "propostas", "contas_receber", "treinamentos",
+    // Regra do Diego (25/10/2026): nada se apaga; estas também passam a arquivar.
+    "notificacoes", "obra_mensagens", "solicitacoes_anexos", "compras_anexos",
   ];
   SEG_ARQUIVAVEIS.forEach((name) => {
     try {
+      // obra_mensagens é criada por outro arquivo no mesmo boot: na 1ª vez pode ainda não existir.
+      try { app.findCollectionByNameOrId(name); } catch (_) { return; }
       let col = app.findCollectionByNameOrId(name);
       if (!col.fields.getByName("deleted_at")) {
         col.fields.add(new DateField({ name: "deleted_at" }));
@@ -480,6 +484,12 @@ onRecordDeleteRequest((e) => {
   if (regra === null || !$app.canAccessRecord(r, e.requestInfo(), regra)) {
     throw new ForbiddenError("Você não tem permissão para excluir este registro.");
   }
+  // Material que está com algum funcionário não pode nem ser arquivado.
+  const nada = require(`${__hooks}/nada-se-apaga-lib.js`);
+  if (col.name === "materiais" && nada.materialEmSaldo($app, r.id)) {
+    nada.registrarTentativa($app, e.auth, "arquivar", col.name, r.id, `Arquivar o material "${r.get("name")}", que está no saldo de funcionário`);
+    throw new ForbiddenError("Este material está com funcionários (no saldo) e não pode ser arquivado nem alterado.");
+  }
 
   const INATIVO = {
     materiais: "inactive", funcionarios: "Inativo", empresas: "Inativo", epis: "Inativo",
@@ -497,4 +507,5 @@ onRecordDeleteRequest((e) => {
   $app.saveNoValidate(r);
   return e.noContent(204);
 }, "materiais", "funcionarios", "empresas", "epis", "equipamentos", "fornecedores", "clientes", "veiculos",
-   "solicitacoes", "compras", "propostas", "contas_receber", "treinamentos", "users");
+   "solicitacoes", "compras", "propostas", "contas_receber", "treinamentos", "users",
+   "notificacoes", "obra_mensagens", "solicitacoes_anexos", "compras_anexos");

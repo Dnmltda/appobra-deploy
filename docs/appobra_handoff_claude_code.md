@@ -134,6 +134,27 @@
   bloqueada para o cargo também é recusado (`acesso-dados.pb.js`, onFileDownloadRequest). Nas telas, o passe entra
   sozinho em todo `pb.files.getURL` (`frontend/src/lib/pocketbaseClient.js`, renovado a cada 30 min e antes das telas
   abrirem, em AuthContext). Testes: grupo "a6" (7) e `navegador/arquivos.mjs` (fotos e documentos nas telas).
+  Publicado na Hostinger (PR #20) antes do Fly (as telas novas funcionam com o servidor antigo; o contrário não).
+- **Bloco 1, item A7 (aprovado):** login pela aba "ID" com ID repetido em várias empresas agora também trava após 5
+  erros (contador do ID em memória do servidor, `login-limite-lib.js`; não trava o e-mail/usuário de ninguém); o
+  servidor usa o endereço real do Fly (`Fly-Client-IP`, `pb_hooks/endereco-real.pb.js`) no limite de logins por
+  endereço, em vez do `X-Real-IP` que o visitante podia inventar. Testes: grupo "a7" (5, no fim do arquivo).
+- **Bloco 1, item A8 (aprovado):** a tela pública de convite (`/ativar-conta`) não recebe mais CPF nem telefone; o
+  e-mail vem escondido (`jo***@...`) e aparece o nome da empresa (`pb_hooks/activate-invite.pb.js`, `App.jsx`). O
+  convite é achado direto pelo token (antes percorria todos os usuários a cada abertura). Testes: grupo "a8" (3).
+  **Com isso o Bloco 1 está completo** (C1, A1–A8).
+- **Bloco 2 / regra nova do Diego (25/10/2026):** durante o uso **nada se apaga** (nem o Administrador): os
+  registros são a auditoria e ficam fixos; tentativa de adulterar avisa o titular e o responsável da empresa. Só o
+  **fechamento da empresa** apaga tudo, depois do backup completo (`docs/ideias-futuras.md`). Substitui o M2.
+  Os demais itens do Bloco 2 (M1, M3, M7, M6) seguem no plano.
+- **Regra "nada se apaga", parte 1 (aprovada pelo Diego):** `pb_hooks/nada-se-apaga.pb.js` + `-lib.js`. Apagar pela
+  API é recusado em todas as tabelas (nem o Administrador); os "Excluir" das telas seguem arquivando (lista em
+  `seguranca-etapa1.pb.js`, agora também notificações, mural e anexos). Exceção: itens de pedido/compra ainda não
+  aprovados (rascunho). Material no saldo de algum funcionário não pode ser alterado nem arquivado. Edição de
+  cadastro grava `historico_alteracoes` (quem, quando, campo, antes, depois). Toda tentativa barrada (apagar, gravar
+  sem permissão, trocar empresa, usar item de outra empresa, mexer em material no saldo) grava
+  `tentativas_bloqueadas` — base para a parte 2 (sino + "Movimentações do dia/semana"). Textos das telas: "excluir"
+  virou "arquivar"/"inativar" com o aviso de que nada é apagado. Testes: grupo "nada" (13).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,
