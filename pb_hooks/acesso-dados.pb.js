@@ -39,31 +39,68 @@ onRecordViewRequest((e) => {
   e.next();
 }, ...require(`${__hooks}/acesso-dados-lib.js`).TABELAS);
 
-// Campos sensíveis escondidos na resposta para quem não trabalha com eles.
+// Campos sensíveis escondidos na resposta para quem não trabalha com eles
+// (lista em acesso-dados-lib.js).
 onRecordEnrich((e) => {
   const a = e.requestInfo && e.requestInfo.auth;
-  if (!a || a.isSuperuser()) return e.next();
-  const cargo = a.get("cargo") || a.get("role");
-  const admin = a.get("dono_sistema") === true || a.get("role") === "admin" || a.get("role") === "Administrador" || cargo === "Administrador";
-  if (admin) return e.next();
-  const em = (lista) => lista.includes(cargo);
-  const PESSOAS = ["Diretoria", "Gerência", "RH", "Mestre de Obras"];
-  const VALORES = ["Diretoria", "Gerência", "Engenheiro", "Mestre de Obras", "Almoxarife", "Comprador", "Financeiro"];
-  const CAMPOS = {
-    funcionarios: [PESSOAS, ["cpf", "salario", "data_nascimento", "endereco", "cep", "contato_emergencia"]],
-    users: [["RH"], ["cpf"]],
-    materiais: [VALORES, ["unit_cost"]],
-    equipamentos: [VALORES, ["acquisition_cost", "valor_compra", "valor_atual"]],
-    equipamentos_manutencao: [VALORES, ["custos"]],
-    epis: [VALORES.concat(["RH"]), ["valor_unitario", "valor_medio"]],
-    obras: [["Diretoria", "Gerência", "Engenheiro", "Financeiro"], ["budget", "actual_cost"]],
-    saldo_funcionario: [VALORES, ["valor_unitario", "valor_total"]],
-  };
-  const tabela = e.record.collection().name;
-  const regra = CAMPOS[tabela];
-  if (regra && !em(regra[0])) {
-    // users: a própria pessoa continua vendo o próprio CPF.
-    if (!(tabela === "users" && e.record.id === a.id)) e.record.hide(...regra[1]);
-  }
+  const campos = require(`${__hooks}/acesso-dados-lib.js`).escondidos(a, e.record.collection().name);
+  // users: a própria pessoa continua vendo o próprio CPF.
+  if (campos.length && !(e.record.collection().name === "users" && a && e.record.id === a.id)) e.record.hide(...campos);
   e.next();
 }, "funcionarios", "users", "materiais", "equipamentos", "equipamentos_manutencao", "epis", "obras", "saldo_funcionario");
+
+// ------------------------------------------------------------
+// Item A5 da auditoria de 24/10/2026 (aprovado pelo Diego): fechar os
+// caminhos que ainda vazavam o que está escondido.
+// ------------------------------------------------------------
+
+// 1. Busca e ordenação por campo escondido (ex.: ?filter=salario>5000 para
+//    descobrir o salário por tentativa) são recusadas para quem não vê o campo.
+onRecordsListRequest((e) => {
+  const lib = require(`${__hooks}/acesso-dados-lib.js`);
+  const q = e.requestInfo().query || {};
+  const campo = lib.buscaProibida(e.auth, e.collection.name, String(q.filter || "") + " " + String(q.sort || ""));
+  if (campo) throw new BadRequestError("Não é possível buscar por este campo.");
+  e.next();
+});
+
+// 2. Tempo real: inscrição em tabela que a pessoa não pode ver (ou com filtro
+//    por campo escondido) é ignorada; as demais inscrições seguem.
+onRealtimeSubscribeRequest((e) => {
+  const lib = require(`${__hooks}/acesso-dados-lib.js`);
+  const auth = e.auth;
+  const ok = [];
+  const subs = e.subscriptions || [];
+  for (let i = 0; i < subs.length; i++) {
+    const topico = String(subs[i]);
+    const tabela = topico.split("?")[0].split("/")[0];
+    if (lib.TABELAS.includes(tabela) && !lib.pode(auth, tabela)) continue;
+    let filtro = "";
+    const k = topico.indexOf("options=");
+    if (k >= 0) {
+      try {
+        const op = JSON.parse(decodeURIComponent(topico.slice(k + 8)));
+        filtro = String((op.query && (op.query.filter || "")) || "") + " " + String((op.query && op.query.sort) || "");
+      } catch (_) { filtro = topico; }
+    }
+    if (filtro && lib.buscaProibida(auth, tabela, filtro)) continue;
+    ok.push(topico);
+  }
+  e.subscriptions = ok;
+  e.next();
+});
+
+// 3. Dados vinculados (expand): registro de tabela bloqueada chega vazio, só
+//    com o código. A tela continua abrindo, sem a informação restrita.
+onRecordEnrich((e) => {
+  const lib = require(`${__hooks}/acesso-dados-lib.js`);
+  const a = e.requestInfo && e.requestInfo.auth;
+  const tabela = e.record.collection().name;
+  if (lib.TABELAS.includes(tabela) && !lib.pode(a, tabela)) {
+    const nomes = [];
+    const fields = e.record.collection().fields;
+    for (let i = 0; i < fields.length; i++) if (fields[i].name !== "id") nomes.push(fields[i].name);
+    e.record.hide(...nomes);
+  }
+  e.next();
+});

@@ -1066,6 +1066,14 @@ if tSU:
     check("titular", "Outro administrador não inativa, não apaga nem rebaixa o titular",
           s1 >= 400 and s2 >= 400 and s3 >= 400 and _d2.get("status") == "Ativo" and _d2.get("cargo") == "Administrador" and not _d2.get("deleted_at"),
           f"{s1} {s2} {s3}")
+    _tk = str(uuid.uuid4())
+    s4, r4 = call("PATCH", f"/api/collections/users/records/{_dono['id']}", tD, {"password_reset_token": _tk, "password_reset_expires": "2099-01-01 00:00:00.000Z"})
+    s5, r5 = call("POST", "/api/custom/activate-invite", None, {"token": _tk, "password": "Invasor12345", "passwordConfirm": "Invasor12345"})
+    check("titular", "Outro administrador não grava convite na conta do titular (não toma a conta)", s4 == 403 and s5 >= 400, f"gravar {s4}, ativar {s5}")
+    s6, _ = call("PATCH", f"/api/collections/users/records/{_dono['id']}", tD, {"email": "invasor@teste.local"})
+    check("titular", "Outro administrador não troca o e-mail do titular", s6 == 403, f"status {s6}")
+    s7, _ = call("POST", "/api/custom/esqueci-senha", None, {"identificador": _dono.get("email")})
+    check("titular", "O titular continua podendo pedir \"Esqueci minha senha\"", s7 == 200, f"status {s7}")
     s, _ = call("DELETE", f"/api/collections/users/records/{_dono['id']}", tSU)
     check("titular", "Nem o superusuário apaga a conta do titular", s >= 400 and call("GET", f"/api/collections/users/records/{_dono['id']}", tSU)[0] == 200, f"status {s}")
     s, _ = call("DELETE", f"/api/collections/companies/records/{_cD}", tSU)
@@ -1097,6 +1105,73 @@ check("g1", "RH vê CPF e salário do funcionário", _f(_tok["RH"]).get("cpf") =
 check("g1", "Engenheiro vê o funcionário sem CPF nem salário", _f(_tok["Engenheiro"]) and "salario" not in _f(_tok["Engenheiro"]))
 check("g1", "Administrador continua vendo tudo", _f(tA).get("salario") == 4200 and any(x.get("descricao") == "Aluguel G1" for x in _lista(tA, "contas_pagar")))
 check("g1", "Empresa B continua sem ver nada da A", not _lista(login("b@teste.local", "SenhaB12345")[0] if tSU else tB, "funcionarios", f'id="{_fg.get("id")}"'))
+
+# ------------------------------------------------------------------ A5: busca, tempo real e dados vinculados (24/10/2026)
+def _busca(tok, col, filtro):
+    return call("GET", f"/api/collections/{col}/records?perPage=5&filter=" + q(filtro), tok)
+s, r = _busca(_tok["Servente"], "funcionarios", "salario>1000")
+check("a5", "Servente não busca funcionário por salário", s == 400 and "buscar" in r.get("message", ""), f"status {s}")
+s, r = _busca(_tok["Servente"], "funcionarios", 'cpf~"987"')
+check("a5", "Servente não busca funcionário por CPF", s == 400, f"status {s}")
+s, r = call("GET", "/api/collections/materiais/records?perPage=5&sort=-unit_cost", _tok["Servente"])
+check("a5", "Servente não ordena material pelo custo", s == 400, f"status {s}")
+s, r = _busca(_tok["RH"], "funcionarios", "salario>1000")
+check("a5", "RH continua buscando funcionário por salário", s == 200 and any(x.get("id") == _fg.get("id") for x in r.get("items", [])), f"status {s}")
+s, r = _busca(_tok["Servente"], "funcionarios", 'nome~"Sigiloso"')
+check("a5", "Servente continua buscando funcionário pelo nome", s == 200 and r.get("items"), f"status {s}")
+s, fx = call("POST", "/api/collections/fornecedores/records", tA, {"nome": "Fornecedor Sigiloso", "cnpj": "11222333000181", "company_id": cA})
+s2, ex = call("POST", "/api/collections/equipamentos/records", tA, {"nome": "Martelete A5", "company_id": cA, "fornecedor_id": fx.get("id")})
+check("a5", "(preparo) equipamento com fornecedor", s == 200 and s2 == 200 and ex.get("fornecedor_id"), err(fx) if s >= 400 else (err(ex) if s2 >= 400 else ""))
+s, r = call("GET", f"/api/collections/equipamentos/records/{ex.get('id')}?expand=fornecedor_id", _tok["Servente"])
+_fx = (r.get("expand") or {}).get("fornecedor_id") or {}
+check("a5", "Servente abre o equipamento, mas o fornecedor vem sem dados", s == 200 and "nome" not in _fx, f"status {s} {sorted(_fx)[:4]}")
+s, r = call("GET", f"/api/collections/equipamentos/records/{ex.get('id')}?expand=fornecedor_id", _tok["Almoxarife"])
+check("a5", "Almoxarife vê o fornecedor do equipamento", ((r.get("expand") or {}).get("fornecedor_id") or {}).get("nome") == "Fornecedor Sigiloso", f"status {s}")
+
+import http.client, threading, time as _time
+def _escuta(tok, topicos, acao, espera=3.0):
+    """Abre o tempo real, inscreve nos tópicos, executa a ação e devolve os eventos recebidos."""
+    u = urllib.parse.urlparse(B)
+    cx = http.client.HTTPConnection(u.hostname, u.port, timeout=espera + 5)
+    cx.request("GET", "/api/realtime")
+    resp = cx.getresponse()
+    eventos, cid = [], [None]
+    def ler():
+        nome = ""
+        try:
+            while True:
+                linha = resp.fp.readline().decode()
+                if not linha:
+                    break
+                if linha.startswith("event:"):
+                    nome = linha[6:].strip()
+                elif linha.startswith("data:"):
+                    d = json.loads(linha[5:].strip() or "{}")
+                    if nome == "PB_CONNECT":
+                        cid[0] = d.get("clientId")
+                    else:
+                        eventos.append(nome)
+        except Exception:
+            pass
+    th = threading.Thread(target=ler, daemon=True)
+    th.start()
+    for _ in range(50):
+        if cid[0]:
+            break
+        _time.sleep(0.1)
+    call("POST", "/api/realtime", tok, {"clientId": cid[0], "subscriptions": topicos})
+    _time.sleep(0.5)
+    acao()
+    _time.sleep(espera)
+    cx.close()
+    return eventos
+_ev = _escuta(_tok["Servente"], ["contas_pagar/*", "obras/*"], lambda: (
+    call("POST", "/api/collections/contas_pagar/records", tA, {"descricao": "Conta tempo real", "valor": 10, "data_vencimento": "2026-11-10 12:00:00", "company_id": cA}),
+    call("POST", "/api/collections/obras/records", tA, {"nome": "Obra tempo real", "company_id": cA})))
+check("a5", "Tempo real: Servente não recebe contas a pagar (e continua recebendo obras)", "contas_pagar/*" not in _ev and "obras/*" in _ev, str(_ev))
+_ev = _escuta(_tok["Financeiro"], ["contas_pagar/*"], lambda: call("POST", "/api/collections/contas_pagar/records", tA,
+              {"descricao": "Conta tempo real 2", "valor": 10, "data_vencimento": "2026-11-10 12:00:00", "company_id": cA}))
+check("a5", "Tempo real: Financeiro continua recebendo contas a pagar", "contas_pagar/*" in _ev, str(_ev))
 
 # ------------------------------------------------------------------ A2/A4: empresa travada nas gravações (24/10/2026)
 _tBv = _tB2  # a senha da B mudou mais acima: o token antigo não vale
