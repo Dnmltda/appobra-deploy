@@ -143,9 +143,10 @@
   e-mail vem escondido (`jo***@...`) e aparece o nome da empresa (`pb_hooks/activate-invite.pb.js`, `App.jsx`). O
   convite é achado direto pelo token (antes percorria todos os usuários a cada abertura). Testes: grupo "a8" (3).
   **Com isso o Bloco 1 está completo** (C1, A1–A8).
-- **Bloco 2:** o item M2 (arquivar em vez de apagar) foi **adiado pelo Diego** e substituído por uma ideia para
-  depois que o app estiver ativo: backup pelo responsável da empresa + exclusão total com confirmação por e-mail
-  (`docs/ideias-futuras.md`). Os demais itens do Bloco 2 (M1, M3, M7, M6) seguem no plano.
+- **Bloco 2 / regra nova do Diego (25/10/2026):** durante o uso **nada se apaga** (nem o Administrador): os
+  registros são a auditoria e ficam fixos; tentativa de adulterar avisa o titular e o responsável da empresa. Só o
+  **fechamento da empresa** apaga tudo, depois do backup completo (`docs/ideias-futuras.md`). Substitui o M2.
+  Os demais itens do Bloco 2 (M1, M3, M7, M6) seguem no plano.
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

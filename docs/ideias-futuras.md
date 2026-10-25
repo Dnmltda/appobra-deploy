@@ -17,21 +17,20 @@ Navarro). Até lá o app fica como está.
 - **Planos:** limites por empresa (logins, funcionários, materiais, obras) já começam a existir para as
   empresas de teste; os planos pagos só mudam os números.
 
-## Backup e exclusão total pelo responsável da empresa (pedido do Diego, 25/10/2026)
+## Nada se apaga durante o uso; só o fechamento da empresa apaga tudo (pedido do Diego, 25/10/2026)
 
-Fazer **depois que o app estiver ativo** (no lugar do item M2 da auditoria de 24/10, "arquivar em vez de apagar",
-que fica adiado). Ideia do Diego:
+**Regra:** enquanto a empresa usa o app, **ninguém apaga nada** (nem o Administrador). Os registros são a
+auditoria da obra e ficam fixos, para não ter risco de adulteração. Se alguém **tentar** adulterar (apagar ou
+mexer no que não pode), o sistema **avisa o dono do aplicativo (titular) e o responsável da empresa**.
 
-- O **responsável** pela empresa (quem cadastrou a empresa no app) pode **fazer um backup** dos dados da empresa.
-- Depois disso ele tem a opção de **apagar 100% dos dados** da empresa no banco.
-- Se ele tentar apagar **sem ter feito o backup**, o sistema percebe e **manda um e-mail** para ele confirmar que
-  se responsabiliza pelos dados perdidos. Só depois da confirmação pelo e-mail a exclusão acontece.
+**Fechamento da empresa ("apagar 100%"):** quando a empresa não quer mais usar o app, o responsável faz o
+**backup completo** (dados, documentos e fotos) e só depois a empresa é apagada inteira, para ela não dizer que o
+app ficou com algum dado dela. Se tentar apagar sem o backup, o sistema manda um e-mail para ele confirmar que se
+responsabiliza pelos dados perdidos (a confirmar com o Diego: se essa opção existe ou se o backup é obrigatório).
 
-Decisões em aberto (perguntar ao Diego antes de construir): quem conta como "responsável" (só quem cadastrou ou
-qualquer Administrador); formato do backup (arquivo para baixar com planilhas + fotos/documentos, ou guardado no
-servidor); se "apagar 100%" fecha a empresa inteira (logins incluídos) ou só limpa os dados; quanto tempo o backup
-vale (ex.: feito nas últimas 24 horas); prazo do link do e-mail e se há um período para desistir depois de
-confirmar.
+Substitui o item M2 da auditoria de 24/10 ("arquivar em vez de apagar"). Decisões em aberto: o que pode ser
+**editado** durante o uso (e com histórico); como o aviso de tentativa chega (e-mail na hora, resumo do dia,
+notificação no app); quem é o "responsável" (quem cadastrou a empresa); formato do backup; prazo do link do e-mail.
 
 ## Regra do titular
 
