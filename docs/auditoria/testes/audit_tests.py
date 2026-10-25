@@ -1349,6 +1349,38 @@ s, r = call("POST", "/api/collections/contas_pagar/records", _tok["Servente"], {
 _tc = call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q('tabela="contas_pagar"'), tSU)[1].get("items", []) if tSU else []
 check("nada", "Gravação sem permissão também fica registrada como tentativa", s == 403 and _tc, str(len(_tc)))
 
+# ------------------------------------------------------------------ Avisos e "Movimentações do dia" (parte 2)
+if tSU:
+    _dn = call("GET", "/api/collections/users/records?filter=" + q("dono_sistema=true"), tSU)[1].get("items", [{}])[0]
+    _avisos = lambda uid: call("GET", "/api/collections/notificacoes/records?perPage=200&filter=" + q(f'usuarioId="{uid}" && tipo="seguranca"'), tSU)[1].get("items", [])
+    _antes_t, _antes_r = len(_avisos(_dn.get("id"))), len(_avisos(uA["id"]))
+    call("DELETE", f"/api/collections/movimentacoes/records/{_mv.get('id')}", _tok["Almoxarife"])
+    check("avisos", "Tentativa barrada avisa o titular no sino", len(_avisos(_dn.get("id"))) > _antes_t, f"{_antes_t} -> {len(_avisos(_dn.get('id')))}")
+    check("avisos", "Tentativa barrada avisa o responsável da empresa (quem cadastrou) no sino", len(_avisos(uA["id"])) > _antes_r, f"{_antes_r} -> {len(_avisos(uA['id']))}")
+s, r = call("GET", "/api/custom/minhas-movimentacoes", tA)
+check("avisos", "Resumo do dia do administrador: movimentações, cadastros e tentativas da empresa",
+      s == 200 and r.get("movimentei") and r.get("cadastrei") and r.get("tentativas"),
+      f"status {s} " + str({k: len(r.get(k, [])) for k in ("movimentei", "cadastrei", "recebi", "tentativas")}))
+s, r = call("GET", "/api/custom/minhas-movimentacoes", _tok["Servente"])
+check("avisos", "Servente vê só as próprias tentativas (não as da empresa)", s == 200 and r.get("tentativas")
+      and len(r.get("tentativas", [])) < len(call("GET", "/api/custom/minhas-movimentacoes", tA)[1].get("tentativas", [])), str(len(r.get("tentativas", []))))
+s, r = call("GET", "/api/custom/minhas-movimentacoes?de=2026-01-01&ate=2026-12-31", tA)
+check("avisos", "Período maior que 31 dias é recusado", s == 400, f"status {s}")
+s, r = call("GET", "/api/custom/minhas-movimentacoes", None)
+check("avisos", "Resumo exige login", s in (401, 403), f"status {s}")
+if tSU:
+    _n0 = len(call("GET", "/api/collections/notificacoes/records?perPage=200&filter=" + q(f'usuarioId="{uA["id"]}" && tipo="resumo"'), tSU)[1].get("items", []))
+    s, r = call("POST", "/api/crons/resumo-do-dia", tSU)
+    for _ in range(20):  # o servidor roda a rotina em segundo plano
+        _n1 = len(call("GET", "/api/collections/notificacoes/records?perPage=200&filter=" + q(f'usuarioId="{uA["id"]}" && tipo="resumo"'), tSU)[1].get("items", []))
+        if _n1 > _n0:
+            break
+        _time.sleep(0.5)
+    _n1 = len(call("GET", "/api/collections/notificacoes/records?perPage=200&filter=" + q(f'usuarioId="{uA["id"]}" && tipo="resumo"'), tSU)[1].get("items", []))
+    check("avisos", "Fim do expediente: aviso no sino \"suas movimentações de hoje estão prontas\"", s in (200, 204) and _n1 > _n0, f"cron {s}, avisos {_n0}->{_n1}")
+    s, r = call("POST", "/api/crons/resumo-da-semana", tSU)
+    check("avisos", "Fechamento da semana roda sem erro (e-mail por empresa)", s in (200, 204), f"cron {s} {str(r)[:80]}")
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:

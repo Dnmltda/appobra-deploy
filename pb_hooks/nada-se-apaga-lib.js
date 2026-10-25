@@ -15,6 +15,8 @@ function registrarTentativa(app, auth, acao, tabela, registroId, detalhe) {
     t.set("registro_id", registroId || "");
     t.set("detalhe", String(detalhe || "").slice(0, 500));
     app.save(t);
+    // Sino do titular e do responsável da empresa, na hora (avisos-lib.js).
+    require(`${__hooks}/avisos-lib.js`).avisarTentativa(app, t.get("company_id"), t.get("usuario_nome"), t.get("detalhe") || `${acao} em ${tabela}`);
   } catch (err) {
     console.log("[nada-se-apaga] Erro ao registrar tentativa:", err);
   }
