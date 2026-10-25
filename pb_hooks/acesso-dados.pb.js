@@ -104,3 +104,19 @@ onRecordEnrich((e) => {
   }
   e.next();
 });
+
+// 4. Arquivos (item A6): baixar um arquivo de tabela bloqueada para a pessoa
+//    (ex.: documento para um Servente) é recusado, mesmo com o passe válido.
+onFileDownloadRequest((e) => {
+  const lib = require(`${__hooks}/acesso-dados-lib.js`);
+  const tabela = e.record.collection().name;
+  if (lib.TABELAS.includes(tabela)) {
+    let auth = e.auth;
+    const token = String((e.requestInfo().query || {}).token || "");
+    if (!auth && token) {
+      try { auth = e.app.findAuthRecordByToken(token, "file"); } catch (_) { auth = null; }
+    }
+    if (!auth || !lib.pode(auth, tabela)) throw new NotFoundError("The requested resource wasn't found.");
+  }
+  e.next();
+});

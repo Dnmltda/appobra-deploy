@@ -129,6 +129,11 @@
   (inclusive via relação, ex.: `funcionario_id.cpf`); inscrição de tempo real em tabela bloqueada (ou com filtro por
   campo escondido) é ignorada; registro de tabela bloqueada que vem junto (expand) chega só com o código.
   Testes: grupo "a5" (10, inclusive tempo real de verdade).
+- **Bloco 1, item A6 (aprovado):** arquivos só com login (`pb_hooks/arquivos-protegidos.pb.js`): todo campo de
+  arquivo passa a "protegido" (menos o logo das empresas) e o passe de arquivo vale 1 hora. O download de tabela
+  bloqueada para o cargo também é recusado (`acesso-dados.pb.js`, onFileDownloadRequest). Nas telas, o passe entra
+  sozinho em todo `pb.files.getURL` (`frontend/src/lib/pocketbaseClient.js`, renovado a cada 30 min e antes das telas
+  abrirem, em AuthContext). Testes: grupo "a6" (7) e `navegador/arquivos.mjs` (fotos e documentos nas telas).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,
