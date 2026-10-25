@@ -177,7 +177,10 @@
     destinatário do aviso) não mudam.
   - **M3** `compra-recebida.pb.js`: compra passa a "Recebido" (entrada no estoque) só com cargo que cria
     movimentação (Administrador, Diretoria, Gerência, Engenheiro, Mestre de Obras, Almoxarife, Comprador); os demais
-    (ex.: Financeiro) recebem 403 e a tentativa vai para o sino.
+    (ex.: Financeiro) recebem 403 e a tentativa vai para o sino. A conferência é um `routerUse` (antes do registro):
+    a edição de compra roda numa transação (`estoque-servidor.pb.js`) desfeita com a recusa, e a tentativa gravada
+    dentro dela sumia (vale para qualquer recusa em compras/movimentações: registre a tentativa antes da transação).
+    Na tela, o botão "Recebimento" só aparece para esses cargos (`podeReceberCompra` em `permissoes.js`).
   - **M7** `codigos-unicos.pb.js` + `-lib.js`: regra no servidor (não índice, para não travar o deploy se houver
     repetidos antigos) para patrimônio e código interno do equipamento, número do pedido e da compra, código do EPI e
     CPF/CNPJ de cliente, por empresa, sem diferença de maiúsculas/espaços, ignorando arquivados; na edição só confere
