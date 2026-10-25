@@ -44,8 +44,11 @@ export const ehAdmin = (user) =>
 // O cargo manda; "role" só entra para usuários antigos sem cargo.
 export const cargoDe = (user) => user?.cargo || user?.role || 'Funcionário';
 
+// Telas de todo mundo (cada um vê só o que é seu).
+const PARA_TODOS = ['minhas_movimentacoes'];
+
 export const podeAcessar = (user, modulo) => {
-  if (!modulo) return true;
+  if (!modulo || PARA_TODOS.includes(modulo)) return true;
   if (ehAdmin(user)) return true;
   return (MODULOS_POR_CARGO[cargoDe(user)] || ['dashboard']).includes(modulo);
 };

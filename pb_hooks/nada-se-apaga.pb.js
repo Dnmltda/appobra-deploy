@@ -46,6 +46,29 @@ onBootstrap((e) => {
   }
 });
 
+// 1a. Antes de tudo (até quem nem tem permissão de apagar): pedido de apagar
+//     numa tabela que não arquiva é recusado e REGISTRADO como tentativa. Sem
+//     isto o PocketBase recusaria sozinho, sem deixar rastro.
+routerUse((e) => {
+  try {
+    const m = e.request && e.request.method === "DELETE" && /^\/api\/collections\/([^/]+)\/records\/([^/]+)$/.exec(e.request.url.path);
+    if (m && e.auth && !e.auth.isSuperuser()) {
+      const ARQUIVAM = ["materiais", "funcionarios", "empresas", "epis", "equipamentos", "fornecedores", "clientes", "veiculos",
+        "solicitacoes", "compras", "propostas", "contas_receber", "treinamentos", "users",
+        "notificacoes", "obra_mensagens", "solicitacoes_anexos", "compras_anexos", "solicitacoes_itens", "compras_itens"];
+      let tabela = decodeURIComponent(m[1]);
+      try { tabela = $app.findCollectionByNameOrId(tabela).name; } catch (_) {}
+      if (!ARQUIVAM.includes(tabela)) {
+        require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa($app, e.auth, "apagar", tabela, decodeURIComponent(m[2]), `Tentou apagar um registro de ${tabela}`);
+        throw new ForbiddenError("Os registros do app não podem ser apagados: eles são a auditoria da obra. A tentativa foi registrada.");
+      }
+    }
+  } catch (err) {
+    if (err instanceof ForbiddenError) throw err;
+  }
+  return e.next();
+});
+
 // 1. Apagar: recusado (as tabelas que arquivam são tratadas em seguranca-etapa1.pb.js).
 onRecordDeleteRequest((e) => {
   if (e.auth && e.auth.isSuperuser()) return e.next();

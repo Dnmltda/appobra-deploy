@@ -33,6 +33,7 @@ import ProjectManagement from '@/pages/ProjectManagement.jsx';
 import SuppliersManagement from '@/pages/SuppliersManagement.jsx';
 import SettingsPage from '@/pages/SettingsPage.jsx';
 import PaginaNotificacoes from '@/pages/PaginaNotificacoes.jsx';
+import MinhasMovimentacoesPage from '@/pages/MinhasMovimentacoesPage.jsx';
 import UserProfilePage from '@/pages/UserProfilePage.jsx';
 import AdminSecurityPanel from '@/pages/AdminSecurityPanel.jsx';
 import AuditPage from '@/pages/AuditPage.jsx';
@@ -1042,6 +1043,7 @@ function App() {
               
               {/* Other Routes */}
               <Route path="/notificacoes" element={<ProtectedRoute><PaginaNotificacoes /></ProtectedRoute>} />
+              <Route path="/minhas-movimentacoes" element={<ProtectedRoute><MinhasMovimentacoesPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
               <Route path="/admin/security" element={<ProtectedRoute requiredRoles={['admin', 'Administrador']}><AdminSecurityPanel /></ProtectedRoute>} />
               <Route path="/qrcode" element={<ProtectedRoute module="qrcode"><QRCodeModule /></ProtectedRoute>} />

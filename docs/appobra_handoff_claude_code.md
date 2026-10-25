@@ -155,6 +155,19 @@
   sem permissão, trocar empresa, usar item de outra empresa, mexer em material no saldo) grava
   `tentativas_bloqueadas` — base para a parte 2 (sino + "Movimentações do dia/semana"). Textos das telas: "excluir"
   virou "arquivar"/"inativar" com o aviso de que nada é apagado. Testes: grupo "nada" (13).
+- **Regra "nada se apaga", parte 2 – avisos (aprovada pelo Diego):** `pb_hooks/avisos.pb.js` + `avisos-lib.js`.
+  Toda tentativa barrada vira sino (tipo `seguranca`) na hora para o titular (`dono_sistema`) e o responsável da
+  empresa (= primeiro Administrador ativo cadastrado). Pedido de apagar de quem nem tem permissão (o PocketBase
+  recusaria antes do hook, sem rastro) é pego por um `routerUse` em `nada-se-apaga.pb.js`, registrado e recusado.
+  Cadastro novo entra no `historico_alteracoes` com campo "(novo cadastro)" (gravado com `$app`: depois do
+  `e.next()` a transação já terminou). Rota `GET /api/custom/minhas-movimentacoes?de=&ate=` (até 31 dias; padrão
+  hoje no horário de Brasília) devolve O que eu movimentei / cadastrei / mandaram para mim / tentativas (servente:
+  só as próprias; admin: da empresa; titular: todas). Tela `/minhas-movimentacoes` "Movimentações do dia" (abas
+  Hoje/Semana, PDF "Movimentações da semana"), liberada para todos (`PARA_TODOS` em `permissoes.js`). Rotinas:
+  `resumo-do-dia` seg–sáb 21h UTC (18h Brasília) avisa no sino quem teve atividade (tipo `resumo`);
+  `resumo-da-semana` sexta 21h30 UTC manda **um** e-mail por empresa com atividade ao responsável + titulares (resumo
+  e link para baixar o PDF na tela; o servidor não gera PDF, então não vai anexo). Rotinas rodam em segundo plano
+  (o teste espera). Testes: grupo "avisos" (8).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

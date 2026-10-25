@@ -25,7 +25,7 @@ import {
   ShieldCheck,
   Siren,
   Warehouse,
-  MessagesSquare, QrCode } from 'lucide-react';
+  MessagesSquare, QrCode, CalendarCheck } from 'lucide-react';
 import Logo from './Logo.jsx';
 import BotaoInstalar from '@/components/marca/BotaoInstalar.jsx';
 import { ehAdmin, podeAcessar, podeVerEstoque } from '@/lib/permissoes.js';
@@ -52,6 +52,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   // The 15 requested modules
   const menuItems = [
     { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'minhas_movimentacoes', path: '/minhas-movimentacoes', label: 'Movimentações do dia', icon: CalendarCheck },
     { id: 'obras', path: '/projects', label: 'Obras', icon: Building2 },
     { id: 'minha_obra', path: '/minha-obra', label: 'Minha Obra', icon: MessagesSquare },
     { id: 'ocorrencias', path: '/ocorrencias', label: 'Ocorrências', icon: Siren },
@@ -88,6 +89,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   };
   const GROUP_BY_ID = {
     dashboard: 'GESTAO',
+    minhas_movimentacoes: 'GESTAO',
     financeiro: 'GESTAO',
     relatorios: 'GESTAO',
     documentos: 'GESTAO',
