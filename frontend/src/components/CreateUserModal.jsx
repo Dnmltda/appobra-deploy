@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { toast } from 'sonner';
 import { UserPlus } from 'lucide-react';
+import { mensagemErro } from '@/lib/erros.js';
 
 const CreateUserModal = ({ open, onClose, onSuccess }) => {
   const { createUser, currentUser } = useAuth();
@@ -52,7 +53,7 @@ const CreateUserModal = ({ open, onClose, onSuccess }) => {
       onClose();
       if (onSuccess) onSuccess();
     } catch (error) {
-      toast.error(error.message || 'Erro ao criar usuário');
+      toast.error(mensagemErro(error, 'Erro ao criar usuário'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ const CreateUserModal = ({ open, onClose, onSuccess }) => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
     let password = '';
     for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+      password += chars.charAt(crypto.getRandomValues(new Uint32Array(1))[0] % chars.length);
     }
     setFormData({ ...formData, password });
     toast.success('Senha gerada automaticamente');

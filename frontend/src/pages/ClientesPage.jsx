@@ -40,6 +40,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AUDIT_MODULE = 'Clientes';
 
@@ -155,7 +156,7 @@ const ClientesPage = () => {
     if (!companyId) return '';
     const parts = [`company_id = "${companyId}"`];
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().replace(/"/g, '\\"');
+      const q = searchQuery.trim().replace(/\\/g, '').replace(/"/g, '\\"');
       parts.push(`(nome ~ "${q}" || email ~ "${q}" || cpf_cnpj ~ "${q}")`);
     }
     if (filterTipo !== 'all') parts.push(`tipo = "${filterTipo}"`);
@@ -207,7 +208,7 @@ const ClientesPage = () => {
   const checkDuplicate = async (field, value, excludeId = null) => {
     if (!value || !companyId) return false;
     try {
-      const filter = `company_id = "${companyId}" && ${field} = "${value.replace(/"/g, '\\"')}"`;
+      const filter = `company_id = "${companyId}" && ${field} = "${value.replace(/\\/g, '').replace(/"/g, '\\"')}"`;
       const res = await pb.collection('clientes').getList(1, 1, {
         filter,
         $autoCancel: false,
@@ -317,7 +318,7 @@ const ClientesPage = () => {
       fetchClientes(page);
     } catch (err) {
       console.error('Erro ao salvar cliente:', err);
-      toast.error(err.message || 'Erro ao salvar cliente');
+      toast.error(mensagemErro(err, 'Erro ao salvar cliente'));
     } finally {
       setSaving(false);
     }

@@ -189,6 +189,26 @@
     nome completo, datas de admissão/demissão, observações e arquivamento → 403 + tentativa. Telefone, login e foto
     seguem livres.
   - Testes: grupo "bloco2" (16). O helper de equipamento dos testes passou a gerar código interno único.
+- **Bloco 3 (aprovado pelo Diego em 25/10/2026; ele decidiu INCLUIR a Diretoria):**
+  - **D1** cargo "Diretoria" na lista (`CARGOS` em `permissoes.js` e `users.cargo` via `log-security-event.pb.js`,
+    que só soma valores). Lê `audit_logs`/`auditoria` da própria empresa (regra em `seguranca-etapa1.pb.js`, S7 —
+    um onBootstrap separado foi sobrescrito pela ordem de subida). Sem a tela de Solicitações (saiu de
+    `podeGerirSolicitacoes`).
+  - **D2** menu (`Sidebar.jsx`) na ordem dos grupos, cada grupo uma vez, terminando em Relatórios → Auditoria →
+    Configurações (grupo "Empresa").
+  - **D3/D7** Configurações contam com filtro da empresa; falha de carga mostra aviso (`falhaAoCarregar` em
+    `lib/erros.js`) no Financeiro, Contas a Pagar, Frota, Perdas e Ganhos, QR Code e Configurações.
+  - **D4** cada tela desliga só a própria escuta em tempo real (função devolvida pelo `subscribe`), não mais
+    `unsubscribe('*')`.
+  - **D5** o login grava só `last_login` (tentativas/bloqueio são do servidor).
+  - **D6** `mensagemErro` (`lib/erros.js`) traduz as mensagens fixas do PocketBase e nunca mostra texto em inglês;
+    usada em Fornecedores, Editar/Criar usuário, Recuperar senha, Equipamentos, Clientes, Relatórios, Contas a receber
+    e Ativar conta.
+  - **D8** buscas tiram a "\" do texto (no filtro do PocketBase, `\"` vira aspas escapadas e quebrava a busca).
+  - **D9** `convite-seguro.pb.js`: ao criar acesso com convite, o servidor troca código (40 caracteres,
+    `$security.randomString`) e validade (7 dias) e põe senha descartável aleatória; na edição, código novo também
+    vem do servidor. No navegador, as senhas temporárias usam `crypto.getRandomValues`.
+  - Testes: grupo "bloco3" no servidor (8) e `navegador/bloco3.mjs` (8).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

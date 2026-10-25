@@ -15,6 +15,7 @@ import { AlertTriangle, Plus, Hammer, MapPin, CheckCircle, PackageOpen, Trending
 import { toast } from 'sonner';
 import pb from '@/lib/pocketbaseClient';
 import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import { falhaAoCarregar } from '@/lib/erros.js';
 
 const LossesGainsModule = () => {
   const { currentUser } = useAuth();
@@ -31,8 +32,8 @@ const LossesGainsModule = () => {
   useEffect(() => {
     if (!currentUser?.company_id) return;
     const f = `company_id = "${currentUser.company_id}"`;
-    pb.collection('materiais').getFullList({ filter: f, sort: 'name', $autoCancel: false }).then(setMateriais).catch(() => setMateriais([]));
-    pb.collection('obras').getFullList({ filter: f, sort: 'nome', $autoCancel: false }).then(setObras).catch(() => setObras([]));
+    pb.collection('materiais').getFullList({ filter: f, sort: 'name', $autoCancel: false }).then(setMateriais).catch((err) => { setMateriais([]); falhaAoCarregar('os materiais')(err); });
+    pb.collection('obras').getFullList({ filter: f, sort: 'nome', $autoCancel: false }).then(setObras).catch((err) => { setObras([]); falhaAoCarregar('as obras')(err); });
   }, [currentUser?.company_id]);
 
   const escolherMaterial = (id) => {

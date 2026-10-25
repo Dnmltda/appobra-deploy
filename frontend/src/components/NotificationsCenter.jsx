@@ -21,13 +21,14 @@ const NotificationsCenter = () => {
     if (currentUser) {
       fetchNotifications();
       // Subscribe to real-time updates
-      pb.collection('notificacoes').subscribe('*', (e) => {
+      const pararP = pb.collection('notificacoes').subscribe('*', (e) => {
         if (e.record.usuarioId === currentUser.id) {
           fetchNotifications();
         }
       });
       return () => {
-        pb.collection('notificacoes').unsubscribe('*');
+        // Desliga só esta escuta (unsubscribe('*') derrubaria a de outras telas na mesma tabela).
+        pararP.then((parar) => parar()).catch(() => {});
       };
     }
   }, [currentUser]);

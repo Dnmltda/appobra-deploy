@@ -111,10 +111,11 @@ const ObraPage = ({ minha = false }) => {
   useEffect(() => {
     if (!obraId) return undefined;
     let ativo = true;
-    pb.collection('obra_mensagens').subscribe('*', (ev) => {
+    const pararP = pb.collection('obra_mensagens').subscribe('*', (ev) => {
       if (ativo && ev.record?.obra_id === obraId) carregar();
     }).catch(() => {});
-    return () => { ativo = false; pb.collection('obra_mensagens').unsubscribe('*').catch(() => {}); };
+    // Desliga só esta escuta (não a de outras telas na mesma tabela).
+    return () => { ativo = false; pararP.then((parar) => parar && parar()).catch(() => {}); };
   }, [obraId, carregar]);
 
   const enviar = async (e) => {

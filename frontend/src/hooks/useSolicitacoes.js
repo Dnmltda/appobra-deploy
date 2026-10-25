@@ -21,7 +21,7 @@ const ANEXO = "solicitacoes_anexos";
 const buildFilter = ({ search, tipo, status, prioridade, obra, departamento, responsavel, dataInicio, dataFim }) => {
   const parts = [];
   if (search) {
-    const q = search.replace(/"/g, '\\"');
+    const q = search.replace(/\\/g, '').replace(/"/g, '\\"');
     parts.push(
       `(numero_solicitacao ~ "${q}" || descricao ~ "${q}" || categoria ~ "${q}" || departamento ~ "${q}")`,
     );
@@ -31,7 +31,7 @@ const buildFilter = ({ search, tipo, status, prioridade, obra, departamento, res
   if (prioridade && prioridade !== "all") parts.push(`prioridade = "${prioridade}"`);
   if (obra && obra !== "all") parts.push(`obra_id = "${obra}"`);
   if (responsavel && responsavel !== "all") parts.push(`responsavel_id = "${responsavel}"`);
-  if (departamento) parts.push(`departamento ~ "${departamento.replace(/"/g, '\\"')}"`);
+  if (departamento) parts.push(`departamento ~ "${departamento.replace(/\\/g, '').replace(/"/g, '\\"')}"`);
   if (dataInicio) parts.push(`data_solicitacao >= "${dataInicio}"`);
   if (dataFim) parts.push(`data_solicitacao <= "${dataFim}"`);
   return parts.join(" && ");

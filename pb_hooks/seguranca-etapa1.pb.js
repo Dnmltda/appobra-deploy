@@ -200,9 +200,11 @@ onBootstrap((e) => {
       segAddCompanyField(app, col);
       segBackfill(app, name);
       const fresh = app.findCollectionByNameOrId(name);
+      // Diretoria também lê (tela Auditoria; cargo incluído pelo Diego em 25/10/2026, item D1).
+      const LE = `(${SEG_SAME} && (${SEG_ADMIN} || @request.auth.cargo = "Diretoria")) || ${SEG_MASTER}`;
       segSetRules(fresh, {
-        listRule: `(${SEG_SAME} && ${SEG_ADMIN}) || ${SEG_MASTER}`,
-        viewRule: `(${SEG_SAME} && ${SEG_ADMIN}) || ${SEG_MASTER}`,
+        listRule: LE,
+        viewRule: LE,
         createRule: SEG_CREATE,
         updateRule: null,
         deleteRule: null,

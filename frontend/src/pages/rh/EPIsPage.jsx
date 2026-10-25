@@ -355,7 +355,8 @@ const EPIsPage = () => {
       }).catch(() => {})
     );
     return () => {
-      cols.forEach((c) => { try { pb.collection(c).unsubscribe('*'); } catch (_) {} });
+      // Desliga só esta escuta (unsubscribe('*') derrubaria a de outras telas na mesma tabela).
+      subs.forEach((pararP) => pararP.then((parar) => parar && parar()).catch(() => {}));
     };
   }, [companyId]);
 

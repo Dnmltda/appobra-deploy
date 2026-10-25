@@ -9,6 +9,7 @@ import { useLanguage } from '@/contexts/LanguageContext.jsx';
 import { auditLog } from '@/lib/auditLogger.js';
 import { t } from '@/lib/translations.js';
 import { toast } from 'sonner';
+import { mensagemErro } from '@/lib/erros.js';
 
 const PasswordRecoveryModal = ({ open, onClose, mode = 'forgot' }) => {
   const { requestPasswordReset, changePassword } = useAuth();
@@ -42,7 +43,7 @@ const PasswordRecoveryModal = ({ open, onClose, mode = 'forgot' }) => {
       toast.success(t('emailRecuperacaoEnviado', language));
       resetStateAndClose();
     } catch (error) {
-      toast.error(error.message || t('erro', language));
+      toast.error(mensagemErro(error, t('erro', language)));
     } finally {
       setLoading(false);
     }
@@ -68,7 +69,7 @@ const PasswordRecoveryModal = ({ open, onClose, mode = 'forgot' }) => {
       toast.success(t('senhaAlteradaSucesso', language));
       resetStateAndClose();
     } catch (error) {
-      toast.error(error.message || t('senhaAtualIncorreta', language));
+      toast.error(mensagemErro(error, t('senhaAtualIncorreta', language)));
     } finally {
       setLoading(false);
     }

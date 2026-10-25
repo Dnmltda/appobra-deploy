@@ -51,11 +51,15 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
   // The 15 requested modules
   const menuItems = [
+    // Na ordem dos grupos (cada grupo aparece uma vez) e terminando em
+    // Relatórios → Auditoria → Configurações (padrão DNM&LTDA).
     { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'minhas_movimentacoes', path: '/minhas-movimentacoes', label: 'Movimentações do dia', icon: CalendarCheck },
     { id: 'obras', path: '/projects', label: 'Obras', icon: Building2 },
     { id: 'minha_obra', path: '/minha-obra', label: 'Minha Obra', icon: MessagesSquare },
     { id: 'ocorrencias', path: '/ocorrencias', label: 'Ocorrências', icon: Siren },
+    { id: 'financeiro', path: '/financeiro/dashboard', label: 'Financeiro', icon: Wallet },
+    { id: 'documentos', path: '/documentos', label: 'Documentos', icon: FolderOpen },
     { id: 'materiais', path: '/materiais', label: 'Materiais', icon: Package },
     { id: 'estoque', path: '/estoque', label: 'Estoque', icon: Boxes },
     { id: 'estoque_obras', path: '/estoque-obras', label: 'Estoque por Obra', icon: Warehouse },
@@ -66,16 +70,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     { id: 'epis', path: '/rh/epis', label: 'EPIs', icon: HardHat },
     { id: 'qrcode', path: '/qrcode', label: 'QR Code', icon: QrCode },
     { id: 'fornecedores', path: '/suppliers', label: 'Fornecedores', icon: Truck },
-    { id: 'compras', path: '/compras', label: 'Compras', icon: ShoppingCart },
     { id: 'solicitacoes', path: '/solicitacoes', label: 'Solicitações', icon: ClipboardList },
+    { id: 'compras', path: '/compras', label: 'Compras', icon: ShoppingCart },
     { id: 'funcionarios', path: '/employees', label: 'Funcionários', icon: Users },
-    { id: 'financeiro', path: '/financeiro/dashboard', label: 'Financeiro', icon: Wallet },
-    { id: 'documentos', path: '/documentos', label: 'Documentos', icon: FolderOpen },
-    { id: 'relatorios', path: '/relatorios', label: 'Relatórios', icon: BarChart3 },
-    { id: 'configuracoes', path: '/settings', label: 'Configurações', icon: Settings },
-    { id: 'auditoria', path: '/auditoria', label: 'Auditoria', icon: ShieldCheck },
-    { id: 'empresas', path: '/empresas', label: 'Cadastro de Empresas', icon: Building2 },
     { id: 'usuarios', path: '/usuarios', label: 'Gestão de Acessos', icon: UsersRound },
+    { id: 'empresas', path: '/empresas', label: 'Cadastro de Empresas', icon: Building2 },
+    { id: 'relatorios', path: '/relatorios', label: 'Relatórios', icon: BarChart3 },
+    { id: 'auditoria', path: '/auditoria', label: 'Auditoria', icon: ShieldCheck },
+    { id: 'configuracoes', path: '/settings', label: 'Configurações', icon: Settings },
   ];
 
     // Agrupamento visual da barra lateral — só organiza a exibição, não muda
@@ -91,9 +93,9 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
     dashboard: 'GESTAO',
     minhas_movimentacoes: 'GESTAO',
     financeiro: 'GESTAO',
-    relatorios: 'GESTAO',
+    relatorios: 'EMPRESA',
     documentos: 'GESTAO',
-    auditoria: 'GESTAO',
+    auditoria: 'EMPRESA',
     obras: 'GESTAO',
     minha_obra: 'GESTAO',
     ocorrencias: 'GESTAO',

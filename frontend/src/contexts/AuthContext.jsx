@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import pb, { renovarTokenArquivos } from '@/lib/pocketbaseClient.js';
 import { auditLog, AUDIT_ACTIONS, AUDIT_MODULES } from '@/lib/auditLogger.js';
+import { mensagemErro } from '@/lib/erros.js';
 
 const AuthContext = createContext(null);
 
@@ -18,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     
     
     try {
-      pb.collection('users').subscribe('*', (data) => {
+      return pb.collection('users').subscribe('*', (data) => {
         
         if (data.record.company_id === currentUser.company_id) {
           
@@ -31,7 +32,7 @@ export const AuthProvider = ({ children }) => {
             console.error('Erro ao atualizar lista:', err);
           });
         }
-      });
+      }).catch((err) => console.error('Erro ao setup realtime sync:', err));
       
     } catch (error) {
       console.error('Erro ao setup realtime sync:', error);
@@ -49,13 +50,11 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (currentUser && currentUser.company_id) {
-      setupRealtimeSync();
+      const pararP = setupRealtimeSync();
       
       return () => {
-        try {
-          pb.collection('users').unsubscribe('*');
-        } catch (error) {
-        }
+        // Desliga só esta escuta: a Gestão de Acessos também escuta "users".
+        if (pararP) pararP.then((parar) => parar && parar()).catch(() => {});
       };
     }
   }, [currentUser]);
@@ -96,10 +95,10 @@ export const AuthProvider = ({ children }) => {
     }
     
     try {
+      // Só a data do último acesso: tentativas e bloqueio quem cuida é o
+      // servidor (pb_hooks/login-limite.pb.js); gravar aqui era recusado.
       await pb.collection('users').update(fullUser.id, { 
         last_login: new Date().toISOString(),
-        login_attempts: 0,
-        locked_until: ''
       }, { $autoCancel: false });
     } catch (e) {
       console.error('Failed to update last_login field', e);
@@ -330,7 +329,7 @@ export const AuthProvider = ({ children }) => {
       console.error('=== ERRO AO CRIAR USUÁRIO ===');
       console.error('Mensagem:', error.message);
       console.error('Stack:', error.stack);
-      setError(error.message || 'Erro ao criar usuário');
+      setError(mensagemErro(error, 'Erro ao criar usuário'));
       throw error;
     } finally {
       setLoading(false);

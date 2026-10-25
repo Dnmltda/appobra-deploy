@@ -159,7 +159,7 @@ const PropostasPage = () => {
     if (!companyId) return '';
     const parts = [`company_id = "${companyId}"`];
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().replace(/"/g, '\\"');
+      const q = searchQuery.trim().replace(/\\/g, '').replace(/"/g, '\\"');
       parts.push(`(numero_proposta ~ "${q}" || descricao ~ "${q}")`);
     }
     if (filterStatus !== 'all') parts.push(`status = "${filterStatus}"`);

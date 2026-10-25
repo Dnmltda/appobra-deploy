@@ -226,7 +226,7 @@ const EstoqueAlmoxarifadoPage = () => {
     if (histDateFrom) parts.push(`data >= "${histDateFrom}"`);
     if (histDateTo) parts.push(`data <= "${histDateTo}"`);
     if (histSearch.trim()) {
-      const q = histSearch.trim().replace(/"/g, '\\"');
+      const q = histSearch.trim().replace(/\\/g, '').replace(/"/g, '\\"');
       parts.push(`(numero_movimentacao ~ "${q}" || observacoes ~ "${q}" || codigo ~ "${q}")`);
     }
     return parts.join(' && ');
@@ -293,15 +293,17 @@ const EstoqueAlmoxarifadoPage = () => {
   useEffect(() => {
     if (!companyId) return;
     let unsubbed = false;
+    let pararP = null;
     const subscribe = async () => {
       try {
-        await pb.collection('movimentacoes').subscribe('*', (e) => {
+        pararP = pb.collection('movimentacoes').subscribe('*', (e) => {
           if (unsubbed) return;
           if (e.record?.company_id !== companyId) return;
           // Atualiza histórico
           fetchMovimentacoes(histPage);
           fetchPendentes();
         }, { $autoCancel: false });
+        await pararP;
       } catch (err) {
         console.error('Realtime subscription failed', err);
       }
@@ -309,7 +311,8 @@ const EstoqueAlmoxarifadoPage = () => {
     subscribe();
     return () => {
       unsubbed = true;
-      pb.collection('movimentacoes').unsubscribe('*').catch(() => {});
+      // Desliga só esta escuta (unsubscribe('*') derrubaria a de outras telas na mesma tabela).
+      if (pararP) pararP.then((parar) => parar()).catch(() => {});
     };
   }, [companyId, histPage, fetchMovimentacoes]);
 

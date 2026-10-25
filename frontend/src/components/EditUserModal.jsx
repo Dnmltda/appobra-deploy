@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import pb from '@/lib/pocketbaseClient.js';
 import { toast } from 'sonner';
 import { UserCog } from 'lucide-react';
+import { mensagemErro } from '@/lib/erros.js';
 
 const EditUserModal = ({ open, onClose, user, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -49,7 +50,7 @@ const EditUserModal = ({ open, onClose, user, onSuccess }) => {
       onClose();
       if (onSuccess) onSuccess();
     } catch (error) {
-      toast.error(error.message || 'Erro ao atualizar usuário');
+      toast.error(mensagemErro(error, 'Erro ao atualizar usuário'));
     } finally {
       setLoading(false);
     }

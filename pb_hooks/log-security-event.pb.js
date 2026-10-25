@@ -188,6 +188,7 @@ onBootstrap((e) => {
     if (cargoField) {
       const obrigatorios = [
         "Administrador",
+        "Diretoria",
         "Gerência",
         "Engenheiro",
         "Mestre de Obras",

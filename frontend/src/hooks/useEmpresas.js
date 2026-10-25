@@ -26,7 +26,7 @@ const COUNT_COLLECTIONS = [
 const buildFilter = ({ search, status, plano, estado, dataInicio, dataFim }) => {
   const parts = [];
   if (search) {
-    const q = search.replace(/"/g, '\\"');
+    const q = search.replace(/\\/g, '').replace(/"/g, '\\"');
     parts.push(
       `(razao_social ~ "${q}" || nome_fantasia ~ "${q}" || cnpj ~ "${q}" || cidade ~ "${q}" || responsavel_legal ~ "${q}")`,
     );
@@ -187,7 +187,7 @@ export const useEmpresas = () => {
     const cnpjClean = String(cnpj || "").replace(/\D/g, "");
     const parts = [];
     if (cnpjClean) parts.push(`cnpj = "${cnpjClean}"`);
-    if (razao) parts.push(`razao_social = "${razao.replace(/"/g, '\\"')}"`);
+    if (razao) parts.push(`razao_social = "${razao.replace(/\\/g, '').replace(/"/g, '\\"')}"`);
     if (parts.length === 0) return false;
     let filter = parts.join(" || ");
     if (excludeId) filter += ` && id != "${excludeId}"`;

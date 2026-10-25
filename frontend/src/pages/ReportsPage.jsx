@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import pb from '@/lib/pocketbaseClient';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
+import { mensagemErro } from '@/lib/erros.js';
 
 const ReportsPage = () => {
   const { currentUser } = useAuth();
@@ -131,7 +132,7 @@ const ReportsPage = () => {
       }
 
     } catch (error) {
-      toast.error(`Erro ao gerar ${format.toUpperCase()}: ${error.message}`);
+      toast.error(mensagemErro(error, `Não foi possível gerar o ${format.toUpperCase()}. Tente de novo.`));
     } finally {
       setLoading(false);
       setLoadingType('');
