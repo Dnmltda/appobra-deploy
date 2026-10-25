@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import pb from '@/lib/pocketbaseClient.js';
+import pb, { renovarTokenArquivos } from '@/lib/pocketbaseClient.js';
 import { auditLog, AUDIT_ACTIONS, AUDIT_MODULES } from '@/lib/auditLogger.js';
 
 const AuthContext = createContext(null);
@@ -40,7 +40,8 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (pb.authStore.isValid && pb.authStore.model) {
-      fetchUserDetails(pb.authStore.model.id);
+      // O passe dos arquivos protegidos vem antes das telas (fotos e anexos).
+      renovarTokenArquivos().finally(() => fetchUserDetails(pb.authStore.model.id));
     } else {
       setInitialLoading(false);
     }
@@ -87,6 +88,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const handleLoginSuccess = async (authData) => {
+    await renovarTokenArquivos();
     const fullUser = await fetchUserDetails(authData.record.id);
     
     if (!fullUser) {

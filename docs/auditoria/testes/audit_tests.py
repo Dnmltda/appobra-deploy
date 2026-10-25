@@ -1173,6 +1173,32 @@ _ev = _escuta(_tok["Financeiro"], ["contas_pagar/*"], lambda: call("POST", "/api
               {"descricao": "Conta tempo real 2", "valor": 10, "data_vencimento": "2026-11-10 12:00:00", "company_id": cA}))
 check("a5", "Tempo real: Financeiro continua recebendo contas a pagar", "contas_pagar/*" in _ev, str(_ev))
 
+# ------------------------------------------------------------------ A6: arquivos só com login (24/10/2026)
+def _arquivo(rec, nome, tok=None, ftok=None):
+    url = f"/api/files/{rec['collectionId']}/{rec['id']}/{nome}" + (f"?token={ftok}" if ftok else "")
+    req = urllib.request.Request(B + url)
+    try:
+        with urllib.request.urlopen(req) as r:
+            return r.status
+    except urllib.error.HTTPError as e:
+        return e.code
+s, dc = call("POST", "/api/collections/documentos_central/records", tA, {"titulo": "Contrato A6", "nome": "Contrato A6", "company_id": cA, "arquivo": FOTO})
+_nome = (dc.get("arquivo") or [""])[0] if isinstance(dc.get("arquivo"), list) else dc.get("arquivo")
+check("a6", "(preparo) documento com arquivo", s == 200 and _nome, err(dc) if s >= 400 else "")
+if not _nome:
+    dc = {"collectionId": "x", "id": "x"}; _nome = "x"
+check("a6", "Arquivo do documento não abre sem login", _arquivo(dc, _nome) in (403, 404), str(_arquivo(dc, _nome)))
+_ftA = call("POST", "/api/files/token", tA)[1].get("token")
+check("a6", "Arquivo abre com o passe de quem pode ver", _arquivo(dc, _nome, ftok=_ftA) == 200, str(_arquivo(dc, _nome, ftok=_ftA)))
+_ftB = call("POST", "/api/files/token", _tB2)[1].get("token")
+check("a6", "Passe de outra empresa não abre o arquivo", _arquivo(dc, _nome, ftok=_ftB) in (403, 404), str(_arquivo(dc, _nome, ftok=_ftB)))
+_ftS = call("POST", "/api/files/token", _tok["Servente"])[1].get("token")
+check("a6", "Passe de quem não vê documentos (Servente) não abre o arquivo", _arquivo(dc, _nome, ftok=_ftS) in (403, 404), str(_arquivo(dc, _nome, ftok=_ftS)))
+_cols = {c["name"]: c for c in call("GET", "/api/collections?perPage=500", tSU)[1].get("items", [])} if tSU else {}
+_abertos = [f"{n}.{f['name']}" for n, c in _cols.items() if not n.startswith("_") for f in c.get("fields", []) if f.get("type") == "file" and not f.get("protected")]
+check("a6", "Todos os arquivos protegidos, menos o logo das empresas", set(_abertos) <= {"empresas.logo"}, str(_abertos))
+check("a6", "Passe de arquivo vale 1 hora", (_cols.get("users", {}).get("fileToken") or {}).get("duration") == 3600, str(_cols.get("users", {}).get("fileToken")))
+
 # ------------------------------------------------------------------ A2/A4: empresa travada nas gravações (24/10/2026)
 _tBv = _tB2  # a senha da B mudou mais acima: o token antigo não vale
 s, matB = call("POST", "/api/collections/materiais/records", _tBv, {"name": "Material da B", "code": "TST-B-1", "unit": "un", "company_id": cB})
