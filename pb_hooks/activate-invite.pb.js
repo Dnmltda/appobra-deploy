@@ -28,6 +28,11 @@
 // depender de helpers de nível de módulo (mesmo padrão já usado em
 // self-register-company.pb.js, que nunca teve esse problema).
 
+// Item A8 da auditoria de 24/10/2026 (aprovado pelo Diego): a tela de convite
+// é pública (só precisa do link), então devolve apenas o que a pessoa precisa
+// para se reconhecer: nome, cargo, empresa e o e-mail parcialmente escondido.
+// CPF e telefone não saem mais. A busca vai direto no usuário do convite (antes
+// percorria todos os usuários a cada abertura).
 routerAdd("POST", "/api/custom/get-invite-details", (e) => {
   try {
     const data = new DynamicModel({ token: "" });
@@ -36,56 +41,38 @@ routerAdd("POST", "/api/custom/get-invite-details", (e) => {
     const cleanToken = String(data.token || "").trim();
     let user = null;
     if (cleanToken) {
-      let allUsers = [];
       try {
-        allUsers = $app.findAllRecords("users") || [];
-      } catch (err) {
-        allUsers = [];
-      }
-      const found = allUsers.find((u) => {
-        if (!u) return false;
-        const t = u.get("password_reset_token");
-        return !!t && String(t) === cleanToken;
-      });
-      if (found) {
+        const found = $app.findFirstRecordByFilter("users", "password_reset_token = {:t}", { t: cleanToken });
         const expires = found.get("password_reset_expires");
-        if (expires && new Date(expires).getTime() >= Date.now()) {
-          user = found;
-        }
-      }
+        if (expires && new Date(String(expires).replace(" ", "T")).getTime() >= Date.now()) user = found;
+      } catch (_) { user = null; }
     }
 
     if (!user) {
       throw new BadRequestError("Link de convite inválido ou expirado.");
     }
 
-    let funcionario = null;
+    // jo***@gmail.com: dá para reconhecer o próprio e-mail sem expor o endereço.
+    const email = String(user.get("email") || "");
+    const [antes, depois] = email.split("@");
+    const emailEscondido = depois ? `${antes.slice(0, 2)}***@${depois}` : "";
+
+    let nome = user.get("name");
     const funcionarioId = user.get("funcionario_id");
     if (funcionarioId) {
-      try {
-        const funcCol = $app.findCollectionByNameOrId("funcionarios");
-        const funcRecord = $app.findRecordById(funcCol, funcionarioId);
-        funcionario = {
-          nome: funcRecord.get("nome"),
-          cpf: funcRecord.get("cpf"),
-          cargo: user.get("cargo"),
-          departamento: funcRecord.get("departamento"),
-          telefone: funcRecord.get("telefone"),
-        };
-      } catch (err) {
-        // Funcionário pode ter sido excluído depois do convite — segue só com os dados do usuário.
-      }
+      try { nome = $app.findRecordById("funcionarios", funcionarioId).get("nome") || nome; } catch (_) { /* funcionário excluído */ }
     }
+    let empresa = "";
+    try { empresa = $app.findRecordById("companies", user.get("company_id")).get("name"); } catch (_) {}
 
     return e.json(200, {
       success: true,
-      name: user.get("name"),
-      email: user.get("email"),
+      name: nome,
+      email: emailEscondido,
       username: user.get("username"),
       id_unico: user.get("id_unico"),
       cargo: user.get("cargo"),
-      telefone: user.get("telefone"),
-      funcionario,
+      empresa,
     });
   } catch (err) {
     if (err instanceof BadRequestError || (err && typeof err.status === "number")) {
@@ -116,23 +103,11 @@ routerAdd("POST", "/api/custom/activate-invite", (e) => {
     const cleanToken = String(data.token || "").trim();
     let user = null;
     if (cleanToken) {
-      let allUsers = [];
       try {
-        allUsers = $app.findAllRecords("users") || [];
-      } catch (err) {
-        allUsers = [];
-      }
-      const found = allUsers.find((u) => {
-        if (!u) return false;
-        const t = u.get("password_reset_token");
-        return !!t && String(t) === cleanToken;
-      });
-      if (found) {
+        const found = $app.findFirstRecordByFilter("users", "password_reset_token = {:t}", { t: cleanToken });
         const expires = found.get("password_reset_expires");
-        if (expires && new Date(expires).getTime() >= Date.now()) {
-          user = found;
-        }
-      }
+        if (expires && new Date(String(expires).replace(" ", "T")).getTime() >= Date.now()) user = found;
+      } catch (_) { user = null; }
     }
 
     if (!user) {

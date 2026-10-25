@@ -859,16 +859,10 @@ const AtivarContaPageInline = () => {
                   <span className="text-muted-foreground">Cargo</span>
                   <span className="font-medium text-right">{invite?.cargo || '-'}</span>
                 </div>
-                {invite?.funcionario?.cpf && (
+                {invite?.empresa && (
                   <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">CPF</span>
-                    <span className="font-medium text-right">{invite.funcionario.cpf}</span>
-                  </div>
-                )}
-                {(invite?.telefone || invite?.funcionario?.telefone) && (
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-muted-foreground">Telefone</span>
-                    <span className="font-medium text-right">{invite.telefone || invite.funcionario.telefone}</span>
+                    <span className="text-muted-foreground">Empresa</span>
+                    <span className="font-medium text-right">{invite.empresa}</span>
                   </div>
                 )}
               </div>

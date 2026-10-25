@@ -139,6 +139,10 @@
   erros (contador do ID em memória do servidor, `login-limite-lib.js`; não trava o e-mail/usuário de ninguém); o
   servidor usa o endereço real do Fly (`Fly-Client-IP`, `pb_hooks/endereco-real.pb.js`) no limite de logins por
   endereço, em vez do `X-Real-IP` que o visitante podia inventar. Testes: grupo "a7" (5, no fim do arquivo).
+- **Bloco 1, item A8 (aprovado):** a tela pública de convite (`/ativar-conta`) não recebe mais CPF nem telefone; o
+  e-mail vem escondido (`jo***@...`) e aparece o nome da empresa (`pb_hooks/activate-invite.pb.js`, `App.jsx`). O
+  convite é achado direto pelo token (antes percorria todos os usuários a cada abertura). Testes: grupo "a8" (3).
+  **Com isso o Bloco 1 está completo** (C1, A1–A8).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,
