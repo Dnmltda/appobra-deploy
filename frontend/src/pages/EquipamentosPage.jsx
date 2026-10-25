@@ -260,7 +260,7 @@ const EquipamentosPage = () => {
       parts.push(`(responsavel_id = "${currentUser.id}" || funcionario_id = "${currentUser.id}")`);
     }
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().replace(/"/g, '\\"');
+      const q = searchQuery.trim().replace(/\\/g, '').replace(/"/g, '\\"');
       parts.push(`(nome ~ "${q}" || numero_patrimonial ~ "${q}" || codigo_interno ~ "${q}" || codigo_qr ~ "${q}" || codigo_barras ~ "${q}" || numero_serie ~ "${q}" || marca ~ "${q}" || modelo ~ "${q}" || categoria ~ "${q}")`);
     }
     if (filterSituacao !== 'all') parts.push(`situacao = "${filterSituacao}"`);
@@ -385,9 +385,10 @@ const EquipamentosPage = () => {
   useEffect(() => {
     if (!companyId) return;
     let unsubbed = false;
+    let pararP = null;
     const subscribe = async () => {
       try {
-        await pb.collection('equipamentos').subscribe('*', (e) => {
+        pararP = pb.collection('equipamentos').subscribe('*', (e) => {
           if (unsubbed) return;
           setAllEquipamentos((prev) => {
             if (e.action === 'delete') return prev.filter((m) => m.id !== e.record.id);
@@ -403,6 +404,7 @@ const EquipamentosPage = () => {
             return prev;
           });
         }, { $autoCancel: false });
+        await pararP;
       } catch (err) {
         console.error('Realtime subscription failed', err);
       }
@@ -410,7 +412,8 @@ const EquipamentosPage = () => {
     subscribe();
     return () => {
       unsubbed = true;
-      pb.collection('equipamentos').unsubscribe('*').catch(() => {});
+      // Desliga só esta escuta (unsubscribe('*') derrubaria a de outras telas na mesma tabela).
+      if (pararP) pararP.then((parar) => parar()).catch(() => {});
     };
   }, [companyId]);
 
@@ -467,7 +470,7 @@ const EquipamentosPage = () => {
   const checkDuplicate = async (field, value, excludeId = null) => {
     if (!value || !companyId) return false;
     try {
-      const filter = `company_id = "${companyId}" && ${field} = "${value.replace(/"/g, '\\"')}"`;
+      const filter = `company_id = "${companyId}" && ${field} = "${value.replace(/\\/g, '').replace(/"/g, '\\"')}"`;
       const res = await pb.collection('equipamentos').getList(1, 1, { filter, $autoCancel: false });
       if (res.items.length === 0) return false;
       if (excludeId && res.items[0].id === excludeId) return false;
@@ -907,7 +910,7 @@ const EquipamentosPage = () => {
       fetchAllForDashboard();
     } catch (err) {
       console.error('Erro ao salvar manutenção:', err);
-      toast.error(err.message || 'Erro ao salvar manutenção');
+      toast.error(mensagemErro(err, 'Erro ao salvar manutenção'));
     }
   };
 

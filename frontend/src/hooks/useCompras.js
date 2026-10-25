@@ -25,7 +25,7 @@ const ANEXO = "compras_anexos";
 const buildFilter = ({ search, status, prioridade, obra, fornecedor, dataInicio, dataFim, valorMin, valorMax }) => {
   const parts = [];
   if (search) {
-    const q = search.replace(/"/g, '\\"');
+    const q = search.replace(/\\/g, '').replace(/"/g, '\\"');
     parts.push(
       `(numero_compra ~ "${q}" || descricao ~ "${q}" || categoria ~ "${q}" || justificativa ~ "${q}")`,
     );

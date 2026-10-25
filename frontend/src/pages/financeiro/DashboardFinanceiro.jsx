@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Wallet, ArrowDownCircle, ArrowUpCircle, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/Header.jsx';
+import { falhaAoCarregar } from '@/lib/erros.js';
 
 const DashboardFinanceiro = () => {
   const { language } = useLanguage();
@@ -27,7 +28,7 @@ const DashboardFinanceiro = () => {
       const totalR = rec.reduce((a, b) => a + (b.valor || 0), 0);
       const totalD = desp.reduce((a, b) => a + (b.valor || 0), 0);
       setMetrics({ receitas: totalR, despesas: totalD, saldo: totalR - totalD });
-    }).catch(console.error);
+    }).catch(falhaAoCarregar('o painel financeiro'));
   }, [currentUser]);
 
   const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);

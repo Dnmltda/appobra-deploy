@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import Header from '@/components/Header.jsx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Truck, Droplet, PenTool as PenToolIcon, AlertTriangle } from 'lucide-react';
+import { falhaAoCarregar } from '@/lib/erros.js';
 
 const FrotaDashboardPage = () => {
   const { currentUser } = useAuth();
@@ -20,7 +21,7 @@ const FrotaDashboardPage = () => {
         pb.collection('licenciamentos').getList(1, 1, { filter: `${companyFilter} && status="Pendente"`, $autoCancel: false })
       ]).then(([v, a, m, l]) => {
         setMetrics({ veiculos: v.totalItems, abastecimentos: a.totalItems, manutencoes: m.totalItems, alertas: l.totalItems });
-      }).catch(console.error);
+      }).catch(falhaAoCarregar('o painel da frota'));
     }
   }, [currentUser]);
 

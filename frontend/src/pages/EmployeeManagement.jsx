@@ -120,11 +120,10 @@ const generateTempPassword = () => {
   const lower = 'abcdefghijkmnpqrstuvwxyz';
   const nums = '23456789';
   const sym = '!@#$%&*';
-  const pick = (s) => s[Math.floor(Math.random() * s.length)];
-  let pwd =
-    pick(upper) + pick(lower) + pick(nums) + pick(sym) +
-    Array.from({ length: 6 }, () => pick(upper + lower + nums + sym)).join('');
-  return pwd.split('').sort(() => Math.random() - 0.5).join('');
+  // Sorteio seguro do navegador (o servidor ainda troca por outra, convite-seguro.pb.js).
+  const pick = (s) => s[crypto.getRandomValues(new Uint32Array(1))[0] % s.length];
+  return pick(upper) + pick(lower) + pick(nums) + pick(sym) +
+    Array.from({ length: 12 }, () => pick(upper + lower + nums + sym)).join('');
 };
 
 // Token de convite com validade de 7 dias — mesmo mecanismo de

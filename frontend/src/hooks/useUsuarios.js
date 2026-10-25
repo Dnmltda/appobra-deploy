@@ -20,7 +20,7 @@ const COLLECTION = "users";
 const buildFilter = ({ search, status, perfil, empresa, departamento, dataInicio, dataFim }) => {
   const parts = [];
   if (search) {
-    const q = search.replace(/"/g, '\\"');
+    const q = search.replace(/\\/g, '').replace(/"/g, '\\"');
     parts.push(
       `(nome_completo ~ "${q}" || username ~ "${q}" || email ~ "${q}" || cpf ~ "${q}" || id_unico ~ "${q}")`,
     );
@@ -28,7 +28,7 @@ const buildFilter = ({ search, status, perfil, empresa, departamento, dataInicio
   if (status && status !== "all") parts.push(`status = "${status}"`);
   if (perfil && perfil !== "all") parts.push(`perfil_acesso = "${perfil}"`);
   if (empresa && empresa !== "all") parts.push(`company_id = "${empresa}"`);
-  if (departamento) parts.push(`departamento ~ "${departamento.replace(/"/g, '\\"')}"`);
+  if (departamento) parts.push(`departamento ~ "${departamento.replace(/\\/g, '').replace(/"/g, '\\"')}"`);
   if (dataInicio) parts.push(`created >= "${dataInicio} 00:00:00"`);
   if (dataFim) parts.push(`created <= "${dataFim} 23:59:59"`);
   return parts.join(" && ");

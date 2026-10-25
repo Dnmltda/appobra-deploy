@@ -78,6 +78,7 @@ import AbastecimentosPage from '@/pages/frota/AbastecimentosPage.jsx';
 import ManutencoesFrotaPage from '@/pages/frota/ManutencoesFrotaPage.jsx';
 import LicenciamentoFrotaPage from '@/pages/frota/LicenciamentoFrotaPage.jsx';
 import QuiloMetragemPage from '@/pages/frota/QuiloMetragemPage.jsx';
+import { mensagemErro } from '@/lib/erros.js';
 
 // ContasReceberPage: definido aqui em App.jsx (não em arquivo separado) porque
 // o editor manual do Horizons não permite criar arquivos novos, só editar existentes.
@@ -183,7 +184,7 @@ const ContasReceberPage = () => {
       fetchContas();
     } catch (err) {
       console.error('Erro ao salvar conta a receber:', err);
-      toast.error(err.message || 'Erro ao salvar conta a receber');
+      toast.error(mensagemErro(err, 'Erro ao salvar conta a receber'));
     }
   };
 
@@ -774,7 +775,7 @@ const AtivarContaPageInline = () => {
         setAcErrors({ username: msg });
         return;
       }
-      toast.error(err?.data?.message || err?.message || 'Link inválido ou expirado. Peça ao administrador para gerar um novo convite.');
+      toast.error(mensagemErro(err, 'Link inválido ou expirado. Peça ao administrador para gerar um novo convite.'));
       setStep('invalid');
     } finally {
       setAcLoading(false);

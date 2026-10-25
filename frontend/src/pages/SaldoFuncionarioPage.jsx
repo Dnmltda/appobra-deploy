@@ -156,14 +156,15 @@ const SaldoFuncionarioPage = () => {
   useEffect(() => {
     if (!companyId) return;
     let cancelled = false;
-    void pb.collection('saldo_funcionario').subscribe('*', (e) => {
+    const pararP = pb.collection('saldo_funcionario').subscribe('*', (e) => {
       if (cancelled) return;
       if (e.record?.company_id !== companyId) return;
       fetchAll();
     }).catch((err) => console.error('Realtime subscription failed', err));
     return () => {
       cancelled = true;
-      void pb.collection('saldo_funcionario').unsubscribe('*').catch(() => {});
+      // Desliga só esta escuta (unsubscribe('*') derrubaria a de outras telas na mesma tabela).
+      pararP.then((parar) => parar && parar()).catch(() => {});
     };
   }, [companyId, fetchAll]);
 

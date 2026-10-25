@@ -57,9 +57,11 @@ const SettingsPage = () => {
         });
       }
       
-      const users = await pb.collection('users').getList(1, 1, { $autoCancel: false });
-      const funcs = await pb.collection('funcionarios').getList(1, 1, { $autoCancel: false });
-      const obras = await pb.collection('obras').getList(1, 1, { $autoCancel: false });
+      // Contagem só da empresa (o servidor também filtra; aqui fica explícito).
+      const daEmpresa = { filter: `company_id = "${currentUser?.company_id || ''}"`, $autoCancel: false };
+      const users = await pb.collection('users').getList(1, 1, daEmpresa);
+      const funcs = await pb.collection('funcionarios').getList(1, 1, daEmpresa);
+      const obras = await pb.collection('obras').getList(1, 1, daEmpresa);
       
       setStats({
         users: users.totalItems,
@@ -67,6 +69,9 @@ const SettingsPage = () => {
       });
     } catch (e) {
       console.error(e);
+      // Em vez de mostrar zero como se fosse verdade.
+      setStats({ users: '—', items: '—' });
+      toast.error('Não foi possível carregar os números da empresa agora. Verifique a internet e tente de novo.');
     }
   };
 

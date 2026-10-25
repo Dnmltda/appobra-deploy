@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {  FileText } from 'lucide-react';
 import Header from '@/components/Header.jsx';
+import { falhaAoCarregar } from '@/lib/erros.js';
 
 const ContasPagar = () => {
   const { language } = useLanguage();
@@ -22,7 +23,7 @@ const ContasPagar = () => {
         expand: 'fornecedorId', 
         sort: 'data_vencimento', 
         $autoCancel: false 
-      }).then(setData).catch(console.error);
+      }).then(setData).catch(falhaAoCarregar('as contas a pagar'));
     }
   }, [currentUser]);
 

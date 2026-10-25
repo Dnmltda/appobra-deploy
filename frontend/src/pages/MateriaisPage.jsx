@@ -196,7 +196,7 @@ const MateriaisPage = () => {
     if (!companyId) return '';
     const parts = [`company_id = "${companyId}"`];
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().replace(/"/g, '\\"');
+      const q = searchQuery.trim().replace(/\\/g, '').replace(/"/g, '\\"');
       parts.push(`(name ~ "${q}" || code ~ "${q}" || category ~ "${q}")`);
     }
     if (filterStatus !== 'all') parts.push(`status = "${filterStatus}"`);
@@ -229,7 +229,7 @@ const MateriaisPage = () => {
       setCarregandoModelos(true);
       try {
         const data = await pb.collection('materiais').getFullList({
-          filter: `company_id = "${companyId}" && category = "${categoria.replace(/"/g, '\\"')}"`,
+          filter: `company_id = "${companyId}" && category = "${categoria.replace(/\\/g, '').replace(/"/g, '\\"')}"`,
           sort: 'name',
           $autoCancel: false,
         });
@@ -370,7 +370,7 @@ const MateriaisPage = () => {
   const checkDuplicate = async (field, value, excludeId = null) => {
     if (!value || !companyId) return false;
     try {
-      const filter = `company_id = "${companyId}" && ${field} = "${value.replace(/"/g, '\\"')}"`;
+      const filter = `company_id = "${companyId}" && ${field} = "${value.replace(/\\/g, '').replace(/"/g, '\\"')}"`;
       const res = await pb.collection('materiais').getList(1, 1, {
         filter,
         $autoCancel: false,

@@ -13,6 +13,7 @@ import { Plus, Pencil, Trash2, Search, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '@/components/Header.jsx';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { mensagemErro } from '@/lib/erros.js';
 
 const SuppliersManagement = () => {
   const { currentUser } = useAuth();
@@ -92,7 +93,7 @@ const SuppliersManagement = () => {
       if (err.status === 400) {
         toast.error('Não foi possível salvar o fornecedor. Confira se o CNPJ já está cadastrado.');
       } else {
-        toast.error(err.message || 'Failed to save supplier');
+        toast.error(mensagemErro(err, 'Não foi possível salvar o fornecedor'));
       }
     }
   };

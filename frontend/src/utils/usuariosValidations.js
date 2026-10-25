@@ -104,14 +104,10 @@ export const generateTempPassword = () => {
   const lower = "abcdefghijkmnpqrstuvwxyz";
   const nums = "23456789";
   const sym = "!@#$%&*";
-  const pick = (s) => s[Math.floor(Math.random() * s.length)];
-  let pwd =
-    pick(upper) + pick(lower) + pick(nums) + pick(sym) +
-    Array.from({ length: 6 }, () => pick(upper + lower + nums + sym)).join("");
-  return pwd
-    .split("")
-    .sort(() => Math.random() - 0.5)
-    .join("");
+  // Sorteio seguro (crypto), não Math.random.
+  const pick = (s) => s[crypto.getRandomValues(new Uint32Array(1))[0] % s.length];
+  return pick(upper) + pick(lower) + pick(nums) + pick(sym) +
+    Array.from({ length: 8 }, () => pick(upper + lower + nums + sym)).join("");
 };
 
 // Validação completa do formulário de usuário

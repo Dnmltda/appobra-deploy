@@ -13,6 +13,7 @@ import pb from '@/lib/pocketbaseClient';
 import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Html5QrcodeScanner, Html5QrcodeSupportedFormats as F } from 'html5-qrcode';
 import { QrImagem, linkDoItem, lerConteudo, imprimirEtiqueta } from '@/components/CodigosItem.jsx';
+import { falhaAoCarregar } from '@/lib/erros.js';
 
 // QR Code dos itens (Etapa 5 da auditoria): a etiqueta é de um item real da
 // empresa (material, equipamento ou EPI), gerada no próprio aparelho, e a
@@ -51,7 +52,7 @@ const QRCodeModule = () => {
     const filtro = tipo === 'material' ? `company_id = "${companyId}"` : `company_id = "${companyId}" && deleted_at = ""`;
     pb.collection(t.col).getFullList({ filter: filtro, sort: tipo === 'material' ? 'name' : 'nome', $autoCancel: false })
       .then(setItens)
-      .catch(() => pb.collection(t.col).getFullList({ filter: `company_id = "${companyId}"`, $autoCancel: false }).then(setItens).catch(() => setItens([])));
+      .catch(() => pb.collection(t.col).getFullList({ filter: `company_id = "${companyId}"`, $autoCancel: false }).then(setItens).catch((err) => { setItens([]); falhaAoCarregar('a lista de itens')(err); }));
     setItemId('');
     setQrUrl('');
   }, [tipo, companyId]);
@@ -61,7 +62,7 @@ const QRCodeModule = () => {
   const carregarHistorico = () => {
     if (!companyId) return;
     pb.collection('qrcode_leituras').getList(1, 50, { filter: `company_id = "${companyId}"`, sort: '-created', expand: 'usuario_id', $autoCancel: false })
-      .then((r) => setHistorico(r.items)).catch(() => setHistorico([]));
+      .then((r) => setHistorico(r.items)).catch((err) => { setHistorico([]); falhaAoCarregar('o histórico de leituras')(err); });
   };
   useEffect(() => { if (activeTab === 'track') carregarHistorico(); }, [activeTab, companyId]);
 

@@ -475,6 +475,15 @@ s, r = call("POST", "/api/collections/users/records", tA, {
     "company_id": cA, "role": "Funcionário", "cargo": "Funcionário", "status": "Inativo", "id_unico": "05",
     "password_reset_token": tok, "password_reset_expires": "2099-01-01 00:00:00.000Z"})
 check("telas", "Convite: admin cria acesso com link", s == 200, err(r) if s >= 400 else "")
+# D9: o código do convite (e a senha descartável) é o servidor que faz.
+_conv = call("GET", f"/api/collections/users/records/{r.get('id')}", tSU)[1] if tSU else {}
+check("bloco3", "D9: o servidor troca o código do convite mandado pelo navegador", not tSU or (_conv.get("password_reset_token") and _conv.get("password_reset_token") != tok
+      and len(_conv.get("password_reset_token")) >= 40), str(len(_conv.get("password_reset_token") or "")))
+s, r = call("POST", "/api/custom/get-invite-details", None, {"token": tok})
+check("bloco3", "D9: o código feito no navegador não abre o convite", not tSU or s >= 400, f"status {s}")
+s, r = call("POST", "/api/collections/users/auth-with-password", body={"identity": "conv@teste.local", "password": "Tmp12345678"})
+check("bloco3", "D9: a senha mandada pelo navegador não vale (a do servidor ninguém vê)", s >= 400, f"status {s}")
+tok = _conv.get("password_reset_token") or tok
 s, r = call("POST", "/api/custom/get-invite-details", None, {"token": tok})
 check("telas", "Convite: link abre os dados", s == 200, err(r) if s >= 400 else "")
 check("a8", "Convite (tela pública) não devolve CPF nem telefone", s == 200 and "cpf" not in json.dumps(r) and "telefone" not in json.dumps(r), str(sorted(r))[:120])
@@ -1429,6 +1438,21 @@ s, r = call("PATCH", f"/api/collections/users/records/{_us.get('id')}", _tok["Se
 check("bloco2", "M6: telefone continua livre", s == 200 and r.get("telefone") == "(11) 98888-7777", err(r) if s >= 400 else "")
 _t6 = call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q('detalhe~"próprio cadastro"'), tSU)[1].get("items", []) if tSU else [1]
 check("bloco2", "M6: a tentativa fica registrada", bool(_t6), str(len(_t6)))
+
+# ------------------------------------------------------------------ Bloco 3 (25/10/2026)
+# D1: cargo Diretoria existe e lê a auditoria da empresa
+s, r = call("POST", "/api/collections/users/records", tA, {"email": "dir@teste.local", "username": "diretora", "password": "Senha12345",
+            "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Diretoria", "role": "Diretoria", "status": "Ativo", "name": "Diretora A"})
+check("bloco3", "D1: dá para criar um acesso com o cargo Diretoria", s == 200, err(r) if s >= 400 else "")
+_tDir = login("dir@teste.local")[0] if s == 200 else None
+s, r = call("GET", "/api/collections/audit_logs/records?perPage=5", _tDir)
+check("bloco3", "D1: a Diretoria vê a auditoria da própria empresa", s == 200 and r.get("totalItems", 0) > 0
+      and all(x.get("company_id") == cA for x in r.get("items", [])), f"status {s} {r.get('totalItems')}")
+s, r = call("GET", "/api/collections/audit_logs/records?perPage=5", _tok["Servente"])
+check("bloco3", "D1: quem não é gestão continua sem ver a auditoria", s == 200 and not r.get("items"), f"status {s}")
+# D8: busca terminada em "\" (a tela tira a barra; o servidor não pode cair)
+s, r = call("GET", "/api/collections/materiais/records?perPage=1&filter=" + q('name ~ "areia"'), tA)
+check("bloco3", "D8: busca normal continua funcionando", s == 200, f"status {s}")
 
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)

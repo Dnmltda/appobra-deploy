@@ -269,7 +269,7 @@ const MovimentacoesPage = () => {
       parts.push(`responsavel_id = "${currentUser.id}"`);
     }
     if (searchQuery.trim()) {
-      const q = searchQuery.trim().replace(/"/g, '\\"');
+      const q = searchQuery.trim().replace(/\\/g, '').replace(/"/g, '\\"');
       parts.push(`(numero_movimentacao ~ "${q}" || observacoes ~ "${q}" || codigo ~ "${q}")`);
     }
     if (filterTipo !== 'all') parts.push(`tipo = "${filterTipo}"`);
@@ -349,9 +349,10 @@ const MovimentacoesPage = () => {
   useEffect(() => {
     if (!companyId) return;
     let unsubbed = false;
+    let pararP = null;
     const subscribe = async () => {
       try {
-        await pb.collection('movimentacoes').subscribe('*', (e) => {
+        pararP = pb.collection('movimentacoes').subscribe('*', (e) => {
           if (unsubbed) return;
           // Atualiza dashboard
           setAllMovimentacoes((prev) => {
@@ -369,6 +370,7 @@ const MovimentacoesPage = () => {
             return prev;
           });
         }, { $autoCancel: false });
+        await pararP;
       } catch (err) {
         console.error('Realtime subscription failed', err);
       }
@@ -376,7 +378,8 @@ const MovimentacoesPage = () => {
     subscribe();
     return () => {
       unsubbed = true;
-      pb.collection('movimentacoes').unsubscribe('*').catch(() => {});
+      // Desliga só esta escuta (unsubscribe('*') derrubaria a de outras telas na mesma tabela).
+      if (pararP) pararP.then((parar) => parar()).catch(() => {});
     };
   }, [companyId]);
 

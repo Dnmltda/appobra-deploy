@@ -6,7 +6,7 @@
 // esconder um item aqui é só conforto — quem garante é a regra do servidor.
 
 export const CARGOS = [
-  'Administrador', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador',
+  'Administrador', 'Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador',
   'Financeiro', 'RH', 'Funcionário', 'Cliente', 'Pedreiro', 'Servente', 'Encanador', 'Eletricista', 'Faxina',
 ];
 
@@ -68,8 +68,9 @@ export const podeReceberCompra = (user) =>
   ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador'].includes(cargoDe(user));
 
 // Aprovar, separar e entregar solicitações (mesma lista "gestão" do servidor).
+// (A Diretoria não tem a tela de solicitações: acompanha pelos relatórios.)
 export const podeGerirSolicitacoes = (user) =>
-  ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador'].includes(cargoDe(user));
+  ehAdmin(user) || ['Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife', 'Comprador'].includes(cargoDe(user));
 
 // Autorizar diferença de estoque (inventário/ajuste/perda que muda o saldo).
 export const podeAutorizarAjuste = (user) =>
