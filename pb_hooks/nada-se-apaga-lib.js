@@ -3,9 +3,26 @@
 // vem depois, no sino e no resumo do dia/semana). Usado por nada-se-apaga.pb.js
 // e por outros hooks que barram gravações.
 
+// Nome de cada tabela como aparece para as pessoas (sino, resumo, e-mail).
+const NOMES = {
+  materiais: "Materiais", movimentacoes: "Movimentações", funcionarios: "Funcionários", users: "Acessos",
+  empresas: "Empresas", obras: "Obras", epis: "EPIs", epis_entregas: "Entregas de EPI", equipamentos: "Equipamentos",
+  emprestimos: "Empréstimos", fornecedores: "Fornecedores", clientes: "Clientes", veiculos: "Veículos",
+  solicitacoes: "Pedidos de material", solicitacoes_itens: "Itens de pedido", compras: "Compras",
+  compras_itens: "Itens de compra", propostas: "Propostas", contas_pagar: "Contas a pagar",
+  contas_receber: "Contas a receber", treinamentos: "Treinamentos", saldo_funcionario: "Saldo por funcionário",
+  notificacoes: "Notificações", obra_mensagens: "Mural da obra", historico_alteracoes: "Histórico de alterações",
+  tentativas_bloqueadas: "Tentativas barradas", ocorrencias: "Ocorrências", divergencias: "Divergências de estoque",
+};
+function nomeTabela(t) {
+  return NOMES[t] || String(t || "").replace(/_/g, " ");
+}
+
 // Registra uma tentativa barrada. Nunca derruba o pedido principal.
 function registrarTentativa(app, auth, acao, tabela, registroId, detalhe) {
   try {
+    // Texto para as pessoas: "registro de materiais" vira "registro de Materiais".
+    detalhe = String(detalhe || "").replace(new RegExp(`\\b${String(tabela).replace(/[^\w]/g, "")}\\b`, "g"), nomeTabela(tabela));
     const t = new Record(app.findCollectionByNameOrId("tentativas_bloqueadas"));
     t.set("company_id", (auth && auth.get && auth.get("company_id")) || "");
     t.set("usuario_id", (auth && auth.id && !auth.isSuperuser()) ? auth.id : "");
@@ -16,7 +33,7 @@ function registrarTentativa(app, auth, acao, tabela, registroId, detalhe) {
     t.set("detalhe", String(detalhe || "").slice(0, 500));
     app.save(t);
     // Sino do titular e do responsável da empresa, na hora (avisos-lib.js).
-    require(`${__hooks}/avisos-lib.js`).avisarTentativa(app, t.get("company_id"), t.get("usuario_nome"), t.get("detalhe") || `${acao} em ${tabela}`);
+    require(`${__hooks}/avisos-lib.js`).avisarTentativa(app, t.get("company_id"), t.get("usuario_nome"), t.get("detalhe") || `${acao} em ${nomeTabela(tabela)}`);
   } catch (err) {
     console.log("[nada-se-apaga] Erro ao registrar tentativa:", err);
   }
@@ -52,4 +69,4 @@ function diferencas(r) {
   return out;
 }
 
-module.exports = { registrarTentativa, materialEmSaldo, CADASTROS, diferencas };
+module.exports = { registrarTentativa, nomeTabela, materialEmSaldo, CADASTROS, diferencas };

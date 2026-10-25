@@ -112,7 +112,7 @@ const MinhasMovimentacoesPage = () => {
                   <Card key={b.chave} className={b.alerta && itens.length ? 'border-red-500' : ''}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
-                        <h2 className={`font-semibold flex items-center gap-2 ${b.alerta && itens.length ? 'text-red-700' : 'text-marinho'}`}>
+                        <h2 className={`text-lg font-semibold flex items-center gap-2 ${b.alerta && itens.length ? 'text-red-700' : 'text-marinho'}`}>
                           <Icone className="w-4 h-4" aria-hidden="true" />{b.titulo}
                         </h2>
                         <span className="text-xs font-semibold bg-creme rounded-full px-2 py-0.5">{itens.length}</span>

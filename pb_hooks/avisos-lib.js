@@ -90,11 +90,11 @@ function resumo(app, u, de, ate) {
   busca("saldo_funcionario", `criado_por = {:u} && tipo_operacao = 'Utilização' && ${no}`).forEach((r) =>
     add(out.movimentei, r, `Uso · ${nomeDe(app, "materiais", r.get("material_id"))} · ${r.get("quantidade")}${r.get("local_uso") ? ` · ${r.get("local_uso")}` : ""}`));
   busca("historico_alteracoes", `usuario_id = {:u} && campo = '(novo cadastro)' && ${no}`).forEach((r) =>
-    add(out.cadastrei, r, `${r.get("tabela")} · ${String(r.get("depois") || "").replace(/^"|"$/g, "")}`));
+    add(out.cadastrei, r, `${require(`${__hooks}/nada-se-apaga-lib.js`).nomeTabela(r.get("tabela"))} · ${String(r.get("depois") || "").replace(/^"|"$/g, "")}`));
   busca("notificacoes", `usuarioId = {:u} && tipo != 'seguranca' && ${no}`).forEach((r) => add(out.recebi, r, r.get("mensagem")));
   const todas = ehAdmin(u);
   busca("tentativas_bloqueadas", `${todas ? (u.get("dono_sistema") === true ? "id != ''" : "company_id = {:c}") : "usuario_id = {:u}"} && ${no}`).forEach((r) =>
-    add(out.tentativas, r, r.get("detalhe") || `${r.get("acao")} em ${r.get("tabela")}`, { quem: r.get("usuario_nome") || "" }));
+    add(out.tentativas, r, r.get("detalhe") || `${r.get("acao")} em ${require(`${__hooks}/nada-se-apaga-lib.js`).nomeTabela(r.get("tabela"))}`, { quem: r.get("usuario_nome") || "" }));
   Object.keys(out).forEach((k) => out[k].sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora)));
   return out;
 }
