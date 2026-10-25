@@ -4,6 +4,7 @@ import { Helmet } from "react-helmet";
 import pb from "@/lib/pocketbaseClient.js";
 import { useAuth } from "@/contexts/AuthContext.jsx";
 import { useCompras } from "@/hooks/useCompras.js";
+import { podeReceberCompra } from "@/lib/permissoes.js";
 import {  NIVEIS_APROVACAO, STATUS_APROVACAO,
   STATUS_RECEBIMENTO, TIPOS_ANEXO, statusColor, prioridadeColor,
   formatCurrency, formatDate, calcItemTotal,
@@ -219,7 +220,7 @@ const CompraDetalhesPage = () => {
               <Button variant="outline" onClick={gerarPDF}><FileText className="w-4 h-4 mr-2" />PDF</Button>
               {h.canEdit && compra.status !== "Cancelado" && <Button variant="outline" onClick={() => navigate(`/compras/${id}/editar`)}><Pencil className="w-4 h-4 mr-2" />Editar</Button>}
               {h.canApprove && !["Aprovado", "Recebido", "Cancelado"].includes(compra.status) && <Button onClick={() => setAprovModal(true)}><CheckCircle2 className="w-4 h-4 mr-2" />Aprovar</Button>}
-              {h.canEdit && !["Recebido", "Cancelado"].includes(compra.status) && <Button onClick={() => setRecModal(true)}><Package className="w-4 h-4 mr-2" />Recebimento</Button>}
+              {h.canEdit && podeReceberCompra(currentUser) && !["Recebido", "Cancelado"].includes(compra.status) && <Button onClick={() => setRecModal(true)}><Package className="w-4 h-4 mr-2" />Recebimento</Button>}
             </div>
           </div>
 
@@ -346,7 +347,7 @@ const CompraDetalhesPage = () => {
               <Card>
                 <CardHeader className="flex-row items-center justify-between">
                   <CardTitle className="text-lg">Recebimentos</CardTitle>
-                  {h.canEdit && !["Recebido", "Cancelado"].includes(compra.status) && <Button size="sm" onClick={() => setRecModal(true)}><Plus className="w-4 h-4 mr-1" />Registrar</Button>}
+                  {h.canEdit && podeReceberCompra(currentUser) && !["Recebido", "Cancelado"].includes(compra.status) && <Button size="sm" onClick={() => setRecModal(true)}><Plus className="w-4 h-4 mr-1" />Registrar</Button>}
                 </CardHeader>
                 <CardContent className="p-0">
                   {recebimentos.length === 0 ? <p className="text-center py-8 text-muted-foreground">Nenhum recebimento registrado</p> : (

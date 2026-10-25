@@ -53,3 +53,17 @@ check("Recebimento completo pela tela coloca o material no estoque (+12)", depoi
 await page.screenshot({ path: OUT + "compra-recebida.png" });
 console.log("erros de console:", erros.filter((e) => !/favicon/.test(e)).slice(0, 5));
 await browser.close();
+
+// ---- M3 (25/10/2026): Financeiro edita a compra, mas não vê "Recebimento"
+// (receber dá entrada no estoque; só quem lança movimentação).
+const forn = (await api("GET", "/api/collections/fornecedores/records?perPage=1&filter=" + encodeURIComponent(`company_id="${cid}"`), token)).data.items[0];
+const c2 = (await api("POST", "/api/collections/compras/records", token, { numero_compra: "CMP-FIN-1", descricao: "Compra do financeiro",
+  status: "Aprovado", fornecedor_id: forn.id, company_id: cid })).data;
+await api("POST", "/api/collections/users/records", token, { email: "fabio.fin@teste.local", username: "fabiofin", password: "Senha12345",
+  passwordConfirm: "Senha12345", company_id: cid, cargo: "Financeiro", role: "Financeiro", status: "Ativo", name: "Fábio Financeiro" });
+const fin = await abrir("fabio.fin@teste.local");
+await fin.page.goto(FRONT + "/compras/" + c2.id); await fin.page.waitForTimeout(2500);
+check("Financeiro abre a compra", /Compra do financeiro|CMP-FIN-1/.test(await fin.page.locator("main").innerText()));
+check("Financeiro não vê o botão Recebimento", (await fin.page.getByRole("button", { name: "Recebimento" }).count()) === 0);
+await fin.page.screenshot({ path: OUT + "compra-financeiro.png" });
+await fin.browser.close();

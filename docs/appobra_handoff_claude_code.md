@@ -168,6 +168,27 @@
   `resumo-da-semana` sexta 21h30 UTC manda **um** e-mail por empresa com atividade ao responsável + titulares (resumo
   e link para baixar o PDF na tela; o servidor não gera PDF, então não vai anexo). Rotinas rodam em segundo plano
   (o teste espera). Testes: grupo "avisos" (8).
+- **Bloco 2 (aprovado pelo Diego em 25/10/2026):**
+  - **M1** `autoria.pb.js` + `-lib.js`: em todo pedido pela API, `criado_por`/`created_by`/`autor_id`/`registrado_por`
+    recebem quem está logado ao criar e não mudam ao editar; `atualizado_por`/`updated_by` = quem editou;
+    `retirada_registrada_por` = quem está logado se o pedido mexer nele; nos logs (`audit_logs`, `auditoria`,
+    `epis_historico`, `equipamentos_historico`, `qrcode_leituras`, `relatorios_exportados`) o usuário é sempre quem
+    está logado. Campos que apontam para outra pessoa de propósito (solicitante, responsável, aprovador escolhido,
+    destinatário do aviso) não mudam.
+  - **M3** `compra-recebida.pb.js`: compra passa a "Recebido" (entrada no estoque) só com cargo que cria
+    movimentação (Administrador, Diretoria, Gerência, Engenheiro, Mestre de Obras, Almoxarife, Comprador); os demais
+    (ex.: Financeiro) recebem 403 e a tentativa vai para o sino. A conferência é um `routerUse` (antes do registro):
+    a edição de compra roda numa transação (`estoque-servidor.pb.js`) desfeita com a recusa, e a tentativa gravada
+    dentro dela sumia (vale para qualquer recusa em compras/movimentações: registre a tentativa antes da transação).
+    Na tela, o botão "Recebimento" só aparece para esses cargos (`podeReceberCompra` em `permissoes.js`).
+  - **M7** `codigos-unicos.pb.js` + `-lib.js`: regra no servidor (não índice, para não travar o deploy se houver
+    repetidos antigos) para patrimônio e código interno do equipamento, número do pedido e da compra, código do EPI e
+    CPF/CNPJ de cliente, por empresa, sem diferença de maiúsculas/espaços, ignorando arquivados; na edição só confere
+    se o código mudou. Código do material já é gerado pelo servidor; código de barras já era conferido.
+  - **M6** `meus-dados.pb.js`: na própria conta (não admin) CPF, RG, obra vinculada, departamento, centro de custo,
+    nome completo, datas de admissão/demissão, observações e arquivamento → 403 + tentativa. Telefone, login e foto
+    seguem livres.
+  - Testes: grupo "bloco2" (16). O helper de equipamento dos testes passou a gerar código interno único.
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

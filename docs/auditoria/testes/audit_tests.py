@@ -704,7 +704,7 @@ cargo1 = (call("GET", "/api/collections/cargos/records?perPage=1", tA)[1].get("i
 s, funE = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-EQ", "nome": "Pedreiro do Martelete",
                "nome_completo": "Pedreiro do Martelete", "cargoId": cargo1, "company_id": cA})
 def novo_eq(nome, cid=None, tok=None):
-    s, eq = call("POST", "/api/collections/equipamentos/records", tok or tA, {"nome": nome, "codigo_interno": nome[:6].upper(),
+    s, eq = call("POST", "/api/collections/equipamentos/records", tok or tA, {"nome": nome, "codigo_interno": nome[:6].upper() + "-" + uuid.uuid4().hex[:4],
                  "situacao": "Disponível", "company_id": cid or cA})
     return eq
 def emp(eq, tok=None, **extra):
@@ -1380,6 +1380,55 @@ if tSU:
     check("avisos", "Fim do expediente: aviso no sino \"suas movimentações de hoje estão prontas\"", s in (200, 204) and _n1 > _n0, f"cron {s}, avisos {_n0}->{_n1}")
     s, r = call("POST", "/api/crons/resumo-da-semana", tSU)
     check("avisos", "Fechamento da semana roda sem erro (e-mail por empresa)", s in (200, 204), f"cron {s} {str(r)[:80]}")
+
+# ------------------------------------------------------------------ Bloco 2: M1, M3, M7, M6 (25/10/2026)
+# M1: quem fez é o servidor que diz
+_us = call("GET", "/api/collections/users/records?filter=" + q('email="g1.servente@teste.local"'), tSU)[1].get("items", [{}])[0] if tSU else {}
+s, r = call("POST", "/api/collections/audit_logs/records", _tok["Servente"], {"acao": "falso", "modulo": "x", "usuario_id": uA["id"], "usuario": "Admin A"})
+check("bloco2", "M1: log de auditoria em nome de outra pessoa fica com o autor verdadeiro", s == 200 and r.get("usuario_id") == _us.get("id") and r.get("usuario") != "Admin A",
+      f"{s} {r.get('usuario_id')} {r.get('usuario')}")
+s, r = call("POST", "/api/collections/clientes/records", tA, {"nome": "Cliente M1", "email": "m1@teste.local", "company_id": cA, "criado_por": _us.get("id")})
+_m1 = r if s == 200 else {}
+check("bloco2", "M1: \"criado_por\" mandado pelo aparelho é trocado por quem está logado", s == 200 and r.get("criado_por") == uA["id"], f"{s} {r.get('criado_por')}")
+s, r = call("PATCH", f"/api/collections/clientes/records/{_m1.get('id')}", tA, {"cidade": "Campinas", "criado_por": _us.get("id")})
+check("bloco2", "M1: editar não troca o autor original", s == 200 and r.get("criado_por") == uA["id"], f"{s} {r.get('criado_por')}")
+# M7: códigos únicos por empresa
+call("POST", "/api/collections/clientes/records", tA, {"nome": "Cliente M7", "email": "m7@teste.local", "cpf_cnpj": "11.222.333/0001-81", "company_id": cA})
+s, r = call("POST", "/api/collections/clientes/records", _tB2, {"nome": "Cliente M7 da B", "email": "m7b@teste.local", "cpf_cnpj": "11.222.333/0001-81", "company_id": cB})
+check("bloco2", "M7: o mesmo CPF/CNPJ em outra empresa é aceito", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/compras/records", tA, {"numero_compra": "CMP-M7", "company_id": cA, "fornecedor_id": forn.get("id"), "descricao": "M7", "status": "Solicitado"})
+_c7 = r if s == 200 else {}
+s, r = call("POST", "/api/collections/compras/records", tA, {"numero_compra": " cmp-m7 ", "company_id": cA, "fornecedor_id": forn.get("id"), "descricao": "M7 b", "status": "Solicitado"})
+check("bloco2", "M7: número de compra repetido na mesma empresa é recusado (mesmo com espaço/minúscula)", s == 400 and "Já existe" in json.dumps(r, ensure_ascii=False), f"status {s}")
+s, r = call("PATCH", f"/api/collections/compras/records/{_c7.get('id')}", tA, {"descricao": "sem trocar o número", "numero_compra": "CMP-M7"})
+check("bloco2", "M7: editar sem trocar o número continua funcionando", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/clientes/records", tA, {"nome": "Cliente M7 de novo", "email": "m7c@teste.local", "cpf_cnpj": "11.222.333/0001-81", "company_id": cA})
+check("bloco2", "M7: CPF/CNPJ de cliente repetido na empresa é recusado", s == 400, f"status {s}")
+s, r = call("POST", "/api/collections/epis/records", tA, {"nome": "Luva M7", "tipo": "Luva", "codigo": "LUV-M7", "status": "Ativo", "company_id": cA})
+s, r = call("POST", "/api/collections/epis/records", tA, {"nome": "Luva M7 b", "tipo": "Luva", "codigo": "LUV-M7", "status": "Ativo", "company_id": cA})
+check("bloco2", "M7: código de EPI repetido na empresa é recusado", s == 400, f"status {s}")
+s, r = call("POST", "/api/collections/equipamentos/records", tA, {"name": "Furadeira M7", "numero_patrimonial": "PAT-M7", "status": "available", "company_id": cA})
+s, r = call("POST", "/api/collections/equipamentos/records", tA, {"name": "Furadeira M7 b", "numero_patrimonial": "pat-m7", "status": "available", "company_id": cA})
+check("bloco2", "M7: patrimônio de equipamento repetido na empresa é recusado", s == 400, f"status {s}")
+# M3: "Recebido" só por quem lança movimentação
+s, _c3 = call("POST", "/api/collections/compras/records", tA, {"numero_compra": "CMP-M3", "company_id": cA, "fornecedor_id": forn.get("id"),
+              "descricao": "Compra M3", "status": "Aprovado"})
+s, r = call("PATCH", f"/api/collections/compras/records/{_c3.get('id')}", _tok["Financeiro"], {"status": "Recebido"})
+_t3 = call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q('acao="receber compra"'), tSU)[1].get("items", []) if tSU else [1]
+check("bloco2", "M3: Financeiro não marca a compra como Recebido (e a tentativa fica registrada)", s == 403 and _t3, f"status {s}, tentativas {len(_t3)} {str(r)[:120]}")
+s, r = call("PATCH", f"/api/collections/compras/records/{_c3.get('id')}", _tok["Financeiro"], {"observacoes": "boleto conferido"})
+check("bloco2", "M3: Financeiro continua editando a compra", s == 200, err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/compras/records/{_c3.get('id')}", _tok["Almoxarife"], {"status": "Recebido"})
+check("bloco2", "M3: Almoxarife marca Recebido", s == 200, err(r) if s >= 400 else "")
+# M6: dados de RH no próprio cadastro
+s, r = call("PATCH", f"/api/collections/users/records/{_us.get('id')}", _tok["Servente"], {"cpf": "000.000.000-00"})
+check("bloco2", "M6: a pessoa não muda o próprio CPF", s == 403, f"status {s}")
+s, r = call("PATCH", f"/api/collections/users/records/{_us.get('id')}", _tok["Servente"], {"centro_custo": "outro", "departamento": "x"})
+check("bloco2", "M6: nem centro de custo e departamento", s == 403, f"status {s}")
+s, r = call("PATCH", f"/api/collections/users/records/{_us.get('id')}", _tok["Servente"], {"telefone": "(11) 98888-7777"})
+check("bloco2", "M6: telefone continua livre", s == 200 and r.get("telefone") == "(11) 98888-7777", err(r) if s >= 400 else "")
+_t6 = call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q('detalhe~"próprio cadastro"'), tSU)[1].get("items", []) if tSU else [1]
+check("bloco2", "M6: a tentativa fica registrada", bool(_t6), str(len(_t6)))
 
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
