@@ -17,6 +17,22 @@ Navarro). Até lá o app fica como está.
 - **Planos:** limites por empresa (logins, funcionários, materiais, obras) já começam a existir para as
   empresas de teste; os planos pagos só mudam os números.
 
+## Backup e exclusão total pelo responsável da empresa (pedido do Diego, 25/10/2026)
+
+Fazer **depois que o app estiver ativo** (no lugar do item M2 da auditoria de 24/10, "arquivar em vez de apagar",
+que fica adiado). Ideia do Diego:
+
+- O **responsável** pela empresa (quem cadastrou a empresa no app) pode **fazer um backup** dos dados da empresa.
+- Depois disso ele tem a opção de **apagar 100% dos dados** da empresa no banco.
+- Se ele tentar apagar **sem ter feito o backup**, o sistema percebe e **manda um e-mail** para ele confirmar que
+  se responsabiliza pelos dados perdidos. Só depois da confirmação pelo e-mail a exclusão acontece.
+
+Decisões em aberto (perguntar ao Diego antes de construir): quem conta como "responsável" (só quem cadastrou ou
+qualquer Administrador); formato do backup (arquivo para baixar com planilhas + fotos/documentos, ou guardado no
+servidor); se "apagar 100%" fecha a empresa inteira (logins incluídos) ou só limpa os dados; quanto tempo o backup
+vale (ex.: feito nas últimas 24 horas); prazo do link do e-mail e se há um período para desistir depois de
+confirmar.
+
 ## Regra do titular
 
 - **Hoje:** o e-mail `dnmltda@hotmail.com` é sempre o administrador (dono do sistema e superusuário do
