@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertCircle, Eye, EyeOff, Loader2, Mail, User, Hash, LogIn } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Loader2, Mail, User, Hash, LogIn, Phone } from 'lucide-react';
 import { useLogin } from '@/hooks/useLogin.js';
 import { STORAGE_KEYS } from '@/utils/securityUtils.js';
 
@@ -52,6 +52,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
     email: <Mail className="w-4 h-4 text-muted-foreground" />,
     id: <Hash className="w-4 h-4 text-muted-foreground" />,
     username: <User className="w-4 h-4 text-muted-foreground" />,
+    telefone: <Phone className="w-4 h-4 text-muted-foreground" />,
   };
 
   return (
@@ -67,28 +68,32 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
       )}
 
       <Tabs value={method} onValueChange={handleMethodChange}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="id">ID</TabsTrigger>
           <TabsTrigger value="username">Usuário</TabsTrigger>
+          <TabsTrigger value="telefone">Telefone</TabsTrigger>
         </TabsList>
 
-        {['email', 'id', 'username'].map((m) => (
+        {['email', 'id', 'username', 'telefone'].map((m) => (
           <TabsContent key={m} value={m} className="space-y-2 mt-4">
             <Label htmlFor={`lf-${m}`} className="text-marinho font-semibold">
-              {m === 'email' ? 'Email' : m === 'id' ? 'ID do funcionário' : 'Nome de usuário'}
+              {m === 'email' ? 'Email' : m === 'id' ? 'ID do funcionário' : m === 'telefone' ? 'Telefone (com DDD)' : 'Nome de usuário'}
             </Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2">{methodIcon[m]}</span>
               <Input
                 id={`lf-${m}`}
-                type={m === 'email' ? 'email' : 'text'}
+                type={m === 'email' ? 'email' : m === 'telefone' ? 'tel' : 'text'}
+                inputMode={m === 'telefone' ? 'tel' : undefined}
                 placeholder={
                   m === 'email'
                     ? 'seu@email.com'
                     : m === 'id'
                       ? 'USR-000001'
-                      : 'usuario'
+                      : m === 'telefone'
+                        ? '(11) 98888-7777'
+                        : 'usuario'
                 }
                 value={identifier}
                 onChange={(e) => {
@@ -97,7 +102,7 @@ const LoginForm = ({ onRecovery, onCreateAccount, onContact }) => {
                 }}
                 required
                 className="bg-white border-gray-200 focus-visible:ring-ouro h-11 text-foreground pl-9"
-                autoComplete={m === 'email' ? 'email' : 'username'}
+                autoComplete={m === 'email' ? 'email' : m === 'telefone' ? 'tel' : 'username'}
               />
             </div>
             {fieldErrors.identifier && (

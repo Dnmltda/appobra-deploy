@@ -160,6 +160,12 @@ export const validateIdentifier = (method, value) => {
       return isValidEmployeeId(value)
         ? { valid: true }
         : { valid: false, message: 'Informe um ID de funcionário válido.' };
+    case 'telefone': {
+      const n = String(value || '').replace(/\D/g, '');
+      return n.length >= 10 && n.length <= 13
+        ? { valid: true }
+        : { valid: false, message: 'Informe o telefone com DDD.' };
+    }
     default:
       return { valid: false, message: 'Método de login inválido.' };
   }

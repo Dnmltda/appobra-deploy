@@ -209,6 +209,25 @@
     `$security.randomString`) e validade (7 dias) e põe senha descartável aleatória; na edição, código novo também
     vem do servidor. No navegador, as senhas temporárias usam `crypto.getRandomValues`.
   - Testes: grupo "bloco3" no servidor (8) e `navegador/bloco3.mjs` (8).
+- **Bloco 4 (aprovado pelo Diego em 26/10/2026; item 8 "juntar tabelas" ficou para depois, com o backup real):**
+  - **Login por telefone:** rota `POST /api/custom/login-telefone` (`login-e-senha.pb.js`), compara só os números
+    (com ou sem +55); mesmo telefone e senha em mais de um acesso → pede ID/e-mail/usuário. Aba "Telefone" no
+    `LoginForm.jsx` (`loginWithTelefone` no AuthContext, método `telefone` no `useLogin`).
+  - **Versão nova:** `vigiarVersaoNova` (`lib/instalarApp.js`) confere a cada 10 min e ao voltar para o app se o
+    `/index.html` publicado aponta para outro `/assets/index-*.js`; aviso com botão "Atualizar" (`AvisoVersaoNova`
+    no `App.jsx`). Só no build de produção.
+  - **404:** rota `*` mostra `PaginaNaoEncontrada` (antes abria o painel).
+  - **Convidado por:** detalhe do acesso mostra `created_by` (gravado pelo servidor desde o M1).
+  - **Escondido até ficar pronto** (lista em `docs/ideias-futuras.md`): telas Escalas, Licenciamento e
+    Quilometragem (rotas tiradas), botões Nova Equipe, Novo Registro/Nova Manutenção da Frota, Exportar da
+    Auditoria e a aba Backup simulada das Configurações.
+  - **Contas a Pagar:** `financeiro/ContasPagar.jsx` com Nova conta, Editar (em aberto) e Dar baixa;
+    `contas-pagar.pb.js` recusa alterar conta Paga (tentativa registrada).
+  - **Cliente vê só as obras dele:** `obras-cliente.pb.js` cria `obras.clientes_acesso` (relação com users) e
+    acrescenta à leitura de obras `(@request.auth.cargo != "Cliente" || clientes_acesso.id ?= @request.auth.id)`
+    (com `.id`; sem ele o `?=` não casa). Na obra, o administrador marca "Clientes que acompanham esta obra".
+    Atenção: cliente que já existia só volta a ver obras depois de ser marcado nelas.
+  - Testes: grupo "bloco4" no servidor (12) e `navegador/bloco4.mjs` (12).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

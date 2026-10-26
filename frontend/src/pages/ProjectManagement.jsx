@@ -33,8 +33,12 @@ const ProjectManagement = () => {
     descricao: '',
     status: 'Planejamento',
     dataInicio: '',
-    dataFim: ''
+    dataFim: '',
+    clientes_acesso: []
   });
+  // Acessos com cargo Cliente: o administrador escolhe quem acompanha cada obra
+  // (o Cliente só vê as obras marcadas; pb_hooks/obras-cliente.pb.js).
+  const [clientes, setClientes] = useState([]);
 
   const [allocateData, setAllocateData] = useState({
     employeeId: ''
@@ -68,6 +72,10 @@ const ProjectManagement = () => {
       ]);
       setProjects(projectsData);
       setEmployees(employeesData);
+      pb.collection('users').getFullList({
+        filter: `company_id = "${currentUser.company_id}" && cargo = "Cliente" && status = "Ativo"`,
+        sort: 'name', $autoCancel: false
+      }).then(setClientes).catch(() => setClientes([]));
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Não foi possível carregar as obras');
@@ -117,7 +125,8 @@ const ProjectManagement = () => {
       descricao: project.descricao || '',
       status: project.status || 'Planejamento',
       dataInicio: project.dataInicio || '',
-      dataFim: project.dataFim || ''
+      dataFim: project.dataFim || '',
+      clientes_acesso: project.clientes_acesso || []
     });
     setDialogOpen(true);
   };
@@ -179,7 +188,8 @@ const ProjectManagement = () => {
       descricao: '',
       status: 'Planejamento',
       dataInicio: '',
-      dataFim: ''
+      dataFim: '',
+      clientes_acesso: []
     });
     setEditingProject(null);
   };
@@ -284,6 +294,29 @@ const ProjectManagement = () => {
                     />
                   </div>
                 </div>
+                {clientes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Clientes que acompanham esta obra</Label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto rounded-md border p-2">
+                      {clientes.map((c) => (
+                        <label key={c.id} className="flex items-center gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={formData.clientes_acesso.includes(c.id)}
+                            onChange={(e) => setFormData({
+                              ...formData,
+                              clientes_acesso: e.target.checked
+                                ? [...formData.clientes_acesso, c.id]
+                                : formData.clientes_acesso.filter((x) => x !== c.id)
+                            })}
+                          />
+                          {c.name || c.username}
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">O cliente só vê as obras marcadas aqui.</p>
+                  </div>
+                )}
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
                   <Button type="submit">{editingProject ? 'Atualizar' : 'Criar'} Obra</Button>

@@ -14,7 +14,7 @@ import {
 } from '@/utils/securityUtils.js';
 
 export const useLogin = () => {
-  const { loginWithEmail, loginWithId, loginWithUsername } = useAuth();
+  const { loginWithEmail, loginWithId, loginWithUsername, loginWithTelefone } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
@@ -65,6 +65,8 @@ export const useLogin = () => {
           await loginWithId(cleanIdentifier, password);
         } else if (method === 'username') {
           await loginWithUsername(cleanIdentifier, password);
+        } else if (method === 'telefone') {
+          await loginWithTelefone(cleanIdentifier, password);
         }
 
         persistRemember(method, cleanIdentifier, remember);
@@ -97,7 +99,7 @@ export const useLogin = () => {
         setLoading(false);
       }
     },
-    [loginWithEmail, loginWithId, loginWithUsername],
+    [loginWithEmail, loginWithId, loginWithUsername, loginWithTelefone],
   );
 
   const clearError = useCallback(() => {

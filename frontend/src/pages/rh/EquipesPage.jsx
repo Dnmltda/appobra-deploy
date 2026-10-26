@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 const EquipesPage = () => {
@@ -51,9 +51,7 @@ const EquipesPage = () => {
               <h1 className="text-3xl font-bold text-primary">Equipes de Trabalho</h1>
               <p className="text-muted-foreground">Gerencie times e líderes</p>
             </div>
-            <Button className="bg-primary text-primary-foreground opacity-50 cursor-not-allowed" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
-              <Plus className="w-4 h-4 mr-2" /> Nova Equipe
-            </Button>
+            {/* Botão "Nova Equipe" escondido até a função existir (Bloco 4; ver docs/ideias-futuras.md). */}
           </div>
 
           <Card className="shadow-sm">

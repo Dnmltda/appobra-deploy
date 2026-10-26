@@ -179,6 +179,38 @@ routerAdd("POST", "/api/custom/login-id", (e) => {
   return $apis.recordAuthResponse(e, certo, "password", null);
 });
 
+// Login pela aba "Telefone" (Bloco 4, aprovado pelo Diego em 26/10/2026).
+// Compara só os números: "(11) 98888-7777", "11988887777" e "+55 11 98888-7777"
+// são o mesmo telefone. Mesmo telefone e senha em mais de um acesso: não
+// adivinha quem é e pede o ID ou o e-mail.
+routerAdd("POST", "/api/custom/login-telefone", (e) => {
+  const data = new DynamicModel({ telefone: "", password: "" });
+  e.bindBody(data);
+  let n = String(data.telefone || "").replace(/\D/g, "");
+  if (n.length >= 12 && n.startsWith("55")) n = n.slice(2);
+  const senha = String(data.password || "");
+  if (n.length < 10 || !senha) throw new BadRequestError("Informe o telefone com DDD e a senha.");
+  const limpo = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(telefone,' ',''),'(',''),')',''),'-',''),'+',''),'.','')";
+  const ids = arrayOf(new DynamicModel({ id: "" }));
+  try {
+    $app.db().newQuery(`SELECT id FROM users WHERE ${limpo} = {:n} OR ${limpo} = {:c} LIMIT 20`).bind({ n, c: "55" + n }).all(ids);
+  } catch (_) {}
+  const candidatos = ids.map((r) => $app.findRecordById("users", r.id));
+  const lim = require(`${__hooks}/login-limite-lib.js`);
+  if (candidatos.length === 1) lim.conferir(candidatos[0]);
+  const certos = candidatos.filter((u) => u.validatePassword(senha));
+  if (!certos.length) {
+    if (candidatos.length === 1) lim.errou($app, candidatos[0]);
+    throw new BadRequestError("Telefone ou senha incorretos.");
+  }
+  if (certos.length > 1) {
+    throw new BadRequestError("Este telefone está em mais de um acesso. Entre com o ID, o e-mail ou o usuário.");
+  }
+  lim.conferir(certos[0]);
+  lim.acertou($app, certos[0]);
+  return $apis.recordAuthResponse(e, certos[0], "password", null);
+});
+
 // Login pela aba "Usuário". Não diferencia maiúscula de minúscula: contas
 // antigas foram gravadas com maiúscula ("Diego") e a tela manda minúsculo,
 // então o login nativo do PocketBase (comparação exata) não as achava.

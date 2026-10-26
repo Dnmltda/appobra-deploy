@@ -106,7 +106,7 @@ const UsuarioDetalhesPage = () => {
     setError(false);
     try {
       const rec = await pb.collection("users").getOne(id, {
-        expand: "company_id,obra_vinculada_id",
+        expand: "company_id,obra_vinculada_id,created_by",
         $autoCancel: false,
       });
       setUsuario(rec);
@@ -190,6 +190,7 @@ const UsuarioDetalhesPage = () => {
       `Tentativas: ${usuario.login_attempts ?? 0}`,
       `Observações: ${usuario.observacoes || "—"}`,
       `Cadastro: ${usuario.created ? new Date(usuario.created).toLocaleString("pt-BR") : "—"}`,
+      `Convidado por: ${usuario.expand?.created_by?.name || usuario.expand?.created_by?.username || "—"}`,
     ];
     let y = 70;
     linhas.forEach((l) => { doc.text(l, 40, y); y += 18; });
@@ -345,6 +346,8 @@ const UsuarioDetalhesPage = () => {
                   <p><span className="text-muted-foreground">Último login:</span> {usuario.last_login ? new Date(usuario.last_login).toLocaleString("pt-BR") : "—"}</p>
                   <p><span className="text-muted-foreground">Tentativas:</span> {usuario.login_attempts ?? 0}</p>
                   <p><span className="text-muted-foreground">Cadastro:</span> {usuario.created ? new Date(usuario.created).toLocaleString("pt-BR") : "—"}</p>
+                  {/* Quem convidou: gravado pelo servidor (pb_hooks/autoria.pb.js) */}
+                  <p><span className="text-muted-foreground">Convidado por:</span> {usuario.expand?.created_by?.name || usuario.expand?.created_by?.username || "—"}</p>
                   <p><span className="text-muted-foreground">Atualização:</span> {usuario.updated ? new Date(usuario.updated).toLocaleString("pt-BR") : "—"}</p>
                 </CardContent>
               </Card>

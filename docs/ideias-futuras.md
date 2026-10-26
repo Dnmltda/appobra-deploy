@@ -58,3 +58,11 @@ Ainda em aberto: quem é o "responsável" (quem cadastrou a empresa); formato do
 - Domínio próprio para os e-mails (sair do spam).
 - Juntar as tabelas repetidas que têm dados (companies/empresas, audit_logs/auditoria, campos
   inglês/português), na revisão de segurança antes de vender.
+
+## Escondido até ficar pronto (Bloco 4, aprovado pelo Diego em 26/10/2026)
+Estavam visíveis como "em desenvolvimento"; o código das telas continua no projeto e volta quando terminar:
+- Telas: Escalas (RH), Licenciamento e Quilometragem (Frota) — as rotas foram tiradas do `App.jsx`.
+- Botões: "Nova Equipe" (RH), "Novo Registro" de abastecimento e "Nova Manutenção" (Frota), "Exportar" da Auditoria.
+- Configurações: "Exportar/Importar backup" (era simulado). O backup de verdade entra junto com o
+  fechamento da empresa (seção acima).
+- Juntar as tabelas repetidas: fica para a mesma etapa do backup de verdade (Diego, 26/10/2026).
