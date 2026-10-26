@@ -140,7 +140,7 @@ export const AuthProvider = ({ children }) => {
         // Limite por IP do próprio PocketBase (20 logins a cada 5 minutos).
         throw new Error('Muitas tentativas de login seguidas. Espere alguns minutos e tente de novo.');
       }
-      throw new Error(/mais de uma empresa|Muitas tentativas|Usuário inativo|Usuário bloqueado/.test(doServidor) ? doServidor : mensagemErro);
+      throw new Error(/mais de uma empresa|mais de um acesso|Muitas tentativas|Usuário inativo|Usuário bloqueado/.test(doServidor) ? doServidor : mensagemErro);
     }
     confereSituacao(authData.record);
     await handleLoginSuccess(authData);
@@ -174,6 +174,16 @@ export const AuthProvider = ({ children }) => {
       pb.authStore.save(r.token, r.record);
       return r;
     }, 'ID ou senha incorretos.');
+
+  // Telefone com DDD; o servidor compara só os números (pb_hooks/login-e-senha.pb.js).
+  const loginWithTelefone = (telefone, password) =>
+    entrar(async () => {
+      const r = await pb.send('/api/custom/login-telefone', {
+        method: 'POST', body: { telefone: String(telefone).trim(), password }, $autoCancel: false,
+      });
+      pb.authStore.save(r.token, r.record);
+      return r;
+    }, 'Telefone ou senha incorretos.');
 
   // "Esqueci minha senha": o servidor procura a conta (e-mail, usuário ou
   // ID) e envia o e-mail com o link; a resposta é sempre a mesma, exista ou
@@ -491,6 +501,7 @@ export const AuthProvider = ({ children }) => {
     loginWithEmail,
     loginWithId,
     loginWithUsername,
+    loginWithTelefone,
     requestPasswordReset,
     resetPassword,
     getInviteDetails,

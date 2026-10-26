@@ -6,7 +6,6 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AbastecimentosPage = () => {
@@ -50,9 +49,7 @@ const AbastecimentosPage = () => {
               <h1 className="text-3xl font-bold text-primary">Abastecimentos</h1>
               <p className="text-muted-foreground">Controle de consumo de combustível</p>
             </div>
-            <Button className="bg-primary text-primary-foreground opacity-50 cursor-not-allowed" onClick={() => toast.info('Em desenvolvimento')}>
-              <Plus className="w-4 h-4 mr-2" /> Novo Registro
-            </Button>
+            {/* Botão "Novo Registro" escondido até a função existir (Bloco 4; ver docs/ideias-futuras.md). */}
           </div>
 
           <Card className="shadow-sm">

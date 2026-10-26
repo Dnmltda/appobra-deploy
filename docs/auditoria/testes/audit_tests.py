@@ -1454,6 +1454,39 @@ check("bloco3", "D1: quem não é gestão continua sem ver a auditoria", s == 20
 s, r = call("GET", "/api/collections/materiais/records?perPage=1&filter=" + q('name ~ "areia"'), tA)
 check("bloco3", "D8: busca normal continua funcionando", s == 200, f"status {s}")
 
+# ------------------------------------------------------------------ Bloco 4 (26/10/2026)
+# 1. Login por telefone
+_uTel = call("GET", "/api/collections/users/records?filter=" + q('email="g1.almoxarife@teste.local"'), tSU)[1].get("items", [{}])[0] if tSU else {}
+call("PATCH", f"/api/collections/users/records/{_uTel.get('id')}", tA, {"telefone": "(11) 97777-1234"})
+for _fmt in ("(11) 97777-1234", "11977771234", "+55 11 97777-1234"):
+    s, r = call("POST", "/api/custom/login-telefone", None, {"telefone": _fmt, "password": "Senha12345"})
+    check("bloco4", f"Login por telefone ({_fmt})", s == 200 and r.get("record", {}).get("id") == _uTel.get("id"), f"status {s} {str(r)[:80]}")
+s, r = call("POST", "/api/custom/login-telefone", None, {"telefone": "11977771234", "password": "errada123"})
+check("bloco4", "Login por telefone com senha errada é recusado", s == 400 and "incorretos" in r.get("message", ""), f"status {s}")
+s, r = call("POST", "/api/custom/login-telefone", None, {"telefone": "1199", "password": "x"})
+check("bloco4", "Telefone incompleto pede o DDD", s == 400 and "DDD" in r.get("message", ""), f"status {s}")
+# 7a. Contas a pagar: baixa e conta paga fechada
+s, _cp = call("POST", "/api/collections/contas_pagar/records", _tok["Financeiro"], {"descricao": "Conta B4", "valor": 300, "data_vencimento": "2026-11-20 12:00:00",
+              "status": "Aberta", "company_id": cA})
+check("bloco4", "Financeiro cadastra conta a pagar", s == 200, err(_cp) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/contas_pagar/records/{_cp.get('id')}", _tok["Financeiro"], {"status": "Paga", "data_pagamento": "2026-10-26"})
+check("bloco4", "Financeiro dá baixa na conta", s == 200 and r.get("status") == "Paga", err(r) if s >= 400 else "")
+s, r = call("PATCH", f"/api/collections/contas_pagar/records/{_cp.get('id')}", tA, {"valor": 1})
+_tcp = call("GET", "/api/collections/tentativas_bloqueadas/records?filter=" + q('tabela="contas_pagar"'), tSU)[1].get("items", []) if tSU else [1]
+check("bloco4", "Conta paga não muda mais (nem o administrador) e a tentativa fica registrada", s == 403 and _tcp, f"status {s}, tentativas {len(_tcp)}")
+# 7b. Cliente vê só as obras dele
+_tCli = _tok["Cliente"]
+_uCli = call("GET", "/api/collections/users/records?filter=" + q('email="g1.cliente@teste.local"'), tSU)[1].get("items", [{}])[0] if tSU else {}
+s, _oC = call("POST", "/api/collections/obras/records", tA, {"nome": "Obra do Cliente B4", "status": "Em Andamento", "company_id": cA, "clientes_acesso": [_uCli.get("id")]})
+s2, _oX = call("POST", "/api/collections/obras/records", tA, {"nome": "Obra de outro B4", "status": "Em Andamento", "company_id": cA})
+_vis = [o.get("nome") for o in call("GET", "/api/collections/obras/records?perPage=200", _tCli)[1].get("items", [])]
+check("bloco4", "Cliente vê a obra em que foi incluído", "Obra do Cliente B4" in _vis, str(_vis)[:120])
+check("bloco4", "Cliente não vê as outras obras da empresa", "Obra de outro B4" not in _vis and len(_vis) == 1, str(_vis)[:120])
+s, r = call("GET", f"/api/collections/obras/records/{_oX.get('id')}", _tCli)
+check("bloco4", "Cliente não abre uma obra que não é dele pelo endereço", s == 404, f"status {s}")
+_visA = [o.get("nome") for o in call("GET", "/api/collections/obras/records?perPage=200", tA)[1].get("items", [])]
+check("bloco4", "Administrador continua vendo todas as obras", "Obra do Cliente B4" in _visA and "Obra de outro B4" in _visA)
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:

@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext.jsx';
 import { LanguageProvider } from '@/contexts/LanguageContext.jsx';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
+import { vigiarVersaoNova } from '@/lib/instalarApp.js';
 import pb from '@/lib/pocketbaseClient.js';
 import { validatePasswordStrength, passwordsMatch, passwordStrengthScore, STRENGTH_LABELS } from '@/utils/loginValidations.js';
 import { Card, CardContent } from '@/components/ui/card';
@@ -69,15 +70,12 @@ import ContasPagar from '@/pages/financeiro/ContasPagar.jsx';
 import TreinamentosPage from '@/pages/rh/TreinamentosPage.jsx';
 import EPIsPage from '@/pages/rh/EPIsPage.jsx';
 import EquipesPage from '@/pages/rh/EquipesPage.jsx';
-import EscalasPage from '@/pages/rh/EscalasPage.jsx';
 import DocumentosPage from '@/pages/rh/DocumentosPage.jsx';
 
 import VeiculosPage from '@/pages/frota/VeiculosPage.jsx';
 import FrotaDashboardPage from '@/pages/frota/FrotaDashboardPage.jsx';
 import AbastecimentosPage from '@/pages/frota/AbastecimentosPage.jsx';
 import ManutencoesFrotaPage from '@/pages/frota/ManutencoesFrotaPage.jsx';
-import LicenciamentoFrotaPage from '@/pages/frota/LicenciamentoFrotaPage.jsx';
-import QuiloMetragemPage from '@/pages/frota/QuiloMetragemPage.jsx';
 import { mensagemErro } from '@/lib/erros.js';
 
 // ContasReceberPage: definido aqui em App.jsx (não em arquivo separado) porque
@@ -998,6 +996,37 @@ const EntradaTela = ({ children }) => {
   );
 };
 
+// Endereço que não existe (Bloco 4, aprovado pelo Diego em 26/10/2026). Antes
+// abria o painel sem avisar.
+function PaginaNaoEncontrada() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <Helmet><title>Página não encontrada - APP OBRA</title></Helmet>
+      <div className="text-center max-w-md">
+        <p className="text-6xl font-bold text-ouro mb-2" aria-hidden="true">404</p>
+        <h1 className="text-2xl font-bold text-marinho mb-3">Página não encontrada</h1>
+        <p className="text-muted-foreground mb-6">O endereço que você abriu não existe ou mudou de lugar.</p>
+        <RouterLink to="/dashboard">
+          <Button className="bg-royal text-white hover:bg-royal/90">Voltar ao início</Button>
+        </RouterLink>
+      </div>
+    </div>
+  );
+}
+
+// Aviso "Versão nova disponível" (lib/instalarApp.js): fica na tela até a
+// pessoa tocar em Atualizar.
+function AvisoVersaoNova() {
+  useEffect(() => vigiarVersaoNova(() => {
+    toast('Versão nova do APP OBRA disponível.', {
+      id: 'versao-nova',
+      duration: Infinity,
+      action: { label: 'Atualizar', onClick: () => window.location.reload() },
+    });
+  }), []);
+  return null;
+}
+
 function App() {
   return (
     <CompanyProvider>
@@ -1067,7 +1096,8 @@ function App() {
               {/* RH Sub-routes */}
               <Route path="/trainings" element={<ProtectedRoute module="rh"><TreinamentosPage /></ProtectedRoute>} />
               <Route path="/rh/equipes" element={<ProtectedRoute module="rh"><EquipesPage /></ProtectedRoute>} />
-              <Route path="/rh/escalas" element={<ProtectedRoute module="rh"><EscalasPage /></ProtectedRoute>} />
+              {/* Escalas, Licenciamento e Quilometragem: telas "em desenvolvimento" escondidas
+                  até ficarem prontas (Bloco 4; ver docs/ideias-futuras.md). */}
               <Route path="/rh/documentos" element={<ProtectedRoute module="rh"><DocumentosPage /></ProtectedRoute>} />
               
               {/* Frota Sub-routes */}
@@ -1075,14 +1105,13 @@ function App() {
               <Route path="/frota/veiculos" element={<ProtectedRoute module="frota"><VeiculosPage /></ProtectedRoute>} />
               <Route path="/frota/abastecimentos" element={<ProtectedRoute module="frota"><AbastecimentosPage /></ProtectedRoute>} />
               <Route path="/frota/manutencoes" element={<ProtectedRoute module="frota"><ManutencoesFrotaPage /></ProtectedRoute>} />
-              <Route path="/frota/licenciamentos" element={<ProtectedRoute module="frota"><LicenciamentoFrotaPage /></ProtectedRoute>} />
-              <Route path="/frota/quilometragem" element={<ProtectedRoute module="frota"><QuiloMetragemPage /></ProtectedRoute>} />
               
               {/* Catch-all */}
-              <Route path="*" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+              <Route path="*" element={<PaginaNaoEncontrada />} />
             </Routes>
             </EntradaTela>
             <Toaster position="top-right" richColors />
+            <AvisoVersaoNova />
           </Router>
           </MotionConfig>
         </AuthProvider>

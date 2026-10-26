@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building, Monitor, Palette, Globe, Save, Download, Upload, Shield, Lock } from 'lucide-react';
+import { Building, Monitor, Palette, Globe, Save, Shield, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '@/components/Header.jsx';
 import { useLanguage } from '@/contexts/LanguageContext.jsx';
@@ -126,17 +126,14 @@ const SettingsPage = () => {
     toast.success('Tema atualizado');
   };
 
-  const handleExport = () => {
-    toast.success('Backup exportado com sucesso (Simulação)');
-  };
-
   const tabs = [
     { id: 'language', label: t('preferenciasIdioma', language) || 'Idioma', icon: Globe },
     { id: 'company', label: 'Empresa', icon: Building },
     { id: 'system', label: 'Sistema', icon: Monitor },
     { id: 'theme', label: 'Tema', icon: Palette },
     { id: 'security', label: 'Segurança', icon: Shield },
-    { id: 'backup', label: 'Backup', icon: Download }
+    // A aba "Backup" (simulada) saiu: o backup de verdade entra com o
+    // fechamento da empresa (Bloco 4; ver docs/ideias-futuras.md).
   ];
 
   return (
@@ -351,18 +348,6 @@ const SettingsPage = () => {
                 </>
               )}
 
-              {activeTab === 'backup' && (
-                <Card className="shadow-sm border-border bg-card">
-                  <CardHeader className="border-b border-border pb-4 flex flex-row items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg"><Download className="h-5 w-5 text-primary" /></div>
-                    <CardTitle className="text-xl text-primary">Backup e Restauração</CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-6 flex flex-wrap gap-4">
-                    <Button onClick={handleExport} className="bg-primary text-primary-foreground"><Download className="w-4 h-4 mr-2" /> Exportar Dados (JSON)</Button>
-                    <Button variant="outline" onClick={() => window.confirm('Atenção: A importação irá sobrescrever dados. Continuar?')}><Upload className="w-4 h-4 mr-2" /> Importar Dados</Button>
-                  </CardContent>
-                </Card>
-              )}
 
             </div>
           </div>

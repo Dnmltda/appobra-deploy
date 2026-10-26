@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Filter, Download, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Filter, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AuditPage = () => {
@@ -100,10 +100,6 @@ const AuditPage = () => {
     });
     setPage(1);
     setTimeout(fetchAuditLogs, 100);
-  };
-
-  const handleExport = () => {
-    toast.success('Exportação em desenvolvimento');
   };
 
   return (
@@ -203,10 +199,7 @@ const AuditPage = () => {
                 <Button onClick={handleClearFilters} variant="outline">
                   Limpar Filtros
                 </Button>
-                <Button onClick={handleExport} variant="outline" className="ml-auto">
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('exportar', language)}
-                </Button>
+                {/* Botão "Exportar" escondido até a função existir (Bloco 4; ver docs/ideias-futuras.md). */}
               </div>
             </CardContent>
           </Card>
