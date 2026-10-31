@@ -54,6 +54,7 @@ import SaldoFuncionarioPage from '@/pages/SaldoFuncionarioPage.jsx';
 import MateriaisObraPage from '@/pages/MateriaisObraPage.jsx';
 import EstoqueObrasPage from '@/pages/EstoqueObrasPage.jsx';
 import ObraPage from '@/pages/ObraPage.jsx';
+import ObraAndamentoPage from '@/pages/ObraAndamentoPage.jsx';
 import EquipamentosPage from '@/pages/EquipamentosPage.jsx';
 import EmpresasPage from '@/pages/EmpresasPage.jsx';
 import EmpresaDetalhesPage from '@/pages/EmpresaDetalhesPage.jsx';
@@ -1049,6 +1050,8 @@ function App() {
               <Route path="/movimentacoes" element={<ProtectedRoute module="movimentacoes"><MovimentacoesPage /></ProtectedRoute>} />
               <Route path="/estoque" element={<ProtectedRoute module="estoque"><EstoqueAlmoxarifadoPage /></ProtectedRoute>} />
               <Route path="/obras/:id" element={<ProtectedRoute module="obras"><ObraPage /></ProtectedRoute>} />
+              {/* Andamento por andar/unidade: quem vê cada obra é o servidor que decide (estrutura-obra.pb.js). */}
+              <Route path="/obras/:id/andamento" element={<ProtectedRoute><ObraAndamentoPage /></ProtectedRoute>} />
               <Route path="/minha-obra" element={<ProtectedRoute module="minha_obra"><ObraPage minha /></ProtectedRoute>} />
               <Route path="/estoque-obras" element={<ProtectedRoute module="estoque_obras"><EstoqueObrasPage /></ProtectedRoute>} />
               <Route path="/ocorrencias" element={<ProtectedRoute module="ocorrencias"><OcorrenciasPage /></ProtectedRoute>} />

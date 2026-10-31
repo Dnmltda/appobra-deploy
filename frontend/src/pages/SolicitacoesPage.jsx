@@ -24,10 +24,11 @@ import {
   ClipboardList, Clock, CheckCircle2, XCircle, AlertTriangle, Filter, X,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
+import SeletorUnidade from "@/components/SeletorUnidade.jsx";
 
 const emptyForm = {
   tipo: "", categoria: "", solicitante_id: "", departamento: "", centro_custo: "",
-  obra_id: "", responsavel_id: "", prioridade: "Normal", descricao: "", justificativa: "",
+  obra_id: "", unidade_id: "", responsavel_id: "", prioridade: "Normal", descricao: "", justificativa: "",
   data_solicitacao: new Date().toISOString().split("T")[0], data_prazo: "",
   status: "Aberta", observacoes: "",
 };
@@ -116,7 +117,7 @@ const SolicitacoesPage = () => {
     setForm({
       tipo: s.tipo || "", categoria: s.categoria || "", solicitante_id: s.solicitante_id || "",
       departamento: s.departamento || "", centro_custo: s.centro_custo || "",
-      obra_id: s.obra_id || "", responsavel_id: s.responsavel_id || "",
+      obra_id: s.obra_id || "", unidade_id: s.unidade_id || "", responsavel_id: s.responsavel_id || "",
       prioridade: s.prioridade || "Normal", descricao: s.descricao || "",
       justificativa: s.justificativa || "",
       data_solicitacao: s.data_solicitacao ? s.data_solicitacao.split("T")[0] : "",
@@ -553,6 +554,7 @@ const SolicitacoesPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <SeletorUnidade obraId={form.obra_id} value={form.unidade_id} onChange={(v) => setForm((f) => ({ ...f, unidade_id: v }))} id="sol_unidade" />
               <div className="space-y-2">
                 <Label>Departamento</Label>
                 <Input value={form.departamento} onChange={(e) => setForm({ ...form, departamento: e.target.value })} />

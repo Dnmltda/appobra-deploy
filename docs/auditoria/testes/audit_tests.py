@@ -1487,6 +1487,86 @@ check("bloco4", "Cliente não abre uma obra que não é dele pelo endereço", s 
 _visA = [o.get("nome") for o in call("GET", "/api/collections/obras/records?perPage=200", tA)[1].get("items", [])]
 check("bloco4", "Administrador continua vendo todas as obras", "Obra do Cliente B4" in _visA and "Obra de outro B4" in _visA)
 
+# ------------------------------------------------------------------ Estrutura da obra: andares, unidades e serviços (31/10/2026)
+_lst = lambda col, tok, f="": call("GET", f"/api/collections/{col}/records?perPage=500" + ("&filter=" + q(f) if f else ""), tok)[1].get("items", [])
+_cat = _lst("servicos_padrao", tA)
+check("estrutura", "Empresa já tem o catálogo padrão de serviços", len(_cat) >= 6 and any(x.get("nome") == "Hidráulica" for x in _cat), str(len(_cat)))
+_tEng, _tAlx, _tCli = _tok["Engenheiro"], _tok["Almoxarife"], _tok["Cliente"]
+s, _oP = call("POST", "/api/collections/obras/records", tA, {"nome": "Edifício Estrutura", "status": "Em Andamento", "company_id": cA})
+s, r = call("POST", "/api/custom/estrutura/gerar", _tAlx, {"obra_id": _oP.get("id"), "tipo": "Prédio", "andares": 3})
+check("estrutura", "Almoxarife não monta a estrutura", s == 403, f"status {s}")
+s, r = call("POST", "/api/custom/estrutura/gerar", _tEng, {"obra_id": _oP.get("id"), "tipo": "Prédio", "andares": 3})
+_and = sorted(_lst("obras_andares", tA, f'obra_id="{_oP.get("id")}"'), key=lambda x: x.get("numero"))
+check("estrutura", "Engenheiro monta o prédio: 3 andares (1º, 2º, 3º)", s == 200 and [a.get("nome") for a in _and] == ["1º andar", "2º andar", "3º andar"], f"{s} {r}")
+s, r = call("POST", "/api/custom/estrutura/gerar", _tEng, {"obra_id": _oP.get("id"), "tipo": "Prédio", "andares": 2})
+check("estrutura", "Montar de novo a mesma obra é recusado", s == 400, f"status {s}")
+s, r = call("POST", "/api/custom/estrutura/dividir", _tEng, {"andar_id": _and[0]["id"], "modo": "inteiro"})
+_u1 = _lst("obras_unidades", tA, f'andar_id="{_and[0]["id"]}"')
+_s1 = _lst("obras_unidade_servicos", tA, f'unidade_id="{_u1[0]["id"] if _u1 else "x"}"')
+check("estrutura", "1º andar como \"Andar inteiro\" já vem com os serviços do catálogo", s == 200 and len(_u1) == 1 and len(_s1) == len([c for c in _cat if c.get("ativo")])
+      and all(x.get("status") == "Não iniciado" for x in _s1), f"{s} {len(_u1)} {len(_s1)}")
+s, r = call("POST", "/api/custom/estrutura/dividir", _tEng, {"andar_id": _and[1]["id"], "modo": "dividido", "aptos": 2, "comuns": ["Corredor"]})
+_u2 = sorted(x.get("nome") for x in _lst("obras_unidades", tA, f'andar_id="{_and[1]["id"]}"'))
+check("estrutura", "2º andar dividido: Apto 201, Apto 202 e Corredor", s == 200 and _u2 == ["Apto 201", "Apto 202", "Corredor"], f"{s} {_u2}")
+_sv = _s1[0] if _s1 else {}
+s, r = call("PATCH", f"/api/collections/obras_unidade_servicos/records/{_sv.get('id')}", _tEng, {"status": "Em andamento", "alterado_por": uA["id"], "servico_nome": "Outro"})
+check("estrutura", "Engenheiro muda o status; quem/quando gravados pelo servidor; nome do serviço fixo", s == 200 and r.get("status") == "Em andamento"
+      and r.get("alterado_por") and r.get("alterado_por") != uA["id"] and r.get("alterado_em") and r.get("servico_nome") == _sv.get("servico_nome"), f"{s} {str(r)[:120]}")
+_hs = _lst("historico_alteracoes", tA, f'tabela="obras_unidade_servicos" && registro_id="{_sv.get("id")}"')
+check("estrutura", "A mudança de status fica no histórico (antes e depois)", any("Não iniciado" in h.get("antes", "") and "Em andamento" in h.get("depois", "") for h in _hs), str(len(_hs)))
+s, r = call("PATCH", f"/api/collections/obras_unidade_servicos/records/{_sv.get('id')}", _tAlx, {"status": "Concluído"})
+_sv2 = call("GET", f"/api/collections/obras_unidade_servicos/records/{_sv.get('id')}", tA)[1]
+check("estrutura", "Almoxarife vê, mas não muda o status", s >= 400 and _sv2.get("status") == "Em andamento", f"status {s}")
+check("estrutura", "Almoxarife vê os andares e unidades", len(_lst("obras_unidades", _tAlx, f'obra_id="{_oP.get("id")}"')) == 4)
+for x in _s1:
+    call("PATCH", f"/api/collections/obras_unidade_servicos/records/{x['id']}", _tEng, {"status": "Concluído"})
+_pct = call("GET", f"/api/collections/obras/records/{_oP.get('id')}", tA)[1].get("progress_percentage")
+check("estrutura", "Progresso: 1º andar 100%, 2º e 3º 0% → obra 33,3%", abs(float(_pct or 0) - 33.3) < 0.2, str(_pct))
+s, r = call("PATCH", f"/api/collections/obras/records/{_oP.get('id')}", tA, {"progress_percentage": 99})
+check("estrutura", "A % da obra com estrutura não é digitada (vem do servidor)", r.get("progress_percentage") != 99, str(r.get("progress_percentage")))
+s, r = call("PATCH", f"/api/collections/obras/records/{_oP.get('id')}", tA, {"tipo_estrutura": "Casa"})
+check("estrutura", "Tipo de estrutura não muda depois de montada", s == 400, f"status {s}")
+s, r = call("DELETE", f"/api/collections/obras_andares/records/{_and[2]['id']}", tA)
+check("estrutura", "Andar não se apaga (nem o administrador)", s == 403, f"status {s}")
+# Cliente: só a obra em que está
+check("estrutura", "Cliente sem acesso à obra não vê as unidades", not _lst("obras_unidades", _tCli, f'obra_id="{_oP.get("id")}"'))
+_uCli2 = call("GET", "/api/collections/users/records?filter=" + q('email="g1.cliente@teste.local"'), tSU)[1].get("items", [{}])[0] if tSU else {}
+call("PATCH", f"/api/collections/obras/records/{_oP.get('id')}", tA, {"clientes_acesso": [_uCli2.get("id")]})
+check("estrutura", "Cliente incluído na obra vê o andamento", len(_lst("obras_unidades", _tCli, f'obra_id="{_oP.get("id")}"')) == 4)
+s, r = call("PATCH", f"/api/collections/obras_unidade_servicos/records/{_sv.get('id')}", _tCli, {"status": "Não iniciado"})
+check("estrutura", "Cliente não muda status", s >= 400, f"status {s}")
+check("estrutura", "Outra empresa não vê a estrutura", not _lst("obras_andares", _tB2, f'obra_id="{_oP.get("id")}"'))
+# Catálogo: só o Administrador mexe; renomear/desativar não muda o que já foi lançado
+_hid = next((c for c in _cat if c.get("nome") == "Hidráulica"), {})
+s, r = call("PATCH", f"/api/collections/servicos_padrao/records/{_hid.get('id')}", _tEng, {"nome": "Hidro"})
+check("estrutura", "Engenheiro não mexe no catálogo", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/servicos_padrao/records/{_hid.get('id')}", tA, {"nome": "Instalações hidráulicas", "ativo": False})
+_velhos = [x.get("servico_nome") for x in _lst("obras_unidade_servicos", tA, f'servico_id="{_hid.get("id")}"')]
+check("estrutura", "Administrador renomeia e desativa; os lançamentos guardam o nome antigo", s == 200 and _velhos and all(n == "Hidráulica" for n in _velhos), f"{s} {_velhos[:3]}")
+s, r = call("POST", "/api/collections/servicos_padrao/records", tA, {"nome": "Impermeabilização", "ordem": 9, "ativo": True, "company_id": cA})
+check("estrutura", "Administrador inclui serviço no catálogo", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/custom/estrutura/dividir", _tEng, {"andar_id": _and[2]["id"], "modo": "inteiro"})
+_s3 = [x.get("servico_nome") for x in _lst("obras_unidade_servicos", tA, f'obra_id="{_oP.get("id")}" && unidade_id.andar_id="{_and[2]["id"]}"')]
+check("estrutura", "Unidade nova usa o catálogo atual (sem o desativado, com o novo)", "Impermeabilização" in _s3 and "Hidráulica" not in _s3 and "Instalações hidráulicas" not in _s3, str(_s3))
+# Casa
+s, _oC = call("POST", "/api/collections/obras/records", tA, {"nome": "Casa Estrutura", "status": "Em Andamento", "company_id": cA})
+s, r = call("POST", "/api/custom/estrutura/gerar", _tEng, {"obra_id": _oC.get("id"), "tipo": "Casa", "quartos": 2, "comodos": ["Cozinha", "Sala", "Banheiro"]})
+_uc = sorted(x.get("nome") for x in _lst("obras_unidades", tA, f'obra_id="{_oC.get("id")}"'))
+check("estrutura", "Casa: 2 quartos + cozinha, sala e banheiro, sem andares", s == 200 and _uc == ["Banheiro", "Cozinha", "Quarto 1", "Quarto 2", "Sala"]
+      and not _lst("obras_andares", tA, f'obra_id="{_oC.get("id")}"'), f"{s} {_uc}")
+# Material para a unidade (opcional)
+_uApto = next((x for x in _lst("obras_unidades", tA, f'andar_id="{_and[1]["id"]}"') if x.get("nome") == "Apto 201"), {})
+_base = {"company_id": cA, "tipo": "Material", "descricao": "Fio para o apto", "status": "Aberta", "prioridade": "Normal", "solicitante_id": uA["id"]}
+s, r = call("POST", "/api/collections/solicitacoes/records", tA, {**_base, "numero_solicitacao": "SOL-EST-1", "obra_id": _oP.get("id"), "unidade_id": _uApto.get("id")})
+check("estrutura", "Pedido de material com andar/unidade da obra é aceito", s == 200 and r.get("unidade_id") == _uApto.get("id"), err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/solicitacoes/records", tA, {**_base, "numero_solicitacao": "SOL-EST-2", "obra_id": _oC.get("id"), "unidade_id": _uApto.get("id")})
+check("estrutura", "Unidade de outra obra é recusada", s == 400, f"status {s}")
+s, r = call("POST", "/api/collections/solicitacoes/records", tA, {**_base, "numero_solicitacao": "SOL-EST-3", "obra_id": _oP.get("id")})
+check("estrutura", "Sem andar/unidade continua funcionando como antes", s == 200, err(r) if s >= 400 else "")
+# Obra sem estrutura: nada muda
+s, r = call("PATCH", f"/api/collections/obras/records/{obra.get('id')}", tA, {"progress_percentage": 40})
+check("estrutura", "Obra sem estrutura segue como antes (% digitada à mão)", s == 200 and r.get("progress_percentage") == 40 and not r.get("tipo_estrutura"), f"{s} {r.get('tipo_estrutura')}")
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:

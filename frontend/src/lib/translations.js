@@ -1,3 +1,5 @@
+import { traducoesEstrutura } from './traducoesEstrutura.js';
+
 export const translations = {
   'pt-BR': {
     // Navigation & Menus
@@ -574,6 +576,9 @@ export const translations = {
     type: 'Tipo'
   }
 };
+
+// Textos da estrutura da obra (andares/unidades/serviços), nas três línguas.
+Object.keys(traducoesEstrutura).forEach((l) => Object.assign(translations[l], traducoesEstrutura[l]));
 
 export const t = (key, language) => {
   const lang = language || localStorage.getItem('appobra_language') || 'pt-BR';

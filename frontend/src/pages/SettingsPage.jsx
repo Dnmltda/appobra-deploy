@@ -9,7 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building, Monitor, Palette, Globe, Save, Shield, Lock } from 'lucide-react';
+import { Building, Monitor, Palette, Globe, Save, Shield, Lock, ListChecks } from 'lucide-react';
+import CatalogoServicos from '@/components/CatalogoServicos.jsx';
+import { ehAdmin } from '@/lib/permissoes.js';
 import { toast } from 'sonner';
 import Header from '@/components/Header.jsx';
 import { useLanguage } from '@/contexts/LanguageContext.jsx';
@@ -132,6 +134,8 @@ const SettingsPage = () => {
     { id: 'system', label: 'Sistema', icon: Monitor },
     { id: 'theme', label: 'Tema', icon: Palette },
     { id: 'security', label: 'Segurança', icon: Shield },
+    // Catálogo de serviços da obra (andares/unidades): só o Administrador.
+    ...(ehAdmin(currentUser) ? [{ id: 'servicos', label: t('est_catalogo', language), icon: ListChecks }] : []),
     // A aba "Backup" (simulada) saiu: o backup de verdade entra com o
     // fechamento da empresa (Bloco 4; ver docs/ideias-futuras.md).
   ];
@@ -284,6 +288,8 @@ const SettingsPage = () => {
                   </CardContent>
                 </Card>
               )}
+
+              {activeTab === 'servicos' && ehAdmin(currentUser) && <CatalogoServicos />}
 
               {activeTab === 'security' && (
                 <>

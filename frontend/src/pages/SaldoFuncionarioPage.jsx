@@ -28,6 +28,7 @@ import {
 import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
 import { ehAdmin, cargoDe, podeVerEstoque } from '@/lib/permissoes.js';
+import SeletorUnidade from '@/components/SeletorUnidade.jsx';
 
 const AUDIT_MODULE = 'Saldo por Funcionário';
 
@@ -65,6 +66,7 @@ const emptyUsoForm = {
   material_id: '',
   quantidade: '',
   obra_id: '',
+  unidade_id: '',
   local_uso: '',
   observacoes: '',
 };
@@ -334,6 +336,7 @@ const SaldoFuncionarioPage = () => {
         data_operacao: todayISO(),
         hora_operacao: nowTime(),
         obra_id: usoForm.obra_id,
+        unidade_id: usoForm.unidade_id || '',
         local_uso: usoForm.local_uso.trim(),
         observacoes: usoForm.observacoes || null,
       }, { $autoCancel: false });
@@ -880,6 +883,8 @@ const SaldoFuncionarioPage = () => {
               </Select>
               {formErrors.obra_id && <p className="text-xs text-destructive">{formErrors.obra_id}</p>}
             </div>
+
+            <SeletorUnidade obraId={usoForm.obra_id} value={usoForm.unidade_id} onChange={(v) => setUsoForm((f) => ({ ...f, unidade_id: v }))} id="uso_unidade" />
 
             <div className="space-y-2">
               <Label htmlFor="uso_local">Onde foi usado *</Label>

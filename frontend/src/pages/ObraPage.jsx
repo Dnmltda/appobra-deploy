@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import pb from '@/lib/pocketbaseClient.js';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useLanguage } from '@/contexts/LanguageContext.jsx';
+import { t } from '@/lib/translations.js';
 import Header from '@/components/Header.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,7 @@ const quando = (d) => {
 const ObraPage = ({ minha = false }) => {
   const { id: idDaRota } = useParams();
   const { currentUser } = useAuth();
+  const { language } = useLanguage();
   const gestao = podeGerirOcorrencias(currentUser);
   const [obraId, setObraId] = useState(minha ? null : idDaRota);
   const [obra, setObra] = useState(null);
@@ -274,6 +277,12 @@ const ObraPage = ({ minha = false }) => {
                     {obra.dataInicio && obra.dataFim && ' · '}
                     {obra.dataFim && <>Previsão de término: {new Date(obra.dataFim).toLocaleDateString('pt-BR')}</>}
                   </p>
+                )}
+                {/* Andamento por andar/unidade (só obra com estrutura; todos da obra acompanham) */}
+                {(obra.tipo_estrutura === 'Prédio' || obra.tipo_estrutura === 'Casa') && (
+                  <Button asChild size="sm" variant="outline" className="mt-3">
+                    <Link to={`/obras/${obraId}/andamento`}>{t('est_verAndamento', language)} · {Math.round(obra.progress_percentage || 0)}%</Link>
+                  </Button>
                 )}
               </CardContent>
             </Card>

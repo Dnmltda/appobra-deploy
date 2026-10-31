@@ -141,6 +141,8 @@ export const useSolicitacoes = () => {
     departamento: data.departamento || "",
     centro_custo: data.centro_custo || "",
     obra_id: data.obra_id || null,
+    // Andar/unidade (opcional; estrutura da obra).
+    unidade_id: data.obra_id ? (data.unidade_id || "") : "",
     responsavel_id: data.responsavel_id || null,
     prioridade: data.prioridade || "Normal",
     descricao: data.descricao,
