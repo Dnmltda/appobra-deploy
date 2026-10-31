@@ -9,15 +9,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Users, Pencil, Building2, UserMinus, ArrowRight } from 'lucide-react';
+import { Plus, Users, Pencil, Building2, UserMinus, ArrowRight, Layers } from 'lucide-react';
 import IconeModulo3D from '@/components/marca/IconeModulo3D.jsx';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useLanguage } from '@/contexts/LanguageContext.jsx';
+import { t } from '@/lib/translations.js';
+import { mensagemErro } from '@/lib/erros.js';
+import { podeEditarEstrutura } from '@/lib/permissoes.js';
 
 const ProjectManagement = () => {
   const { currentUser } = useAuth();
+  const { language } = useLanguage();
+  // Estrutura (andares/unidades) só na obra nova; obra existente monta pela tela de andamento.
+  const [estrutura, setEstrutura] = useState({ tipo: 'Sem estrutura', andares: '', quartos: '' });
   const [projects, setProjects] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -105,8 +112,21 @@ const ProjectManagement = () => {
         await pb.collection('obras').update(editingProject.id, data, { $autoCancel: false });
         toast.success('Obra atualizada');
       } else {
-        await pb.collection('obras').create(data, { $autoCancel: false });
+        const nova = await pb.collection('obras').create(data, { $autoCancel: false });
         toast.success('Obra cadastrada');
+        if (estrutura.tipo === 'Prédio' || estrutura.tipo === 'Casa') {
+          try {
+            await pb.send('/api/custom/estrutura/gerar', {
+              method: 'POST', $autoCancel: false,
+              body: estrutura.tipo === 'Prédio'
+                ? { obra_id: nova.id, tipo: 'Prédio', andares: Number(estrutura.andares) }
+                : { obra_id: nova.id, tipo: 'Casa', quartos: Number(estrutura.quartos || 0), comodos: ['Cozinha', 'Sala', 'Banheiro'] },
+            });
+            toast.success(t('est_montada', language));
+          } catch (err) {
+            toast.error(mensagemErro(err, t('est_erroSalvar', language)));
+          }
+        }
       }
       
       setDialogOpen(false);
@@ -191,6 +211,7 @@ const ProjectManagement = () => {
       dataFim: '',
       clientes_acesso: []
     });
+    setEstrutura({ tipo: 'Sem estrutura', andares: '', quartos: '' });
     setEditingProject(null);
   };
 
@@ -294,6 +315,27 @@ const ProjectManagement = () => {
                     />
                   </div>
                 </div>
+                {!editingProject && podeEditarEstrutura(currentUser) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="tipo_estrutura">{t('est_tipoEstrutura', language)}</Label>
+                    <Select value={estrutura.tipo} onValueChange={(v) => setEstrutura({ ...estrutura, tipo: v })}>
+                      <SelectTrigger id="tipo_estrutura"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Sem estrutura">{t('est_semEstrutura', language)}</SelectItem>
+                        <SelectItem value="Prédio">{t('est_predio', language)}</SelectItem>
+                        <SelectItem value="Casa">{t('est_casa', language)}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {estrutura.tipo === 'Prédio' && (
+                      <Input id="est_andares_form" type="number" min="1" max="200" inputMode="numeric" required placeholder={t('est_quantosAndares', language)}
+                        value={estrutura.andares} onChange={(e) => setEstrutura({ ...estrutura, andares: e.target.value })} />
+                    )}
+                    {estrutura.tipo === 'Casa' && (
+                      <Input id="est_quartos_form" type="number" min="0" max="30" inputMode="numeric" placeholder={t('est_quantosQuartos', language)}
+                        value={estrutura.quartos} onChange={(e) => setEstrutura({ ...estrutura, quartos: e.target.value })} />
+                    )}
+                  </div>
+                )}
                 {clientes.length > 0 && (
                   <div className="space-y-2">
                     <Label>Clientes que acompanham esta obra</Label>
@@ -386,6 +428,18 @@ const ProjectManagement = () => {
                       Ver Equipe
                     </Button>
                   </div>
+                  {(project.tipo_estrutura === 'Prédio' || project.tipo_estrutura === 'Casa') && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{t('est_progresso', language)}:</span>
+                        <span className="font-semibold">{Math.round(project.progress_percentage || 0)}%</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden"><div className="h-full bg-royal" style={{ width: `${Math.min(100, project.progress_percentage || 0)}%` }} /></div>
+                    </div>
+                  )}
+                  <Button asChild size="sm" variant="outline" className="w-full">
+                    <Link to={`/obras/${project.id}/andamento`}><Layers className="w-4 h-4 mr-1" />{t('est_andamento', language)}</Link>
+                  </Button>
                   <Button asChild size="sm" className="w-full">
                     <Link to={`/obras/${project.id}`}>Abrir obra: fotos e mural<ArrowRight className="w-4 h-4 ml-1" /></Link>
                   </Button>

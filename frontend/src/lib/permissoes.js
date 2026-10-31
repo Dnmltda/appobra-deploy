@@ -62,6 +62,11 @@ export const podeVerEstoque = (user) =>
 export const podeGerirEstoque = (user) =>
   ehAdmin(user) || ['Diretoria', 'Gerência', 'Engenheiro', 'Mestre de Obras', 'Almoxarife'].includes(cargoDe(user));
 
+// Montar a estrutura da obra e mudar o status dos serviços (andares/unidades) —
+// mesma lista do servidor (pb_hooks/estrutura-obra-lib.js). Os demais só veem.
+export const podeEditarEstrutura = (user) =>
+  ehAdmin(user) || ['Gerência', 'Engenheiro', 'Mestre de Obras'].includes(cargoDe(user));
+
 // Receber compra (dá entrada no estoque): quem lança movimentação — mesma lista
 // do servidor (pb_hooks/compra-recebida.pb.js).
 export const podeReceberCompra = (user) =>

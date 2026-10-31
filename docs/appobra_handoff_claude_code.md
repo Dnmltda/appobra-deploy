@@ -228,6 +228,26 @@
     (com `.id`; sem ele o `?=` não casa). Na obra, o administrador marca "Clientes que acompanham esta obra".
     Atenção: cliente que já existia só volta a ver obras depois de ser marcado nelas.
   - Testes: grupo "bloco4" no servidor (12) e `navegador/bloco4.mjs` (12).
+- **Estrutura da obra: andares, unidades e serviços (aprovado pelo Diego em 31/10/2026; 100% aditivo):**
+  - Servidor: `estrutura-obra.pb.js` + `estrutura-obra-lib.js`. `obras.tipo_estrutura` ("Sem estrutura"/vazio,
+    "Prédio", "Casa"); coleções `obras_andares`, `obras_unidades` (andar_id vazio na Casa), `obras_unidade_servicos`
+    (servico_nome guardado na hora; status Não iniciado/Em andamento/Concluído; alterado_por/alterado_em pelo
+    servidor) e `servicos_padrao` (catálogo por empresa, criado com 6 serviços padrão no boot e em empresa nova).
+    Rotas `POST /api/custom/estrutura/gerar` (Prédio: N andares; Casa: quartos + cômodos) e `.../dividir`
+    (andar inteiro ou N aptos "Apto 301…" + áreas comuns; "Andar inteiro" anterior vira inativo). Unidade nova
+    recebe os serviços ativos do catálogo. Mudança de status → `historico_alteracoes`. % (concluídos ÷ serviços
+    ativos; andar = média das unidades; obra = média dos andares ou das unidades na Casa) gravada em
+    `obras.progress_percentage` só nas obras com estrutura. Tipo não muda depois de montado. Nada se apaga.
+  - Quem monta/muda status: Administrador, Gerência, Engenheiro, Mestre de Obras (`podeEditarEstrutura`);
+    Almoxarife, Funcionário e Diretoria só veem; Cliente só nas obras em que está (`obra_id.clientes_acesso.id`).
+    O campo `clientes_acesso` é criado aqui também, porque a ordem de subida dos hooks não é garantida.
+  - Opcional: `solicitacoes.unidade_id` e `saldo_funcionario.unidade_id` (Registrar uso); o servidor confere que a
+    unidade é da obra. Componente `SeletorUnidade.jsx` só aparece se a obra tem estrutura.
+  - Telas: `ObraAndamentoPage.jsx` em `/obras/:id/andamento` (andares → unidades → checklist; toque muda status;
+    materiais ligados à unidade); cadastro de obra com "Tipo de estrutura"; botão "Andamento" e % nos cartões;
+    atalho em Minha Obra; Configurações → "Serviços da obra" (`CatalogoServicos.jsx`, só Administrador).
+    Textos em `lib/traducoesEstrutura.js` (pt/en/es), mesclados em `translations.js`.
+  - Testes: grupo "estrutura" no servidor (27) e `navegador/estrutura-obra.mjs` (17).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

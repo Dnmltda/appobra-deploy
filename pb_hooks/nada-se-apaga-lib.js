@@ -13,6 +13,8 @@ const NOMES = {
   contas_receber: "Contas a receber", treinamentos: "Treinamentos", saldo_funcionario: "Saldo por funcionário",
   notificacoes: "Notificações", obra_mensagens: "Mural da obra", historico_alteracoes: "Histórico de alterações",
   tentativas_bloqueadas: "Tentativas barradas", ocorrencias: "Ocorrências", divergencias: "Divergências de estoque",
+  obras_andares: "Andares da obra", obras_unidades: "Unidades da obra", obras_unidade_servicos: "Serviços da unidade",
+  servicos_padrao: "Catálogo de serviços",
 };
 function nomeTabela(t) {
   return NOMES[t] || String(t || "").replace(/_/g, " ");
@@ -51,7 +53,8 @@ function materialEmSaldo(app, materialId) {
 }
 
 // Cadastros com histórico de edição (quem, quando, antes e depois).
-const CADASTROS = ["materiais", "funcionarios", "equipamentos", "epis", "fornecedores", "clientes", "veiculos", "obras", "empresas", "users"];
+const CADASTROS = ["materiais", "funcionarios", "equipamentos", "epis", "fornecedores", "clientes", "veiculos", "obras", "empresas", "users",
+  "servicos_padrao", "obras_andares", "obras_unidades"];
 const FORA_DO_HISTORICO = ["updated", "updated_at", "password", "passwordConfirm", "tokenKey", "password_reset_token",
   "password_reset_expires", "remember_token", "last_login", "login_attempts", "locked_until", "atualizado_por", "data_atualizacao"];
 
