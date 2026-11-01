@@ -248,6 +248,19 @@
     atalho em Minha Obra; Configurações → "Serviços da obra" (`CatalogoServicos.jsx`, só Administrador).
     Textos em `lib/traducoesEstrutura.js` (pt/en/es), mesclados em `translations.js`.
   - Testes: grupo "estrutura" no servidor (27) e `navegador/estrutura-obra.mjs` (17).
+- **Convite que não chega (01/11/2026):** um convite falhou no envio (IP bloqueado no Brevo, já corrigido pelo
+  Diego) e o administrador só via "convite enviado"; a Gestão de Acessos não tinha como reenviar.
+  - `email-lib.js`: `enviarConvite(app, user)` (única função que manda o "Criar minha senha"; devolve o motivo
+    da falha) e `avisarFalhaConvite` (sino tipo `acesso` para quem convidou, com link para o acesso).
+  - `send-welcome-email.pb.js`: convite usa `enviarConvite`; se falhar, avisa no sino de quem criou (`created_by`).
+  - `convite-seguro.pb.js`: rota `POST /api/custom/reenviar-convite {user_id}` (Administrador, RH, Mestre de Obras
+    da empresa e o titular; só acesso "Inativo" que nunca entrou; código novo de 7 dias; limite de 2 por 7 dias
+    via `senha-limite-lib.js`, com a data de liberação na mensagem; erro do servidor de e-mail vai para a tela).
+    Troca do código pela API (update) agora também manda o e-mail (antes só trocava o código).
+  - Tela: botão "Reenviar convite" no detalhe do acesso (`UsuarioDetalhesPage.jsx`) para convite pendente.
+  - Cuidado: campo de data vazio vem como objeto no JSVM — conferir com `String(u.get("last_login") || "")`.
+  - Testes: grupo "convite" no servidor (7; o servidor de teste não tem e-mail, então cobre a falha) e
+    `navegador/reenviar-convite.mjs` (8, com a caixa de e-mail de teste: um e-mail só, link novo, antigo inválido).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

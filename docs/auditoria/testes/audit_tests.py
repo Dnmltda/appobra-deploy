@@ -1567,6 +1567,28 @@ check("estrutura", "Sem andar/unidade continua funcionando como antes", s == 200
 s, r = call("PATCH", f"/api/collections/obras/records/{obra.get('id')}", tA, {"progress_percentage": 40})
 check("estrutura", "Obra sem estrutura segue como antes (% digitada à mão)", s == 200 and r.get("progress_percentage") == 40 and not r.get("tipo_estrutura"), f"{s} {r.get('tipo_estrutura')}")
 
+# ------------------------------------------------------------------ Reenviar convite (01/11/2026)
+# (aqui o servidor de teste não tem e-mail configurado: o envio falha de propósito)
+s, _cv = call("POST", "/api/collections/users/records", tA, {"email": "reenvio@teste.local", "username": "reenvio1", "password": "Tmp12345678",
+              "passwordConfirm": "Tmp12345678", "company_id": cA, "cargo": "Pedreiro", "role": "Pedreiro", "status": "Inativo",
+              "password_reset_token": "qualquer", "password_reset_expires": "2099-01-01 00:00:00.000Z"})
+_sino = lambda: [n for n in call("GET", "/api/collections/notificacoes/records?perPage=200&filter=" + q(f'usuarioId="{uA["id"]}" && tipo="acesso"'), tSU)[1].get("items", [])] if tSU else [1]
+check("convite", "Convite que não saiu avisa no sino de quem convidou", s == 200 and any("reenvio@teste.local" in n.get("mensagem", "") for n in _sino()), f"{s} {len(_sino())}")
+s, r = call("POST", "/api/custom/reenviar-convite", _tok["Servente"], {"user_id": _cv.get("id")})
+check("convite", "Servente não reenvia convite", s == 403, f"status {s}")
+_tk0 = call("GET", f"/api/collections/users/records/{_cv.get('id')}", tSU)[1].get("password_reset_token") if tSU else ""
+s, r = call("POST", "/api/custom/reenviar-convite", tA, {"user_id": _cv.get("id")})
+_tk1 = call("GET", f"/api/collections/users/records/{_cv.get('id')}", tSU)[1].get("password_reset_token") if tSU else "x"
+check("convite", "Reenviar com o e-mail fora do ar: o administrador recebe o motivo (não fica escondido)", s == 400 and "não enviou o convite" in r.get("message", ""), f"{s} {r.get('message', '')[:90]}")
+check("convite", "Reenviar gera código novo (o antigo deixa de valer)", _tk1 and _tk1 != _tk0)
+call("POST", "/api/custom/reenviar-convite", tA, {"user_id": _cv.get("id")})
+s, r = call("POST", "/api/custom/reenviar-convite", tA, {"user_id": _cv.get("id")})
+check("convite", "Terceiro reenvio na semana: mensagem clara do limite", s == 400 and "nos últimos 7 dias" in r.get("message", ""), f"{s} {r.get('message', '')[:90]}")
+s, r = call("POST", "/api/custom/reenviar-convite", tA, {"user_id": uA["id"]})
+check("convite", "Quem já entrou não recebe convite (orienta usar Esqueci minha senha)", s in (400, 403), f"status {s}")
+s, r = call("POST", "/api/custom/reenviar-convite", _tB2, {"user_id": _cv.get("id")})
+check("convite", "Outra empresa não reenvia convite deste acesso", s == 404, f"status {s}")
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:

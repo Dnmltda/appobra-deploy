@@ -74,4 +74,37 @@ Equipe DNM&LTDA OBRAS`,
   };
 }
 
-module.exports = { REMETENTE, enderecoApp, esc, botao, corpo, mensagemConvite };
+// Manda o e-mail de convite ("Criar minha senha") com o código atual do
+// acesso. Devolve "" se saiu, ou o motivo da falha (para avisar quem convidou:
+// antes uma falha no envio ficava só no registro do servidor e a tela dizia
+// "convite enviado").
+function enviarConvite(app, u) {
+  const token = String(u.get("password_reset_token") || "");
+  const email = String(u.get("email") || "");
+  if (!token || !email) return "acesso sem convite pendente ou sem e-mail";
+  try {
+    const m = mensagemConvite(u.get("username"), u.get("id_unico"), `${enderecoApp()}/ativar-conta?token=${token}`);
+    app.newMailClient().send(new MailerMessage({
+      from: { address: app.settings().meta.senderAddress, name: REMETENTE },
+      to: [{ address: email }],
+      subject: m.subject,
+      text: m.text,
+      html: m.html,
+    }));
+    return "";
+  } catch (err) {
+    console.log("[convite] Erro ao enviar o convite para", email, ":", err);
+    return String(err && err.message ? err.message : err).slice(0, 200);
+  }
+}
+
+// Sino de quem convidou quando o e-mail de convite não saiu.
+function avisarFalhaConvite(app, u, quemId, motivo) {
+  try {
+    require(`${__hooks}/avisos-lib.js`).notificar(app, quemId,
+      `O e-mail de convite para ${u.get("email")} não saiu (${motivo}). Abra o acesso em Gestão de Acessos e toque em "Reenviar convite".`,
+      `/usuarios/${u.id}`, "acesso");
+  } catch (_) {}
+}
+
+module.exports = { REMETENTE, enderecoApp, esc, botao, corpo, mensagemConvite, enviarConvite, avisarFalhaConvite };
