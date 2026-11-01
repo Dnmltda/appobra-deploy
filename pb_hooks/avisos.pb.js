@@ -19,10 +19,17 @@ onBootstrap((e) => {
   try {
     const col = e.app.findCollectionByNameOrId("notificacoes");
     const tipo = col.fields.getByName("tipo");
+    let mudou = false;
     if (tipo && tipo.values && !tipo.values.includes("seguranca")) {
       tipo.values = [...tipo.values, "seguranca", "resumo"];
-      e.app.save(col);
+      mudou = true;
     }
+    // Aviso de convite que não saiu (convite-seguro.pb.js).
+    if (tipo && tipo.values && !tipo.values.includes("acesso")) {
+      tipo.values = [...tipo.values, "acesso"];
+      mudou = true;
+    }
+    if (mudou) e.app.save(col);
   } catch (err) {
     console.log("[avisos] Erro ao preparar notificações:", err);
   }

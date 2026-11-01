@@ -20,6 +20,15 @@ onRecordAfterCreateSuccess((e) => {
     return;
   }
 
+  // Convite: mesma função do "Reenviar convite"; se não sair, avisa no sino
+  // de quem convidou (created_by, gravado pelo servidor).
+  if (inviteToken) {
+    const motivo = lib.enviarConvite($app, e.record);
+    if (motivo) lib.avisarFalhaConvite($app, e.record, e.record.get("created_by"), motivo);
+    e.next();
+    return;
+  }
+
   try {
     const base = lib.enderecoApp();
     let subject, text, html;

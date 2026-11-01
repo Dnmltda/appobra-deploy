@@ -7,6 +7,7 @@ import jsPDF from "jspdf";
 import pb from "@/lib/pocketbaseClient.js";
 import { useAuth } from "@/contexts/AuthContext.jsx";
 import { auditLog, AUDIT_ACTIONS } from "@/lib/auditLogger.js";
+import { mensagemErro } from "@/lib/erros.js";
 import { useUsuarios } from "@/hooks/useUsuarios.js";
 import { formatCPF, formatPhone } from "@/utils/usuariosValidations.js";
 
@@ -159,6 +160,23 @@ const UsuarioDetalhesPage = () => {
     else toast.error(res.error || "Erro ao alterar status.");
   };
 
+  // Convite não aceito (nunca entrou): reenvia o e-mail "Criar minha senha".
+  // O servidor diz se saiu ou por que não saiu (convite-seguro.pb.js).
+  const [reenviando, setReenviando] = useState(false);
+  const convitePendente = usuario && usuario.status === "Inativo" && !usuario.last_login && !String(usuario.email || "").endsWith("@arquivado.invalid");
+  const handleReenviarConvite = async () => {
+    setReenviando(true);
+    try {
+      const r = await pb.send("/api/custom/reenviar-convite", { method: "POST", body: { user_id: usuario.id }, $autoCancel: false });
+      toast.success(`Convite reenviado para ${r.email}. Peça para olhar também a caixa de spam.`, { duration: 10000 });
+      await auditLog(AUDIT_ACTIONS.USER_UPDATED, "Usuários", `Convite reenviado para ${r.email} (ID ${usuario.id})`);
+    } catch (err) {
+      toast.error(mensagemErro(err, "Não foi possível reenviar o convite agora."), { duration: 12000 });
+    } finally {
+      setReenviando(false);
+    }
+  };
+
   const handleDelete = async () => {
     const res = await deleteUsuario(usuario.id, usuario.nome_completo);
     if (res.success) { toast.success("Usuário excluído."); navigate("/usuarios"); }
@@ -254,6 +272,11 @@ const UsuarioDetalhesPage = () => {
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={exportFichaPDF}><FileText className="w-4 h-4 mr-2" /> PDF</Button>
               <Button variant="outline" size="sm" onClick={printFicha}><Printer className="w-4 h-4 mr-2" /> Imprimir</Button>
+              {canManage && convitePendente && (
+                <Button variant="outline" size="sm" disabled={reenviando} onClick={handleReenviarConvite}>
+                  <Mail className="w-4 h-4 mr-2" /> Reenviar convite
+                </Button>
+              )}
               {canManage && (
                 <Button variant="outline" size="sm" onClick={handleToggleActive}>
                   <Power className={`w-4 h-4 mr-2 ${usuario.status === "Ativo" ? "text-green-600" : "text-red-600"}`} />
