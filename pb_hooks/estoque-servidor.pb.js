@@ -143,7 +143,10 @@ onRecordUpdateExecute((e) => {
   ["estoque_aplicado", "quantidade_aplicada", "quantidade_aplicada_obra", "saldo_anterior", "saldo_posterior"].forEach((f) => r.set(f, o.get(f)));
 
   if (o.get("estoque_aplicado")) {
-    const livres = ["status", "motivo_cancelamento", "observacoes", "atualizado_por", "updated", "updated_at"];
+    // A resposta do funcionário ao envio (aceite-retirada.pb.js) é gravada pelo
+    // servidor depois do lançamento; pela API esses campos não mudam.
+    const livres = ["status", "motivo_cancelamento", "observacoes", "atualizado_por", "updated", "updated_at",
+      "aceite_status", "quantidade_recebida", "aceite_motivo", "aceito_por", "aceito_em", "foto_aceite"];
     const mudou = est.camposAlterados(r, o).filter((f) => !livres.includes(f));
     if (mudou.length) {
       throw new BadRequestError(

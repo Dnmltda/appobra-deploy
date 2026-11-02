@@ -164,6 +164,9 @@ const EstoqueAlmoxarifadoPage = () => {
   const [conferir, setConferir] = useState(null);
   const [contagem, setContagem] = useState({ quantidade: '', motivo_divergencia: '', observacoes: '' });
   const [pendentes, setPendentes] = useState([]);
+  // Envios para funcionários aguardando a confirmação deles, e os que voltaram
+  // com diferença ou recusa (pb_hooks/aceite-retirada.pb.js).
+  const [envios, setEnvios] = useState([]);
   const [pedidosCompra, setPedidosCompra] = useState([]); // solicitações de compra em aberto
   const autorizador = podeAutorizarAjuste(currentUser);
 
@@ -261,6 +264,16 @@ const EstoqueAlmoxarifadoPage = () => {
       }));
     } catch {
       setPendentes([]);
+    }
+    try {
+      const desde = new Date(Date.now() - 60 * 864e5).toISOString().replace('T', ' ');
+      setEnvios(await pb.collection('movimentacoes').getFullList({
+        filter: `company_id = "${companyId}" && tipo = "${TIPO_RETIRADA_FUNC}" && status != "Cancelado" && `
+          + `(aceite_status = "Aguardando" || ((aceite_status = "Aceito com diferença" || aceite_status = "Recusado") && created >= "${desde}"))`,
+        sort: '-created', expand: 'material_id,funcionario_id', $autoCancel: false,
+      }));
+    } catch {
+      setEnvios([]);
     }
   }, [companyId]);
 
@@ -546,8 +559,13 @@ const EstoqueAlmoxarifadoPage = () => {
       }
       const movRec = await pb.collection('movimentacoes').create(movData, { $autoCancel: false });
 
-      // 1a. Se for retirada por funcionário, criar registro no razão saldo_funcionario
-      if (saidaForm.tipo === TIPO_RETIRADA_FUNC) {
+      // 1a. Retirada por funcionário: quem tem acesso ao app confirma o que
+      // chegou antes de entrar no saldo (o servidor marca "Aguardando"); para
+      // quem não tem login, o saldo entra na hora, como antes.
+      if (saidaForm.tipo === TIPO_RETIRADA_FUNC && movRec.aceite_status === 'Aguardando') {
+        const func = funcionarios.find((f) => f.id === saidaForm.funcionario_id);
+        toast.success(`Envio ${numero} registrado (-${formatNumber(qtd)} ${material.unit || ''}). Entra no saldo de ${func?.nome || 'funcionário'} quando ele confirmar o recebimento.`, { duration: 9000 });
+      } else if (saidaForm.tipo === TIPO_RETIRADA_FUNC) {
         const func = funcionarios.find((f) => f.id === saidaForm.funcionario_id);
         await pb.collection('saldo_funcionario').create({
           company_id: companyId,
@@ -839,6 +857,30 @@ const EstoqueAlmoxarifadoPage = () => {
                         <ShoppingCart className="w-4 h-4 mr-1" />Pedir compra
                       </Button>
                     )}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {envios.length > 0 && (
+          <Card className="mb-6 border-royal/40" data-testid="envios-funcionarios">
+            <CardContent className="p-4 space-y-2">
+              <p className="font-semibold">Envios para funcionários: confirmação ({envios.length})</p>
+              <p className="text-xs text-muted-foreground">O material já saiu do estoque. Diferença ou recusa não voltam sozinhas: resolva com Devolução de Funcionário ou Perda.</p>
+              {envios.map((m) => {
+                const un = m.unidade || m.expand?.material_id?.unit || '';
+                const cor = m.aceite_status === 'Aguardando' ? 'text-amber-700' : 'text-red-700';
+                return (
+                  <div key={m.id} className="flex flex-wrap items-center justify-between gap-2 border rounded-md p-2 text-sm">
+                    <div>
+                      <strong>{m.expand?.material_id?.name || 'Material'}</strong> · {formatNumber(m.quantidade)} {un} para {m.expand?.funcionario_id?.nome || 'funcionário'}
+                      <span className="text-muted-foreground"> · {m.numero_movimentacao}</span>
+                      {m.aceite_status === 'Aceito com diferença' && <span className="text-muted-foreground"> · chegou {formatNumber(m.quantidade_recebida)} {un}</span>}
+                      {m.aceite_motivo && <span className="text-muted-foreground"> · "{m.aceite_motivo}"</span>}
+                    </div>
+                    <span className={`font-semibold ${cor}`}>{m.aceite_status === 'Aguardando' ? 'Aguardando o funcionário' : m.aceite_status}</span>
                   </div>
                 );
               })}

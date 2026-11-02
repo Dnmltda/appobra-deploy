@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { mensagemErro } from '@/lib/erros.js';
 import { ehAdmin, cargoDe, podeVerEstoque } from '@/lib/permissoes.js';
 import SeletorUnidade from '@/components/SeletorUnidade.jsx';
+import AceiteRetirada from '@/components/AceiteRetirada.jsx';
 
 const AUDIT_MODULE = 'Saldo por Funcionário';
 
@@ -599,6 +600,9 @@ const SaldoFuncionarioPage = () => {
             <Download className="w-4 h-4 mr-2" />Exportar
           </Button>
         </div>
+
+        {/* Material que o estoque mandou para mim, aguardando a minha confirmação */}
+        <AceiteRetirada onRespondido={fetchAll} />
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
