@@ -273,6 +273,11 @@
   segue como antes (saldo na hora, criado pela tela). Telas: `AceiteRetirada.jsx` no Painel e em Meu Material;
   card "Envios para funcionários: confirmação" na tela Estoque. Sino do funcionário ao receber o envio.
   - Testes: grupo "aceite" no servidor (19) e `navegador/aceite-retirada.mjs` (10).
+- **Entrada direto no estoque de uma obra (pedido do Diego, 02/11/2026):** "Registrar Entrada" da tela Estoque
+  ganhou "Estoque da obra (opcional)". Com obra, a movimentação de Entrada vai com `estoque_obra_id`/`obra_id` e o
+  servidor (`estoque-lib.js`, regra que já existia) soma só no `estoque_obra` daquela obra, sem tocar no geral;
+  vazio = estoque geral, como antes. Só tela (`EstoqueAlmoxarifadoPage.jsx`). "Estoque por Obra" já estava no menu
+  (Suprimentos). Testes: grupo "entrada-obra" no servidor (3) e `navegador/entrada-obra.mjs` (6).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

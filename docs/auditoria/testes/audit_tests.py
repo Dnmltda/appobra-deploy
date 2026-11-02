@@ -1645,6 +1645,19 @@ check("aceite", "Recusar: nada entra no saldo e nada volta sozinho ao estoque", 
 s, _m4 = _env(2, _fSem.get("id"))
 check("aceite", "Funcionário sem acesso ao app: segue como antes (sem aguardar)", s == 200 and not _m4.get("aceite_status"), f"{s} {_m4.get('aceite_status')}")
 
+# ------------------------------------------------------------------ Entrada direto no estoque de uma obra (02/11/2026)
+s, _oE = call("POST", "/api/collections/obras/records", tA, {"nome": "Obra da Entrada", "status": "Em Andamento", "company_id": cA})
+_eo = lambda: sum(x.get("quantidade", 0) for x in call("GET", "/api/collections/estoque_obra/records?filter=" + q(f'obra_id="{_oE.get("id")}" && material_id="{mid}"'), tA)[1].get("items", []))
+_g0, _o0 = saldo(mid), _eo()
+s, r = call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Entrada", "quantidade": 7, "status": "Aprovado", "data": "2026-11-02"})
+check("entrada-obra", "Entrada sem obra vai para o estoque geral (como antes)", s == 200 and saldo(mid) == _g0 + 7 and _eo() == _o0, f"geral {_g0}->{saldo(mid)} obra {_eo()}")
+s, r = call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Entrada", "quantidade": 12, "status": "Aprovado",
+            "data": "2026-11-02", "estoque_obra_id": _oE.get("id"), "obra_id": _oE.get("id")})
+check("entrada-obra", "Entrada com obra entra só no estoque da obra (não conta duas vezes)", s == 200 and _eo() == _o0 + 12 and saldo(mid) == _g0 + 7, f"{s} geral {saldo(mid)} obra {_eo()}")
+s, r = call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Entrada", "quantidade": 1, "status": "Aprovado",
+            "data": "2026-11-02", "estoque_obra_id": "obraquenaoexiste"})
+check("entrada-obra", "Obra inválida na entrada é recusada", s == 400, f"status {s}")
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:
