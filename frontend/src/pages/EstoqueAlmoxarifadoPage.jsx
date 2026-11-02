@@ -104,6 +104,8 @@ const emptyEntradaForm = {
   quantidade: '',
   valor_unitario: '',
   fornecedor_id: '',
+  // Obra cujo estoque recebe o material (opcional; vazio = estoque geral).
+  estoque_obra_id: '',
   observacoes: '',
 };
 
@@ -467,6 +469,10 @@ const EstoqueAlmoxarifadoPage = () => {
         valor_total: valorTotal,
         origem: 'Almoxarifado',
         fornecedor_id: entradaForm.fornecedor_id || null,
+        // Com obra: entra direto no estoque daquela obra, não no geral
+        // (o servidor conta uma vez só: pb_hooks/estoque-lib.js).
+        estoque_obra_id: entradaForm.estoque_obra_id || null,
+        obra_id: entradaForm.estoque_obra_id || null,
         responsavel_id: currentUser.id,
         observacoes: entradaForm.observacoes || null,
         status: 'Aprovado',
@@ -486,7 +492,8 @@ const EstoqueAlmoxarifadoPage = () => {
       // Atualiza estado local
       setMateriais((prev) => prev.map((m) => (m.id === updated.id ? { ...m, ...updated } : m)));
 
-      toast.success(`Entrada registrada: ${numero} (+${formatNumber(qtd)} ${material.unit || ''})`);
+      const obraEntrada = obras.find((o) => o.id === entradaForm.estoque_obra_id);
+      toast.success(`Entrada registrada: ${numero} (+${formatNumber(qtd)} ${material.unit || ''})${obraEntrada ? ` no estoque da obra ${obraEntrada.nome}` : ''}`);
       await auditLog(AUDIT_ACTIONS.RECORD_CREATED, AUDIT_MODULE,
         `Entrada de estoque ${numero}: ${material.name} (+${formatNumber(qtd)} ${material.unit || ''})`);
 
@@ -1216,6 +1223,18 @@ const EstoqueAlmoxarifadoPage = () => {
                   {fornecedores.map((f) => <SelectItem key={f.id} value={f.id}>{f.nome || f.razao_social || 'Fornecedor'}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ent_obra">Estoque da obra (opcional)</Label>
+              <Select value={entradaForm.estoque_obra_id || 'geral'} onValueChange={(v) => setEntradaForm({ ...entradaForm, estoque_obra_id: v === 'geral' ? '' : v })}>
+                <SelectTrigger id="ent_obra"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="geral">Estoque geral (almoxarifado)</SelectItem>
+                  {obras.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Escolhendo uma obra, o material entra direto no estoque dela (veja em Estoque por Obra).</p>
             </div>
 
             <div className="space-y-2">
