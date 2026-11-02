@@ -7,6 +7,7 @@ import Header from '@/components/Header.jsx';
 import { Button } from '@/components/ui/button';
 import GestaoPainel from '@/components/dashboard/GestaoPainel.jsx';
 import ObraPainel from '@/components/dashboard/ObraPainel.jsx';
+import AceiteRetirada from '@/components/AceiteRetirada.jsx';
 
 // Painel inicial (pedido do Diego, 19/10/2026): um "mapa" simples da empresa,
 // com números e gráficos SEMPRE vindos do banco (nada de exemplo). Cada bloco
@@ -41,6 +42,8 @@ const DashboardPage = () => {
       <Header />
       <main className="py-4 sm:py-8 bg-muted/20 min-h-screen overflow-x-hidden">
         <div className="app-container">
+          {/* Material que o estoque mandou para mim, aguardando a minha confirmação */}
+          <AceiteRetirada />
           <div className="mb-4 sm:mb-6 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-2xl sm:text-3xl font-bold text-primary leading-tight">

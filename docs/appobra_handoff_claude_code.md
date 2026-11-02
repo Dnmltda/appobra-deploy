@@ -261,6 +261,18 @@
   - Cuidado: campo de data vazio vem como objeto no JSVM — conferir com `String(u.get("last_login") || "")`.
   - Testes: grupo "convite" no servidor (7; o servidor de teste não tem e-mail, então cobre a falha) e
     `navegador/reenviar-convite.mjs` (8, com a caixa de e-mail de teste: um e-mail só, link novo, antigo inválido).
+- **Funcionário confirma o material antes do saldo (pedido do Diego, 02/11/2026):** `aceite-retirada.pb.js`.
+  "Retirada por Funcionário" na tela Estoque continua baixando o estoque na hora; para funcionário com acesso ativo
+  ao app, a movimentação nasce `aceite_status = "Aguardando"` e o saldo só é criado pelo servidor quando ELE
+  responde (`POST /api/custom/retirada/responder`: aceitar | diferenca (quantidade_recebida < enviada + motivo) |
+  recusar (motivo); aceitar e diferença exigem foto → `foto_aceite`, protegida). Lista dele:
+  `GET /api/custom/retirada/pendentes` (o funcionário não lê movimentações). Diferença/recusa → sino de quem enviou
+  e do responsável; nada volta sozinho ao estoque. Campos do aceite não mudam pela API (request hook) e estão nos
+  "livres" do `estoque-servidor.pb.js` (movimentação já lançada) para o servidor gravar a resposta. Saldo de
+  Retirada ligado a envio com aceite não pode ser criado pela API ("Atualize a página"). Funcionário sem login:
+  segue como antes (saldo na hora, criado pela tela). Telas: `AceiteRetirada.jsx` no Painel e em Meu Material;
+  card "Envios para funcionários: confirmação" na tela Estoque. Sino do funcionário ao receber o envio.
+  - Testes: grupo "aceite" no servidor (19) e `navegador/aceite-retirada.mjs` (10).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

@@ -1589,6 +1589,62 @@ check("convite", "Quem já entrou não recebe convite (orienta usar Esqueci minh
 s, r = call("POST", "/api/custom/reenviar-convite", _tB2, {"user_id": _cv.get("id")})
 check("convite", "Outra empresa não reenvia convite deste acesso", s == 404, f"status {s}")
 
+# ------------------------------------------------------------------ Funcionário confirma o material antes do saldo (02/11/2026)
+_FOTO = bytes.fromhex("ffd8ffe000104a46494600010100000100010000ffdb004300") + b"\x08" * 64 + bytes.fromhex("ffd9")
+s, _fAc = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-ACE", "nome": "Ivo Aceite", "nome_completo": "Ivo Aceite",
+               "cargoId": cargoU, "email": "ivo.aceite@teste.local", "company_id": cA})
+check("aceite", "(preparo) funcionário com acesso", s == 200, err(_fAc) if s >= 400 else "")
+call("POST", "/api/collections/users/records", tA, {"email": "ivo.aceite@teste.local", "username": "ivoaceite", "password": "Senha12345",
+     "passwordConfirm": "Senha12345", "company_id": cA, "cargo": "Servente", "role": "Servente", "status": "Ativo", "funcionario_id": _fAc.get("id")})
+_tIvo = login("ivo.aceite@teste.local")[0]
+s, _fSem = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-SEM", "nome": "Sem Acesso", "nome_completo": "Sem Acesso",
+                "cargoId": cargoU, "company_id": cA})
+call("POST", "/api/collections/movimentacoes/records", tA, {"material_id": mid, "company_id": cA, "tipo": "Entrada", "quantidade": 100, "status": "Aprovado", "data": "2026-11-02"})
+_sl = lambda f: sum((x.get("quantidade") or 0) * (1 if x.get("tipo_operacao") == "Retirada" else -1)
+                    for x in call("GET", "/api/collections/saldo_funcionario/records?perPage=500&filter=" + q(f'funcionario_id="{f}" && material_id="{mid}"'), tA)[1].get("items", []))
+_s0 = saldo(mid)
+def _env(qtd, func):
+    return call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Retirada por Funcionário",
+                "quantidade": qtd, "status": "Aprovado", "data": "2026-11-02", "funcionario_id": func, "aceite_status": "Aceito"})
+s, _m1 = _env(22, _fAc.get("id"))
+check("aceite", "Envio para funcionário com acesso fica \"Aguardando\" (o aparelho não escolhe)", s == 200 and _m1.get("aceite_status") == "Aguardando", f"{s} {_m1.get('aceite_status')}")
+check("aceite", "O estoque baixa na hora do envio (como antes)", saldo(mid) == _s0 - 22, f"{_s0} -> {saldo(mid)}")
+check("aceite", "Nada entra no saldo do funcionário antes de ele confirmar", _sl(_fAc.get("id")) == 0, str(_sl(_fAc.get("id"))))
+s, r = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": _fAc.get("id"), "material_id": mid,
+            "tipo_operacao": "Retirada", "quantidade": 22, "movimentacao_id": _m1.get("id"), "data_operacao": "2026-11-02"})
+check("aceite", "Tela antiga não credita o saldo por fora (pede para atualizar)", s == 400 and "Atualize a página" in r.get("message", ""), f"status {s}")
+s, r = call("GET", "/api/custom/retirada/pendentes", _tIvo)
+check("aceite", "O funcionário vê o envio aguardando a confirmação dele", s == 200 and any(i.get("id") == _m1.get("id") and i.get("quantidade") == 22 for i in r.get("items", [])), str(r)[:120])
+check("aceite", "Outra pessoa não vê os envios dele", not [i for i in call("GET", "/api/custom/retirada/pendentes", tF)[1].get("items", []) if i.get("id") == _m1.get("id")])
+s, r = call("POST", "/api/custom/retirada/responder", tF, {"movimentacao_id": _m1.get("id"), "acao": "aceitar", "foto": _FOTO})
+check("aceite", "Só o próprio funcionário responde", s == 404, f"status {s}")
+s, r = call("POST", "/api/custom/retirada/responder", _tIvo, {"movimentacao_id": _m1.get("id"), "acao": "aceitar"})
+check("aceite", "Aceitar sem foto é recusado", s == 400 and "foto" in r.get("message", ""), f"{s} {r.get('message', '')[:60]}")
+s, r = call("POST", "/api/custom/retirada/responder", _tIvo, {"movimentacao_id": _m1.get("id"), "acao": "diferenca", "quantidade_recebida": 25, "motivo": "x", "foto": _FOTO})
+check("aceite", "Recebi menos: não aceita quantidade maior que a enviada", s == 400, f"status {s}")
+_av0 = len(call("GET", "/api/collections/notificacoes/records?perPage=200&filter=" + q('mensagem~"recebeu 18 de 22"'), tSU)[1].get("items", [])) if tSU else 0
+s, r = call("POST", "/api/custom/retirada/responder", _tIvo, {"movimentacao_id": _m1.get("id"), "acao": "diferenca", "quantidade_recebida": 18, "motivo": "Faltaram 4 no caminhão", "foto": _FOTO})
+check("aceite", "Recebi menos (18 de 22): entra 18 no saldo", s == 200 and _sl(_fAc.get("id")) == 18, f"{s} {str(r)[:80]} saldo {_sl(_fAc.get('id'))}")
+_mv = call("GET", f"/api/collections/movimentacoes/records/{_m1.get('id')}", tA)[1]
+check("aceite", "A resposta fica gravada (quem, quando, quanto chegou, motivo e foto)", _mv.get("aceite_status") == "Aceito com diferença" and _mv.get("quantidade_recebida") == 18
+      and _mv.get("aceito_em") and _mv.get("foto_aceite") and "caminhão" in (_mv.get("aceite_motivo") or ""), str({k: _mv.get(k) for k in ("aceite_status", "quantidade_recebida", "foto_aceite")}))
+_av1 = len(call("GET", "/api/collections/notificacoes/records?perPage=200&filter=" + q('mensagem~"recebeu 18 de 22"'), tSU)[1].get("items", [])) if tSU else 1
+check("aceite", "A diferença avisa no sino de quem enviou / responsável", _av1 > _av0, f"{_av0} -> {_av1}")
+s, r = call("POST", "/api/custom/retirada/responder", _tIvo, {"movimentacao_id": _m1.get("id"), "acao": "aceitar", "foto": _FOTO})
+check("aceite", "Não dá para responder duas vezes", s == 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/movimentacoes/records/{_m1.get('id')}", tA, {"aceite_status": "Aceito", "quantidade_recebida": 22})
+check("aceite", "Ninguém altera a resposta do funcionário depois", r.get("aceite_status") == "Aceito com diferença" and r.get("quantidade_recebida") == 18, str(r.get("aceite_status")))
+s, _m2 = _env(5, _fAc.get("id"))
+s, r = call("POST", "/api/custom/retirada/responder", _tIvo, {"movimentacao_id": _m2.get("id"), "acao": "aceitar", "foto": _FOTO})
+check("aceite", "Aceitar integral: entra a quantidade enviada (18 + 5 = 23)", s == 200 and _sl(_fAc.get("id")) == 23, f"{s} saldo {_sl(_fAc.get('id'))}")
+s, _m3 = _env(3, _fAc.get("id"))
+s, r = call("POST", "/api/custom/retirada/responder", _tIvo, {"movimentacao_id": _m3.get("id"), "acao": "recusar"})
+check("aceite", "Recusar sem motivo é recusado", s == 400, f"status {s}")
+s, r = call("POST", "/api/custom/retirada/responder", _tIvo, {"movimentacao_id": _m3.get("id"), "acao": "recusar", "motivo": "Não chegou nada"})
+check("aceite", "Recusar: nada entra no saldo e nada volta sozinho ao estoque", s == 200 and _sl(_fAc.get("id")) == 23 and saldo(mid) == _s0 - 30, f"{s} saldo {_sl(_fAc.get('id'))} estoque {saldo(mid)}")
+s, _m4 = _env(2, _fSem.get("id"))
+check("aceite", "Funcionário sem acesso ao app: segue como antes (sem aguardar)", s == 200 and not _m4.get("aceite_status"), f"{s} {_m4.get('aceite_status')}")
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:
