@@ -17,8 +17,10 @@ async function pessoa(nome, login, cargoNome) {
 const sv = await pessoa("Sílvio Servente", "silvio", "Servente");
 const pd = await pessoa("Paulo Pedreiro", "paulo", "Pedreiro");
 const ax = await pessoa("Alice Almoxarife", "alice", "Almoxarife");
+// Preparo pelo suporte: desde 03/11/2026 ninguém lança saldo direto pela API.
+const suporte = (await api("POST", "/api/collections/_superusers/auth-with-password", null, { identity: "audit@local.test", password: "AuditPass123!" })).data.token;
 for (const p of [sv, pd]) {
-  const r = await api("POST", "/api/collections/saldo_funcionario/records", token, { company_id: cid, funcionario_id: p.f.id,
+  const r = await api("POST", "/api/collections/saldo_funcionario/records", suporte, { company_id: cid, funcionario_id: p.f.id,
     material_id: mat.id, tipo_operacao: "Retirada", quantidade: 1, obra_id: obra.id, data_operacao: new Date().toISOString().replace("T", " ") });
 }
 

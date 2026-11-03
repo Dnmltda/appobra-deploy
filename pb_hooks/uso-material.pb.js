@@ -53,6 +53,15 @@ onRecordCreateRequest((e) => {
 
   if (r.get("tipo_operacao") !== "Utilização") {
     if (!gestao) throw new ForbiddenError("Só o almoxarifado ou a gestão registra retirada e devolução.");
+    // Sem atalho (Diego, 03/11/2026): retirada/devolução direta só para quem
+    // não tem acesso ao app e sempre amarrada à movimentação do estoque.
+    const motivo = lib.conferirLancamentoDireto(e.app, r);
+    if (motivo) {
+      require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa($app, a, "lançar saldo", "saldo_funcionario", "",
+        `Tentou lançar ${r.get("tipo_operacao")} direto no saldo de um funcionário: ${motivo}`);
+      throw new BadRequestError(motivo);
+    }
+    r.set("responsavel_id", a.id);
     return e.next();
   }
 
@@ -83,17 +92,24 @@ onRecordCreateRequest((e) => {
   e.next();
 }, "saldo_funcionario");
 
+// Lançamento do saldo não muda depois de feito, para NINGUÉM pela API (Diego,
+// 03/11/2026: antes a gestão podia editar; correção vira o próximo lançamento,
+// ex. uma devolução). A tentativa fica registrada e vai para o sino.
 onRecordUpdateRequest((e) => {
   const a = e.auth;
-  if (a && !a.isSuperuser() && !require(`${__hooks}/uso-material-lib.js`).ehGestao(a)) {
-    throw new ForbiddenError("Lançamentos do saldo não podem ser alterados.");
+  if (a && !a.isSuperuser()) {
+    require(`${__hooks}/nada-se-apaga-lib.js`).registrarTentativa($app, a, "editar", "saldo_funcionario", e.record.id,
+      "Tentou alterar um lançamento do saldo de funcionário");
+    throw new ForbiddenError("Lançamentos do saldo não podem ser alterados. Para corrigir, registre o próximo lançamento (ex.: uma devolução).");
   }
   e.next();
 }, "saldo_funcionario");
 
+// Apagar: recusado para todos (a regra geral de nada-se-apaga.pb.js já barra
+// antes e registra a tentativa; aqui fica como reforço, sem exceção de cargo).
 onRecordDeleteRequest((e) => {
   const a = e.auth;
-  if (a && !a.isSuperuser() && !require(`${__hooks}/uso-material-lib.js`).ehGestao(a)) {
+  if (a && !a.isSuperuser()) {
     throw new ForbiddenError("Lançamentos do saldo não podem ser apagados.");
   }
   e.next();

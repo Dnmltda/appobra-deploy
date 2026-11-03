@@ -1339,7 +1339,8 @@ s, _nt = call("POST", "/api/collections/notificacoes/records", tA, {"usuarioId":
 s, r = call("DELETE", f"/api/collections/notificacoes/records/{_nt.get('id')}", tA)
 check("nada", "Limpar uma notificação arquiva (não apaga)", s == 204 and (call("GET", f"/api/collections/notificacoes/records/{_nt.get('id')}", tSU)[0] == 200 if tSU else True), f"status {s}")
 s, _ms = call("POST", "/api/collections/materiais/records", tA, {"name": "Disco de corte 7pol", "code": "NADA-1", "unit": "un", "quantity_in_stock": 10, "status": "active", "company_id": cA})
-s2, r2 = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": funU.get("id"), "material_id": _ms.get("id"),
+# (preparo pelo suporte: desde 03/11/2026 ninguém lança saldo direto pela API)
+s2, r2 = call("POST", "/api/collections/saldo_funcionario/records", tSU or tAlm, {"company_id": cA, "funcionario_id": funU.get("id"), "material_id": _ms.get("id"),
               "tipo_operacao": "Retirada", "quantidade": 2, "data_operacao": "2026-10-25"})
 check("nada", "(preparo) material entregue ao saldo de um funcionário", s == 200 and s2 == 200, err(r2) if s2 >= 400 else "")
 s, r = call("PATCH", f"/api/collections/materiais/records/{_ms.get('id')}", tA, {"name": "Disco trocado de nome"})
@@ -1612,7 +1613,7 @@ check("aceite", "O estoque baixa na hora do envio (como antes)", saldo(mid) == _
 check("aceite", "Nada entra no saldo do funcionário antes de ele confirmar", _sl(_fAc.get("id")) == 0, str(_sl(_fAc.get("id"))))
 s, r = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": _fAc.get("id"), "material_id": mid,
             "tipo_operacao": "Retirada", "quantidade": 22, "movimentacao_id": _m1.get("id"), "data_operacao": "2026-11-02"})
-check("aceite", "Tela antiga não credita o saldo por fora (pede para atualizar)", s == 400 and "Atualize a página" in r.get("message", ""), f"status {s}")
+check("aceite", "Tela antiga não credita o saldo por fora (a confirmação é que credita)", s == 400 and ("confirmação" in r.get("message", "") or "Atualize a página" in r.get("message", "")), f"status {s} {r.get('message', '')[:60]}")
 s, r = call("GET", "/api/custom/retirada/pendentes", _tIvo)
 check("aceite", "O funcionário vê o envio aguardando a confirmação dele", s == 200 and any(i.get("id") == _m1.get("id") and i.get("quantidade") == 22 for i in r.get("items", [])), str(r)[:120])
 check("aceite", "Outra pessoa não vê os envios dele", not [i for i in call("GET", "/api/custom/retirada/pendentes", tF)[1].get("items", []) if i.get("id") == _m1.get("id")])
@@ -1657,6 +1658,35 @@ check("entrada-obra", "Entrada com obra entra só no estoque da obra (não conta
 s, r = call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Entrada", "quantidade": 1, "status": "Aprovado",
             "data": "2026-11-02", "estoque_obra_id": "obraquenaoexiste"})
 check("entrada-obra", "Obra inválida na entrada é recusada", s == 400, f"status {s}")
+
+# ------------------------------------------------------------------ Saldo do funcionário sem atalho (03/11/2026)
+_lanc = call("GET", "/api/collections/saldo_funcionario/records?perPage=1&filter=" + q(f'funcionario_id="{_fAc.get("id")}"'), tA)[1].get("items", [{}])[0]
+for _nome, _tk in (("Administrador", tA), ("Almoxarife", tAlm), ("Engenheiro", tEng), ("Financeiro", _tok["Financeiro"])):
+    s, r = call("PATCH", f"/api/collections/saldo_funcionario/records/{_lanc.get('id')}", _tk, {"quantidade": 1})
+    check("saldo", f"{_nome} não altera lançamento do saldo pela API", s >= 400, f"status {s}")
+    s, r = call("DELETE", f"/api/collections/saldo_funcionario/records/{_lanc.get('id')}", _tk)
+    check("saldo", f"{_nome} não apaga lançamento do saldo pela API", s >= 400, f"status {s}")
+_l2 = call("GET", f"/api/collections/saldo_funcionario/records/{_lanc.get('id')}", tA)[1]
+check("saldo", "O lançamento continua igual depois das tentativas", _l2.get("quantidade") == _lanc.get("quantidade"), f"{_lanc.get('quantidade')} -> {_l2.get('quantidade')}")
+_tsl = call("GET", "/api/collections/tentativas_bloqueadas/records?perPage=50&filter=" + q('tabela="saldo_funcionario"'), tSU)[1].get("items", []) if tSU else [1]
+check("saldo", "As tentativas ficam registradas (sino do titular e do responsável)", len(_tsl) >= 4, str(len(_tsl)))
+s, r = call("POST", "/api/collections/saldo_funcionario/records", tA, {"company_id": cA, "funcionario_id": _fAc.get("id"), "material_id": mid,
+            "tipo_operacao": "Devolução", "quantidade": 5, "data_operacao": "2026-11-03"})
+check("saldo", "Administrador não tira material do saldo do funcionário por fora (devolução sem movimentação)", s == 400, f"status {s}")
+s, r = call("POST", "/api/collections/saldo_funcionario/records", tA, {"company_id": cA, "funcionario_id": _fAc.get("id"), "material_id": mid,
+            "tipo_operacao": "Retirada", "quantidade": 5, "data_operacao": "2026-11-03"})
+check("saldo", "Nem coloca material no saldo por fora (retirada sem movimentação)", s == 400, f"status {s}")
+s, _mS = call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Retirada por Funcionário",
+              "quantidade": 2, "status": "Aprovado", "data": "2026-11-03", "funcionario_id": _fSem.get("id")})
+s, r = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": _fSem.get("id"), "material_id": mid,
+            "tipo_operacao": "Retirada", "quantidade": 2, "movimentacao_id": _mS.get("id"), "data_operacao": "2026-11-03"})
+check("saldo", "Funcionário sem acesso: retirada amarrada à movimentação do estoque continua funcionando", s == 200, err(r) if s >= 400 else "")
+s, r = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": _fSem.get("id"), "material_id": mid,
+            "tipo_operacao": "Retirada", "quantidade": 2, "movimentacao_id": _mS.get("id"), "data_operacao": "2026-11-03"})
+check("saldo", "A mesma movimentação não gera saldo duas vezes", s == 400, f"status {s}")
+s, r = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": _fSem.get("id"), "material_id": mid,
+            "tipo_operacao": "Retirada", "quantidade": 9, "movimentacao_id": _mS.get("id"), "data_operacao": "2026-11-03"})
+check("saldo", "Quantidade diferente da movimentação é recusada", s == 400, f"status {s}")
 
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
