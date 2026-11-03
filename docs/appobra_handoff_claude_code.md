@@ -278,6 +278,29 @@
   servidor (`estoque-lib.js`, regra que já existia) soma só no `estoque_obra` daquela obra, sem tocar no geral;
   vazio = estoque geral, como antes. Só tela (`EstoqueAlmoxarifadoPage.jsx`). "Estoque por Obra" já estava no menu
   (Suprimentos). Testes: grupo "entrada-obra" no servidor (3) e `navegador/entrada-obra.mjs` (6).
+- **Saldo do funcionário sem atalho (Diego, 03/11/2026):** `uso-material.pb.js` — UPDATE de `saldo_funcionario`
+  recusado para todos pela API (tentativa registrada); DELETE já era barrado pela regra geral de nada-se-apaga e
+  ficou sem exceção de cargo. Retirada/Devolução criada pela API só via `uso-material-lib.conferirLancamentoDireto`:
+  amarrada a uma movimentação do mesmo tipo/funcionário/material/quantidade, sem saldo já gerado, e só para
+  funcionário SEM acesso ao app. Utilização segue igual. Correção excepcional de saldo: direto no banco (suporte).
+  Preparos de teste que criavam saldo direto usam a conta de suporte. Testes: grupo "saldo" (15).
+- **Devolução em duas etapas (Diego, 03/11/2026):** `devolucao-funcionario.pb.js`. Funcionário informa
+  (`POST /api/custom/devolucao/informar`: movimentação "Devolução de Funcionário" Pendente + `aceite_status`
+  Aguardando + `quantidade_informada`; volta por padrão para o `estoque_obra_id` da última retirada dele); a gestão
+  confirma (`POST /api/custom/devolucao/confirmar`: confirmar | diferenca | recusar; pode trocar o destino). Só na
+  confirmação: `quantidade` = recebido, status Aprovado (o estoque aplica) e o servidor cria o `saldo_funcionario`
+  Devolução. Recusa → Cancelado, nada muda. `GET /api/custom/devolucao/minhas`. Devolução direta pela tela para
+  quem tem acesso é recusada antes de mexer no estoque. Telas: botão de devolução também para o próprio
+  funcionário (Meu Material), `ConfirmarDevolucoes.jsx` na tela Estoque, aviso "Devoluções aguardando o
+  almoxarifado" em `AceiteRetirada.jsx`. Testes: grupo "devolucao" (14) e `navegador/devolucao-funcionario.mjs` (8).
+- **Usos na obra com a unidade real (03/11/2026):** histórico do funcionário (`SaldoFuncionarioPage.jsx`) e
+  Materiais por Obra expandem `unidade_id.andar_id` e mostram "1º andar · Apto 101"; sem unidade, o texto digitado.
+  Nada muda na % de progresso. Teste: `navegador/uso-unidade.mjs` (6).
+- **Painel do Administrador (03/11/2026):** `GestaoPainel.jsx` em seções (Resumo, Hoje na empresa, Material e
+  estoque, Pedidos de material); "Gasto de material por obra" ganhou o detalhe por obra (top 5 materiais, escolha
+  por botão ou tocando na barra) com "Ver tudo em Materiais por Obra" e o aviso "Cadastre o preço dos materiais"
+  quando a obra não tem valor. Valores continuam vindo do servidor (quem não está em VALORES não recebe o custo).
+  Teste: `navegador/painel-gasto.mjs` (8, inclui RH sem nenhum R$).
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,

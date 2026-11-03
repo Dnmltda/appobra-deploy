@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import pb from '@/lib/pocketbaseClient.js';
 import { podeAcessar, podeGerirSolicitacoes } from '@/lib/permissoes.js';
 import {
@@ -26,6 +27,16 @@ const STATUS_OBRA_CLASSE = {
   'Concluída': 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30',
 };
 const ORDEM_OBRA = ['Em Andamento', 'Planejamento', 'Pausada', 'Concluída'];
+
+// Título de cada grupo do painel (marinho com o traço dourado da marca).
+const Secao = ({ titulo, icon: Icone, children }) => (
+  <section className="space-y-3 sm:space-y-4">
+    <h2 className="flex items-center gap-2 text-base sm:text-lg font-bold text-marinho dark:text-foreground border-b-2 border-ouro/60 pb-1.5">
+      {Icone && <Icone className="w-5 h-5 text-ouro" aria-hidden="true" />}{titulo}
+    </h2>
+    {children}
+  </section>
+);
 
 const GestaoPainel = ({ user, refreshKey }) => {
   const cid = user.company_id;
@@ -87,36 +98,58 @@ const GestaoPainel = ({ user, refreshKey }) => {
   }), [cid, refreshKey], verOcorrencias);
 
   // ---------- Gasto de material por obra ----------
+  // Mesmas fontes da tela Materiais por Obra (entregue na obra + usado por
+  // funcionário). O valor vem do servidor, que esconde o custo de quem não
+  // trabalha com valores (pb_hooks/acesso-dados-lib.js): nada vaza aqui.
   const gasto = useBlock(async () => {
     const [obs, consumos, usos] = await Promise.all([
       pb.collection('obras').getFullList({ filter: C, fields: 'id,nome', $autoCancel: false }),
       pb.collection('movimentacoes').getFullList({
         filter: `${C} && tipo = "Consumo de Obra" && estoque_aplicado = true && obra_id != ""`,
-        fields: 'obra_id,valor_total', $autoCancel: false,
+        expand: 'material_id', $autoCancel: false,
       }),
       pb.collection('saldo_funcionario').getFullList({
         filter: `${C} && tipo_operacao = "Utilização" && obra_id != ""`,
-        fields: 'obra_id,valor_total', $autoCancel: false,
+        expand: 'material_id', $autoCancel: false,
       }).catch(() => []),
     ]);
     const nomes = new Map(obs.map((o) => [o.id, o.nome || 'Obra sem nome']));
     const porObra = new Map();
-    const somar = (obraId, campo, valor) => {
-      if (!porObra.has(obraId)) porObra.set(obraId, { nome: nomes.get(obraId) || 'Obra removida', entregue: 0, usado: 0, total: 0 });
+    const somar = (r, campo) => {
+      const obraId = r.obra_id;
+      const valor = Number(r.valor_total || 0);
+      if (!porObra.has(obraId)) porObra.set(obraId, { id: obraId, nome: nomes.get(obraId) || 'Obra removida', entregue: 0, usado: 0, total: 0, registros: 0, materiais: new Map() });
       const linha = porObra.get(obraId);
       linha[campo] += valor;
       linha.total += valor;
+      linha.registros += 1;
+      // Detalhe por material (o resumo da tela Materiais por Obra).
+      const mid = r.material_id || '?';
+      if (!linha.materiais.has(mid)) {
+        linha.materiais.set(mid, { nome: r.expand?.material_id?.name || 'Material', unidade: r.unidade || r.expand?.material_id?.unit || '', quantidade: 0, valor: 0 });
+      }
+      const m = linha.materiais.get(mid);
+      m.quantidade += Number(r.quantidade || 0);
+      m.valor += valor;
     };
-    consumos.forEach((m) => somar(m.obra_id, 'entregue', Number(m.valor_total || 0)));
-    usos.forEach((u) => somar(u.obra_id, 'usado', Number(u.valor_total || 0)));
-    const linhas = [...porObra.values()].sort((a, b) => b.total - a.total);
+    consumos.forEach((m) => somar(m, 'entregue'));
+    usos.forEach((u) => somar(u, 'usado'));
+    const todas = [...porObra.values()]
+      .map((l) => ({ ...l, materiais: [...l.materiais.values()].sort((a, b) => b.valor - a.valor || b.quantidade - a.quantidade) }))
+      .sort((a, b) => b.total - a.total || b.registros - a.registros);
     return {
       registros: consumos.length + usos.length,
-      linhas: linhas.filter((l) => l.total > 0).slice(0, 8),
-      totalGeral: linhas.reduce((s, l) => s + l.total, 0),
-      obrasComValor: linhas.filter((l) => l.total > 0).length,
+      todas,
+      linhas: todas.filter((l) => l.total > 0).slice(0, 8),
+      totalGeral: todas.reduce((s, l) => s + l.total, 0),
+      obrasComValor: todas.filter((l) => l.total > 0).length,
     };
   }, [cid, refreshKey], verGasto);
+  const [obraGasto, setObraGasto] = useState('');
+  const obraDetalhe = useMemo(() => {
+    const todas = gasto.data?.todas || [];
+    return todas.find((o) => o.id === obraGasto) || todas[0] || null;
+  }, [gasto.data, obraGasto]);
 
   // ---------- Movimentações dos últimos 30 dias ----------
   const movs = useBlock(async () => {
@@ -298,118 +331,164 @@ const GestaoPainel = ({ user, refreshKey }) => {
     );
   }
 
+  const blocoGasto = verGasto && (
+    <BlockCard
+      title="Gasto de material por obra" icon={Wallet} to="/materiais-por-obra" linkLabel="Ver tudo"
+      description={gasto.data && gasto.data.totalGeral > 0
+        ? `Total: ${formatCurrency(gasto.data.totalGeral)} em ${gasto.data.obrasComValor} obra(s)`
+        : 'Material entregue na obra + material usado por funcionário na obra'}
+    >
+      {gasto.loading ? <BlockSkeleton chart /> : gasto.error ? <BlockError /> : gasto.data.registros === 0 ? (
+        <EmptyState
+          icon={Wallet} title="Nenhum material gasto em obra ainda"
+          text="Quando o almoxarifado entregar material para uma obra (Consumo de Obra) ou um funcionário registrar o uso, o gasto aparece aqui."
+          actionLabel="Ver materiais por obra" actionTo="/materiais-por-obra"
+        />
+      ) : (
+        <div className="space-y-4" data-testid="gasto-por-obra">
+          {gasto.data.linhas.length > 0 && <GastoPorObraChart data={gasto.data.linhas} onSelect={setObraGasto} />}
+          {/* Detalhe por material da obra escolhida (resumo da tela Materiais por Obra) */}
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Escolha a obra">
+            {gasto.data.todas.map((o) => (
+              <button key={o.id} type="button" onClick={() => setObraGasto(o.id)}
+                className={`px-3 py-1 rounded-full border text-xs font-medium ${obraDetalhe?.id === o.id ? 'bg-marinho text-white border-marinho' : 'bg-background hover:border-ouro'}`}>
+                {o.nome}
+              </button>
+            ))}
+          </div>
+          {obraDetalhe && (
+            <div className="rounded-lg border p-3 space-y-2" data-testid="gasto-detalhe">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold text-sm">{obraDetalhe.nome}</p>
+                <span className="text-sm font-bold">{obraDetalhe.total > 0 ? formatCurrency(obraDetalhe.total) : ''}</span>
+              </div>
+              {obraDetalhe.total === 0 && (
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Cadastre o preço dos materiais em <Link to="/materiais" className="underline">Materiais</Link> para ver o valor aqui.
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">Materiais que mais pesaram nesta obra:</p>
+              <ul className="divide-y text-sm">
+                {obraDetalhe.materiais.slice(0, 5).map((m) => (
+                  <li key={m.nome} className="py-1.5 flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate">{m.nome} <span className="text-muted-foreground">· {formatNumber(m.quantidade)} {m.unidade}</span></span>
+                    <span className="shrink-0 font-medium">{m.valor > 0 ? formatCurrency(m.valor) : '—'}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link to="/materiais-por-obra" className="text-xs font-semibold text-royal hover:underline">Ver tudo em Materiais por Obra →</Link>
+            </div>
+          )}
+        </div>
+      )}
+    </BlockCard>
+  );
+
+  const blocoMov = verMov && (
+    <BlockCard
+      title="Movimentações de estoque" icon={ArrowLeftRight} to="/movimentacoes"
+      description={movs.data && movs.data.total > 0
+        ? `Últimos 30 dias: ${movs.data.entradas} entrada(s) e ${movs.data.saidas} saída(s) aprovadas`
+        : 'Entradas e saídas aprovadas por dia, últimos 30 dias'}
+    >
+      {movs.loading ? <BlockSkeleton chart /> : movs.error ? <BlockError /> : (movs.data.entradas + movs.data.saidas) === 0 ? (
+        <EmptyState
+          icon={ArrowLeftRight} title="Nenhuma entrada ou saída aprovada nos últimos 30 dias"
+          actionLabel="Registrar movimentação" actionTo="/movimentacoes"
+        />
+      ) : (
+        <MovimentacoesDiaChart data={movs.data.dias} />
+      )}
+    </BlockCard>
+  );
+
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       {kpis.length > 0 && (
-        <ListaEntrada className={`grid grid-cols-2 gap-3 sm:gap-4 ${kpis.length >= 5 ? 'md:grid-cols-3 xl:grid-cols-5' : kpis.length === 4 ? 'lg:grid-cols-4' : 'md:grid-cols-3'}`}>
-          {kpis}
-        </ListaEntrada>
+        <Secao titulo="Resumo" icon={BarChart3}>
+          <ListaEntrada className={`grid grid-cols-2 gap-3 sm:gap-4 ${kpis.length >= 5 ? 'md:grid-cols-3 xl:grid-cols-5' : kpis.length === 4 ? 'lg:grid-cols-4' : 'md:grid-cols-3'}`}>
+            {kpis}
+          </ListaEntrada>
+        </Secao>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {mostrarAtencao && (
-          <BlockCard
-            title="Precisa da sua atenção" icon={ListChecks} className="lg:col-span-2"
-            description="Pedidos esperando o próximo passo, materiais abaixo do mínimo e ocorrências graves."
-          >
-            {atencaoParcial && !atencaoCarregando && (
-              <p className="text-xs text-muted-foreground mb-2">Parte destas informações não pôde ser carregada agora.</p>
-            )}
-            {atencaoCarregando ? <BlockSkeleton rows={4} /> : atencaoErro ? <BlockError /> : atencao.length === 0 ? (
-              <EmptyState
-                icon={CheckCircle2} title={atencaoParcial ? 'Nada pendente no que foi carregado' : 'Tudo em dia'}
-                text="Nenhum pedido parado, nenhum material abaixo do mínimo e nenhuma ocorrência grave aberta."
-              />
-            ) : (
-              <div className="space-y-2">
-                {atencao.slice(0, LIMITE_ATENCAO).map((i) => (
-                  <ListRow key={i.key} to={i.to} icon={i.icon} iconTone={i.tone} title={i.title} subtitle={i.subtitle} />
-                ))}
-                {atencao.length > LIMITE_ATENCAO && (
-                  <p className="text-xs text-muted-foreground text-center pt-1">
-                    E mais {atencao.length - LIMITE_ATENCAO} item(ns). Abra cada módulo para ver tudo.
-                  </p>
+      {(mostrarAtencao || verObras) && (
+        <Secao titulo="Hoje na empresa" icon={ListChecks}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {mostrarAtencao && (
+              <BlockCard
+                title="Precisa da sua atenção" icon={ListChecks} className="lg:col-span-2"
+                description="Pedidos esperando o próximo passo, materiais abaixo do mínimo e ocorrências graves."
+              >
+                {atencaoParcial && !atencaoCarregando && (
+                  <p className="text-xs text-muted-foreground mb-2">Parte destas informações não pôde ser carregada agora.</p>
                 )}
-              </div>
-            )}
-          </BlockCard>
-        )}
-
-        {verObras && (
-          <BlockCard title="Obras" icon={Building2} to="/projects" className={mostrarAtencao ? '' : 'lg:col-span-3'}>
-            {obras.loading ? <BlockSkeleton rows={3} /> : obras.error ? <BlockError /> : obrasResumo.total === 0 ? (
-              <EmptyState
-                icon={Building2} title="Nenhuma obra cadastrada ainda"
-                text="Cadastre a primeira obra para acompanhar material, pedidos e equipe por obra."
-                actionLabel="Cadastrar obra" actionTo="/projects"
-              />
-            ) : (
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-1.5">
-                  {Object.entries(obrasResumo.contagem).map(([s, n]) => (
-                    <StatusPill key={s} className={STATUS_OBRA_CLASSE[s]}>{n} {s}</StatusPill>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  {obrasResumo.ordenadas.slice(0, 5).map((o) => (
-                    <ListRow
-                      key={o.id} to="/projects" icon={Building2} title={o.nome || 'Obra sem nome'}
-                      subtitle={o.status || 'Sem status'}
-                    />
-                  ))}
-                </div>
-                {obrasResumo.total > 5 && (
-                  <p className="text-xs text-muted-foreground text-center">Mostrando 5 de {obrasResumo.total} obras.</p>
+                {atencaoCarregando ? <BlockSkeleton rows={4} /> : atencaoErro ? <BlockError /> : atencao.length === 0 ? (
+                  <EmptyState
+                    icon={CheckCircle2} title={atencaoParcial ? 'Nada pendente no que foi carregado' : 'Tudo em dia'}
+                    text="Nenhum pedido parado, nenhum material abaixo do mínimo e nenhuma ocorrência grave aberta."
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    {atencao.slice(0, LIMITE_ATENCAO).map((i) => (
+                      <ListRow key={i.key} to={i.to} icon={i.icon} iconTone={i.tone} title={i.title} subtitle={i.subtitle} />
+                    ))}
+                    {atencao.length > LIMITE_ATENCAO && (
+                      <p className="text-xs text-muted-foreground text-center pt-1">
+                        E mais {atencao.length - LIMITE_ATENCAO} item(ns). Abra cada módulo para ver tudo.
+                      </p>
+                    )}
+                  </div>
                 )}
-              </div>
+              </BlockCard>
             )}
-          </BlockCard>
-        )}
-      </div>
 
-      {(verGasto || verMov || verPedidos) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {verGasto && (
-            <BlockCard
-              title="Gasto de material por obra" icon={Wallet} to="/materiais-por-obra" linkLabel="Detalhes"
-              description={gasto.data && gasto.data.totalGeral > 0
-                ? `Total: ${formatCurrency(gasto.data.totalGeral)} em ${gasto.data.obrasComValor} obra(s)`
-                : 'Material entregue na obra + material usado por funcionário na obra'}
-            >
-              {gasto.loading ? <BlockSkeleton chart /> : gasto.error ? <BlockError /> : gasto.data.linhas.length === 0 ? (
-                <EmptyState
-                  icon={Wallet}
-                  title={gasto.data.registros > 0 ? 'Usos registrados ainda sem valor' : 'Nenhum material gasto em obra ainda'}
-                  text={gasto.data.registros > 0
-                    ? `Há ${gasto.data.registros} uso(s) de material em obra, mas sem preço. Cadastre o custo dos materiais para ver o gasto em reais.`
-                    : 'Quando o almoxarifado entregar material para uma obra (Consumo de Obra) ou um funcionário registrar o uso, o gasto aparece aqui.'}
-                  actionLabel="Ver materiais por obra" actionTo="/materiais-por-obra"
-                />
-              ) : (
-                <GastoPorObraChart data={gasto.data.linhas} />
-              )}
-            </BlockCard>
-          )}
+            {verObras && (
+              <BlockCard title="Obras" icon={Building2} to="/projects" className={mostrarAtencao ? '' : 'lg:col-span-3'}>
+                {obras.loading ? <BlockSkeleton rows={3} /> : obras.error ? <BlockError /> : obrasResumo.total === 0 ? (
+                  <EmptyState
+                    icon={Building2} title="Nenhuma obra cadastrada ainda"
+                    text="Cadastre a primeira obra para acompanhar material, pedidos e equipe por obra."
+                    actionLabel="Cadastrar obra" actionTo="/projects"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(obrasResumo.contagem).map(([s, n]) => (
+                        <StatusPill key={s} className={STATUS_OBRA_CLASSE[s]}>{n} {s}</StatusPill>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      {obrasResumo.ordenadas.slice(0, 5).map((o) => (
+                        <ListRow
+                          key={o.id} to="/projects" icon={Building2} title={o.nome || 'Obra sem nome'}
+                          subtitle={o.status || 'Sem status'}
+                        />
+                      ))}
+                    </div>
+                    {obrasResumo.total > 5 && (
+                      <p className="text-xs text-muted-foreground text-center">Mostrando 5 de {obrasResumo.total} obras.</p>
+                    )}
+                  </div>
+                )}
+              </BlockCard>
+            )}
+          </div>
+        </Secao>
+      )}
 
-          {verMov && (
-            <BlockCard
-              title="Movimentações de estoque" icon={ArrowLeftRight} to="/movimentacoes"
-              description={movs.data && movs.data.total > 0
-                ? `Últimos 30 dias: ${movs.data.entradas} entrada(s) e ${movs.data.saidas} saída(s) aprovadas`
-                : 'Entradas e saídas aprovadas por dia, últimos 30 dias'}
-            >
-              {movs.loading ? <BlockSkeleton chart /> : movs.error ? <BlockError /> : (movs.data.entradas + movs.data.saidas) === 0 ? (
-                <EmptyState
-                  icon={ArrowLeftRight} title="Nenhuma entrada ou saída aprovada nos últimos 30 dias"
-                  actionLabel="Registrar movimentação" actionTo="/movimentacoes"
-                />
-              ) : (
-                <MovimentacoesDiaChart data={movs.data.dias} />
-              )}
-            </BlockCard>
-          )}
+      {(verGasto || verMov) && (
+        <Secao titulo="Material e estoque" icon={Package}>
+          <div className={`grid grid-cols-1 gap-4 sm:gap-6 ${verGasto && verMov ? 'lg:grid-cols-2' : ''}`}>
+            {blocoGasto}
+            {blocoMov}
+          </div>
+        </Secao>
+      )}
 
-          {verPedidos && (
+      {verPedidos && (
+        <Secao titulo="Pedidos de material" icon={ClipboardList}>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             <BlockCard
               title="Pedidos por status" icon={BarChart3} to="/solicitacoes"
               description={pedidos.data && pedidos.data.length > 0 ? `${pedidos.data.length} pedido(s) no total` : undefined}
@@ -423,9 +502,7 @@ const GestaoPainel = ({ user, refreshKey }) => {
                 <PedidosStatusChart data={pedidosPorStatus} />
               )}
             </BlockCard>
-          )}
 
-          {verPedidos && (
             <BlockCard title="Últimos pedidos" icon={ClipboardList} to="/solicitacoes">
               {pedidos.loading ? <BlockSkeleton rows={4} /> : pedidos.error ? <BlockError /> : pedidos.data.length === 0 ? (
                 <EmptyState icon={ClipboardList} title="Nenhum pedido de material ainda" />
@@ -441,8 +518,8 @@ const GestaoPainel = ({ user, refreshKey }) => {
                 </div>
               )}
             </BlockCard>
-          )}
-        </div>
+          </div>
+        </Secao>
       )}
     </div>
   );

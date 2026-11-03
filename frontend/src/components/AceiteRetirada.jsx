@@ -19,9 +19,11 @@ import { auditLog, AUDIT_ACTIONS } from '@/lib/auditLogger.js';
 // foto do material. Regras no servidor: pb_hooks/aceite-retirada.pb.js.
 const fmt = (n) => Number(n || 0).toLocaleString('pt-BR', { maximumFractionDigits: 3 });
 
-const AceiteRetirada = ({ onRespondido }) => {
+const AceiteRetirada = ({ onRespondido, versao = 0 }) => {
   const { currentUser } = useAuth();
   const [itens, setItens] = useState([]);
+  // Devoluções que eu informei e o almoxarifado ainda não confirmou.
+  const [minhasDev, setMinhasDev] = useState([]);
   const [sel, setSel] = useState(null);
   const [acao, setAcao] = useState('aceitar');
   const [qtd, setQtd] = useState('');
@@ -33,8 +35,11 @@ const AceiteRetirada = ({ onRespondido }) => {
     if (!currentUser?.funcionario_id) return;
     pb.send('/api/custom/retirada/pendentes', { method: 'GET', $autoCancel: false })
       .then((r) => setItens(r.items || [])).catch(() => setItens([]));
+    pb.send('/api/custom/devolucao/minhas', { method: 'GET', $autoCancel: false })
+      .then((r) => setMinhasDev(r.items || [])).catch(() => setMinhasDev([]));
   }, [currentUser?.funcionario_id]);
-  useEffect(() => { carregar(); }, [carregar]);
+  // "versao" muda quando a tela registra algo (ex.: devolução informada).
+  useEffect(() => { carregar(); }, [carregar, versao]);
 
   const abrir = (item, a) => { setSel(item); setAcao(a); setQtd(''); setMotivo(''); setFoto(null); };
 
@@ -62,9 +67,19 @@ const AceiteRetirada = ({ onRespondido }) => {
     }
   };
 
-  if (!itens.length) return null;
+  if (!itens.length && !minhasDev.length) return null;
   return (
     <>
+      {minhasDev.length > 0 && (
+        <Card className="mb-6 border-green-600/40" data-testid="minhas-devolucoes">
+          <CardContent className="p-4 space-y-1">
+            <p className="font-semibold">Devoluções aguardando o almoxarifado ({minhasDev.length})</p>
+            <p className="text-xs text-muted-foreground">O material sai do seu saldo quando o almoxarifado confirmar que recebeu.</p>
+            {minhasDev.map((d) => <p key={d.id} className="text-sm">{fmt(d.quantidade)} {d.unidade} de {d.material}</p>)}
+          </CardContent>
+        </Card>
+      )}
+      {itens.length > 0 && (
       <Card className="mb-6 border-ouro/60" data-testid="aguardando-confirmacao">
         <CardContent className="p-4 space-y-3">
           <p className="font-semibold flex items-center gap-2"><PackageCheck className="w-5 h-5 text-ouro" />Aguardando sua confirmação ({itens.length})</p>
@@ -83,6 +98,7 @@ const AceiteRetirada = ({ onRespondido }) => {
           ))}
         </CardContent>
       </Card>
+      )}
 
       <Dialog open={!!sel} onOpenChange={(o) => { if (!o) setSel(null); }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">

@@ -40,7 +40,8 @@ const CategoriaTick = ({ x, y, payload, max }) => (
 
 // Gasto de material por obra: barras horizontais empilhadas (entregue na obra
 // + usado por funcionário). data: [{ nome, entregue, usado, total }]
-export const GastoPorObraChart = ({ data }) => {
+// onSelect(obraId): tocar na barra escolhe a obra do detalhe por material.
+export const GastoPorObraChart = ({ data, onSelect }) => {
   const altura = Math.max(160, data.length * 44 + 60);
   return (
     <div style={{ height: altura }} className="w-full">
@@ -62,8 +63,10 @@ export const GastoPorObraChart = ({ data }) => {
             )}
           />
           <Legend formatter={LegendText} iconType="square" iconSize={10} wrapperStyle={{ paddingTop: 4 }} />
-          <Bar isAnimationActive={false} dataKey="entregue" name="Entregue na obra" stackId="g" fill={COR_SERIE_1} stroke="hsl(var(--card))" strokeWidth={1} />
-          <Bar isAnimationActive={false} dataKey="usado" name="Usado por funcionário" stackId="g" fill={COR_SERIE_2} stroke="hsl(var(--card))" strokeWidth={1} radius={[0, 4, 4, 0]} />
+          <Bar isAnimationActive={false} dataKey="entregue" name="Entregue na obra" stackId="g" fill={COR_SERIE_1} stroke="hsl(var(--card))" strokeWidth={1}
+            cursor={onSelect ? 'pointer' : undefined} onClick={(d) => onSelect?.(d?.id || d?.payload?.id)} />
+          <Bar isAnimationActive={false} dataKey="usado" name="Usado por funcionário" stackId="g" fill={COR_SERIE_2} stroke="hsl(var(--card))" strokeWidth={1} radius={[0, 4, 4, 0]}
+            cursor={onSelect ? 'pointer' : undefined} onClick={(d) => onSelect?.(d?.id || d?.payload?.id)} />
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -52,4 +52,36 @@ function equipeDoEstoque(app, companyId) {
     (ehAdmin(u) || ["Almoxarife", "Mestre de Obras"].includes(u.get("cargo") || u.get("role"))));
 }
 
-module.exports = { ehAdmin, ehGestao, saldoEmPosse, notificar, equipeDoEstoque };
+// Funcionário com acesso ativo ao app (ele confirma o que recebe/devolve).
+function temAcesso(app, funcionarioId) {
+  if (!funcionarioId) return false;
+  try {
+    return app.findRecordsByFilter("users", "funcionario_id = {:f} && status = 'Ativo'", "", 1, 0, { f: funcionarioId }).length > 0;
+  } catch (_) { return false; }
+}
+
+// Retirada/Devolução criada pela tela (só para funcionário SEM acesso ao app,
+// que não tem como confirmar): tem de vir de uma movimentação de estoque do
+// mesmo tipo, funcionário, material e quantidade, que ainda não gerou saldo.
+// Fora isso, quem cria o lançamento é o servidor, na confirmação
+// (aceite-retirada.pb.js / devolucao-funcionario.pb.js). Devolve o motivo da
+// recusa, ou "".
+function conferirLancamentoDireto(app, r) {
+  const tipo = r.get("tipo_operacao");
+  const tipoMov = tipo === "Retirada" ? "Retirada por Funcionário" : "Devolução de Funcionário";
+  const movId = String(r.get("movimentacao_id") || "");
+  if (!movId) return "Retirada e devolução só entram no saldo a partir de uma movimentação do estoque.";
+  let mov;
+  try { mov = app.findRecordById("movimentacoes", movId); } catch (_) { return "Movimentação de estoque não encontrada."; }
+  if (mov.get("tipo") !== tipoMov || mov.get("funcionario_id") !== r.get("funcionario_id") || mov.get("material_id") !== r.get("material_id")
+    || Math.abs(Number(mov.get("quantidade") || 0) - Number(r.get("quantidade") || 0)) > 1e-9 || mov.get("company_id") !== r.get("company_id")) {
+    return "O lançamento não confere com a movimentação de estoque (tipo, funcionário, material ou quantidade).";
+  }
+  if (mov.get("status") === "Cancelado") return "A movimentação de estoque foi cancelada.";
+  if (mov.get("aceite_status")) return "Este envio passa pela confirmação: o saldo entra quando ela for feita.";
+  if (temAcesso(app, r.get("funcionario_id"))) return "Este funcionário tem acesso ao app: ele mesmo confirma (o saldo entra na confirmação).";
+  if (app.findRecordsByFilter("saldo_funcionario", "movimentacao_id = {:m}", "", 1, 0, { m: movId }).length) return "Esta movimentação já gerou lançamento no saldo.";
+  return "";
+}
+
+module.exports = { temAcesso, conferirLancamentoDireto, ehAdmin, ehGestao, saldoEmPosse, notificar, equipeDoEstoque };

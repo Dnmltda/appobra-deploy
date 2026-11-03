@@ -56,7 +56,7 @@ const MateriaisObraPage = () => {
         pb.collection('saldo_funcionario').getFullList({
           filter: `company_id = "${companyId}" && tipo_operacao = "Utilização" && obra_id != ""`,
           sort: '-created',
-          expand: 'material_id,funcionario_id',
+          expand: 'material_id,funcionario_id,unidade_id.andar_id',
           $autoCancel: false,
         }),
       ]);
@@ -85,7 +85,10 @@ const MateriaisObraPage = () => {
           valor: Number(u.valor_total || 0),
           data: u.data_operacao || u.created,
           quem: u.expand?.funcionario_id?.nome || '-',
-          local: u.local_uso || '',
+          // Andar/unidade real escolhido no seletor; sem ele, o texto digitado.
+          local: u.expand?.unidade_id
+            ? (u.expand.unidade_id.expand?.andar_id?.nome ? `${u.expand.unidade_id.expand.andar_id.nome} · ${u.expand.unidade_id.nome}` : u.expand.unidade_id.nome)
+            : (u.local_uso || ''),
           origem: 'Uso do funcionário',
         })),
       ].sort((a, b) => String(b.data).localeCompare(String(a.data))));

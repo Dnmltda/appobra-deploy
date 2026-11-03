@@ -36,11 +36,12 @@ await page.screenshot({ path: OUT + "aceite-1-estoque.png", fullPage: true });
 
 // 2. O funcionário confere: chegaram só 18
 const s = await abrir("sergio@teste.local");
-await s.page.waitForTimeout(2500);
 const caixa = s.page.locator('[data-testid="aguardando-confirmacao"]');
+// Primeiro teste da bateria: as telas acabaram de ser montadas e a 1ª carga é lenta.
+await caixa.waitFor({ timeout: 30000 }).catch(() => {});
 check("2. Painel do funcionário mostra \"Aguardando sua confirmação\"", /22 .*Tijolo baiano/.test(await caixa.innerText().catch(() => "")));
 await caixa.getByRole("button", { name: "Recebi menos" }).click();
-const dl = s.page.getByRole("dialog"); await dl.waitFor();
+const dl = s.page.getByRole("dialog"); await dl.waitFor({ timeout: 30000 });
 await dl.locator("#aceite_qtd").fill("18");
 await dl.locator("#aceite_motivo").fill("Vieram 4 quebrados no caminhão");
 await tirarFoto(s.page, dl);

@@ -79,6 +79,14 @@ const emptyDevolucaoForm = {
   observacoes: '',
 };
 
+// Nome real do andar/unidade de um lançamento ("3º andar · Apto 302", ou o
+// cômodo na Casa), quando ele foi escolhido no seletor (unidade_id).
+const nomeUnidade = (h) => {
+  const u = h.expand?.unidade_id;
+  if (!u) return '';
+  return u.expand?.andar_id?.nome ? `${u.expand.andar_id.nome} · ${u.nome}` : u.nome;
+};
+
 const SaldoFuncionarioPage = () => {
   const { currentUser } = useAuth();
   const companyId = currentUser?.company_id;
@@ -105,6 +113,7 @@ const SaldoFuncionarioPage = () => {
   // Devolução
   const [devolucaoOpen, setDevolucaoOpen] = useState(false);
   const [devolucaoFunc, setDevolucaoFunc] = useState(null);
+  const [versaoAvisos, setVersaoAvisos] = useState(0);
   const [devolucaoForm, setDevolucaoForm] = useState(emptyDevolucaoForm);
   const [formErrors, setFormErrors] = useState({});
   const [saving, setSaving] = useState(false);
@@ -124,7 +133,8 @@ const SaldoFuncionarioPage = () => {
         pb.collection('saldo_funcionario').getFullList({
           filter: `company_id = "${companyId}"`,
           sort: '-created',
-          expand: 'funcionario_id,material_id,obra_id,responsavel_id',
+          // unidade_id.andar_id: andar/unidade real escolhido no "Registrar uso".
+          expand: 'funcionario_id,material_id,obra_id,responsavel_id,unidade_id.andar_id',
           $autoCancel: false,
         }),
         pb.collection('funcionarios').getFullList({
@@ -383,8 +393,11 @@ const SaldoFuncionarioPage = () => {
   const handleDevolucao = async (e) => {
     e?.preventDefault();
     if (!companyId) { toast.error('Empresa não identificada'); return; }
-    if (!perms.canMove) { toast.error('Sem permissão para registrar devolução'); return; }
     if (!devolucaoFunc) return;
+    // O próprio funcionário só INFORMA a devolução; o saldo e o estoque mudam
+    // quando o almoxarifado confirma (pb_hooks/devolucao-funcionario.pb.js).
+    const propria = !!currentUser?.funcionario_id && currentUser.funcionario_id === devolucaoFunc.id;
+    if (!propria && !perms.canMove) { toast.error('Sem permissão para registrar devolução'); return; }
 
     const errs = {};
     if (!devolucaoForm.material_id) errs.material_id = 'Selecione um material';
@@ -398,6 +411,27 @@ const SaldoFuncionarioPage = () => {
     }
     setFormErrors(errs);
     if (Object.keys(errs).length > 0) return;
+
+    if (propria) {
+      setSaving(true);
+      try {
+        await pb.send('/api/custom/devolucao/informar', {
+          method: 'POST', $autoCancel: false,
+          body: { material_id: devolucaoForm.material_id, quantidade: qtd, observacoes: devolucaoForm.observacoes || '' },
+        });
+        const material = materialById(devolucaoForm.material_id);
+        toast.success(`Devolução informada: ${formatNumber(qtd)} ${material?.unit || ''} de ${material?.name || 'material'}. Entregue o material ao almoxarifado: sai do seu saldo quando ele confirmar.`, { duration: 10000 });
+        await auditLog(AUDIT_ACTIONS.RECORD_CREATED, AUDIT_MODULE, `Devolução informada por ${devolucaoFunc.nome}: ${formatNumber(qtd)} ${material?.unit || ''} de ${material?.name || ''}`);
+        setDevolucaoOpen(false);
+        setVersaoAvisos((v) => v + 1);
+        await fetchAll();
+      } catch (err) {
+        toast.error(mensagemErro(err, 'Não foi possível informar a devolução.'));
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
 
     setSaving(true);
     try {
@@ -602,7 +636,7 @@ const SaldoFuncionarioPage = () => {
         </div>
 
         {/* Material que o estoque mandou para mim, aguardando a minha confirmação */}
-        <AceiteRetirada onRespondido={fetchAll} />
+        <AceiteRetirada onRespondido={fetchAll} versao={versaoAvisos} />
 
         {/* KPIs */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -719,7 +753,7 @@ const SaldoFuncionarioPage = () => {
                               <Hammer className="w-4 h-4" />
                             </Button>
                           )}
-                          {perms.canMove && (
+                          {(perms.canMove || podeRegistrarUso(l.funcionario)) && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -811,7 +845,9 @@ const SaldoFuncionarioPage = () => {
                             </span>
                             <span className="block text-xs text-muted-foreground">
                               Obra: {h.expand?.obra_id?.nome || '-'}
-                              {h.local_uso ? ` · Local: ${h.local_uso}` : ''}
+                              {/* Andar/unidade escolhido no seletor (real); sem ele, o texto digitado, como antes. */}
+                              {nomeUnidade(h) ? ` · Local: ${nomeUnidade(h)}` : (h.local_uso ? ` · Local: ${h.local_uso}` : '')}
+                              {nomeUnidade(h) && h.local_uso && h.local_uso !== nomeUnidade(h) ? ` (anotação: ${h.local_uso})` : ''}
                               {h.tipo_operacao === 'Utilização' && h.valor_total != null ? ` · ${formatCurrency(h.valor_total)}` : ''}
                               {h.observacoes ? ` · ${h.observacoes}` : ''}
                             </span>
