@@ -1688,6 +1688,46 @@ s, r = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"compan
             "tipo_operacao": "Retirada", "quantidade": 9, "movimentacao_id": _mS.get("id"), "data_operacao": "2026-11-03"})
 check("saldo", "Quantidade diferente da movimentação é recusada", s == 400, f"status {s}")
 
+# ------------------------------------------------------------------ Devolução em duas etapas (03/11/2026)
+# (o Ivo, com acesso ao app, tem 23 do material no saldo — grupo "aceite")
+_g0 = saldo(mid)
+s, r = call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Devolução de Funcionário",
+            "quantidade": 3, "status": "Aprovado", "data": "2026-11-03", "funcionario_id": _fAc.get("id")})
+check("devolucao", "Gestão não devolve direto por quem tem acesso (o funcionário informa)", s == 400 and "ele mesmo informa" in r.get("message", "") and saldo(mid) == _g0, f"{s} estoque {saldo(mid)}")
+s, r = call("POST", "/api/custom/devolucao/informar", _tIvo, {"material_id": mid, "quantidade": 99})
+check("devolucao", "Não informa devolução maior que o que tem", s == 400, f"status {s}")
+s, _d1 = call("POST", "/api/custom/devolucao/informar", _tIvo, {"material_id": mid, "quantidade": 5, "observacoes": "Sobrou da laje"})
+check("devolucao", "Funcionário informa a devolução de 5", s == 200, err(_d1) if s >= 400 else "")
+check("devolucao", "Informar não mexe no saldo dele nem no estoque", _sl(_fAc.get("id")) == 23 and saldo(mid) == _g0, f"saldo {_sl(_fAc.get('id'))} estoque {saldo(mid)}")
+s, r = call("POST", "/api/custom/devolucao/informar", _tIvo, {"material_id": mid, "quantidade": 20})
+check("devolucao", "O que já foi informado não pode ser informado de novo (23 - 5 pendentes)", s == 400, f"status {s}")
+s, r = call("GET", "/api/custom/devolucao/minhas", _tIvo)
+check("devolucao", "O funcionário vê a devolução aguardando o almoxarifado", any(i.get("id") == _d1.get("id") for i in r.get("items", [])))
+s, r = call("POST", "/api/custom/devolucao/confirmar", _tIvo, {"movimentacao_id": _d1.get("id"), "acao": "confirmar"})
+check("devolucao", "O funcionário não confirma a própria devolução", s == 403, f"status {s}")
+s, r = call("POST", "/api/custom/devolucao/confirmar", _tB2, {"movimentacao_id": _d1.get("id"), "acao": "confirmar"})
+check("devolucao", "Outra empresa não confirma", s in (403, 404), f"status {s}")
+s, r = call("POST", "/api/custom/devolucao/confirmar", tAlm, {"movimentacao_id": _d1.get("id"), "acao": "diferenca", "quantidade_recebida": 3, "motivo": "Vieram só 3"})
+check("devolucao", "Almoxarife confirma com diferença (informou 5, chegaram 3): sai 3 do saldo e volta 3 ao estoque",
+      s == 200 and _sl(_fAc.get("id")) == 20 and saldo(mid) == _g0 + 3, f"{s} {str(r)[:60]} saldo {_sl(_fAc.get('id'))} estoque {saldo(mid)}")
+_mv = call("GET", f"/api/collections/movimentacoes/records/{_d1.get('id')}", tA)[1]
+check("devolucao", "Fica gravado: informado 5, recebido 3, quem confirmou e o motivo", _mv.get("quantidade_informada") == 5 and _mv.get("quantidade_recebida") == 3
+      and _mv.get("aceito_por") and "só 3" in (_mv.get("aceite_motivo") or "") and _mv.get("status") == "Aprovado", str({k: _mv.get(k) for k in ("quantidade_informada", "quantidade_recebida", "status")}))
+s, r = call("POST", "/api/custom/devolucao/confirmar", tAlm, {"movimentacao_id": _d1.get("id"), "acao": "confirmar"})
+check("devolucao", "Não confirma duas vezes", s == 400, f"status {s}")
+s, _d2 = call("POST", "/api/custom/devolucao/informar", _tIvo, {"material_id": mid, "quantidade": 2})
+s, r = call("POST", "/api/custom/devolucao/confirmar", tAlm, {"movimentacao_id": _d2.get("id"), "acao": "recusar", "motivo": "Não chegou nada"})
+check("devolucao", "Recusa: nada sai do saldo e nada volta ao estoque", s == 200 and _sl(_fAc.get("id")) == 20 and saldo(mid) == _g0 + 3, f"{s} saldo {_sl(_fAc.get('id'))} estoque {saldo(mid)}")
+s, _d3 = call("POST", "/api/custom/devolucao/informar", _tIvo, {"material_id": mid, "quantidade": 4})
+s, r = call("POST", "/api/custom/devolucao/confirmar", tAlm, {"movimentacao_id": _d3.get("id"), "acao": "confirmar", "estoque_obra_id": _oE.get("id")})
+check("devolucao", "Confirmar integral para o estoque de uma obra: 4 saem do saldo e entram na obra (geral não muda)",
+      s == 200 and _sl(_fAc.get("id")) == 16 and saldo(mid) == _g0 + 3 and _eo() >= 4, f"{s} saldo {_sl(_fAc.get('id'))} geral {saldo(mid)} obra {_eo()}")
+s, _mD = call("POST", "/api/collections/movimentacoes/records", tAlm, {"material_id": mid, "company_id": cA, "tipo": "Devolução de Funcionário",
+              "quantidade": 1, "status": "Aprovado", "data": "2026-11-03", "funcionario_id": _fSem.get("id")})
+s2, r2 = call("POST", "/api/collections/saldo_funcionario/records", tAlm, {"company_id": cA, "funcionario_id": _fSem.get("id"), "material_id": mid,
+              "tipo_operacao": "Devolução", "quantidade": 1, "movimentacao_id": _mD.get("id"), "data_operacao": "2026-11-03"})
+check("devolucao", "Funcionário sem acesso: a gestão registra a devolução direto, como antes", s == 200 and s2 == 200, f"{s} {s2} {err(r2) if s2 >= 400 else ''}")
+
 # ------------------------------------------------------------------ A7: login por ID repetido e endereço real (24/10/2026)
 # (no fim do arquivo: o teste do limite por endereço deixa o IP local barrado por alguns minutos)
 if tSU:

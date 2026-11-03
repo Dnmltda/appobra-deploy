@@ -32,6 +32,7 @@ import { generateNumeroSolicitacao } from '@/utils/solicitacoesValidations.js';
 import { ehAdmin, cargoDe, podeAutorizarAjuste } from '@/lib/permissoes.js';
 import { MOTIVOS_DIVERGENCIA, TIPOS_DIVERGENCIA, QUEM_AUTORIZA } from '@/lib/divergencia.js';
 import { BotaoLerCodigo } from '@/components/LeitorCodigo.jsx';
+import ConfirmarDevolucoes from '@/components/ConfirmarDevolucoes.jsx';
 
 const AUDIT_MODULE = 'Estoque';
 const PER_PAGE = 10;
@@ -869,6 +870,11 @@ const EstoqueAlmoxarifadoPage = () => {
               })}
             </CardContent>
           </Card>
+        )}
+
+        {perms.canMove && (
+          <ConfirmarDevolucoes companyId={companyId} obras={obras}
+            onResolvido={() => { fetchMovimentacoes(1); pb.collection('materiais').getFullList({ filter: `company_id = "${companyId}"`, $autoCancel: false }).then(setMateriais).catch(() => {}); }} />
         )}
 
         {envios.length > 0 && (
