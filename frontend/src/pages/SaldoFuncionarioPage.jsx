@@ -79,6 +79,14 @@ const emptyDevolucaoForm = {
   observacoes: '',
 };
 
+// Nome real do andar/unidade de um lançamento ("3º andar · Apto 302", ou o
+// cômodo na Casa), quando ele foi escolhido no seletor (unidade_id).
+const nomeUnidade = (h) => {
+  const u = h.expand?.unidade_id;
+  if (!u) return '';
+  return u.expand?.andar_id?.nome ? `${u.expand.andar_id.nome} · ${u.nome}` : u.nome;
+};
+
 const SaldoFuncionarioPage = () => {
   const { currentUser } = useAuth();
   const companyId = currentUser?.company_id;
@@ -125,7 +133,8 @@ const SaldoFuncionarioPage = () => {
         pb.collection('saldo_funcionario').getFullList({
           filter: `company_id = "${companyId}"`,
           sort: '-created',
-          expand: 'funcionario_id,material_id,obra_id,responsavel_id',
+          // unidade_id.andar_id: andar/unidade real escolhido no "Registrar uso".
+          expand: 'funcionario_id,material_id,obra_id,responsavel_id,unidade_id.andar_id',
           $autoCancel: false,
         }),
         pb.collection('funcionarios').getFullList({
@@ -836,7 +845,9 @@ const SaldoFuncionarioPage = () => {
                             </span>
                             <span className="block text-xs text-muted-foreground">
                               Obra: {h.expand?.obra_id?.nome || '-'}
-                              {h.local_uso ? ` · Local: ${h.local_uso}` : ''}
+                              {/* Andar/unidade escolhido no seletor (real); sem ele, o texto digitado, como antes. */}
+                              {nomeUnidade(h) ? ` · Local: ${nomeUnidade(h)}` : (h.local_uso ? ` · Local: ${h.local_uso}` : '')}
+                              {nomeUnidade(h) && h.local_uso && h.local_uso !== nomeUnidade(h) ? ` (anotação: ${h.local_uso})` : ''}
                               {h.tipo_operacao === 'Utilização' && h.valor_total != null ? ` · ${formatCurrency(h.valor_total)}` : ''}
                               {h.observacoes ? ` · ${h.observacoes}` : ''}
                             </span>
