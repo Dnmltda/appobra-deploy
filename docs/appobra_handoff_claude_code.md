@@ -301,6 +301,17 @@
   por botão ou tocando na barra) com "Ver tudo em Materiais por Obra" e o aviso "Cadastre o preço dos materiais"
   quando a obra não tem valor. Valores continuam vindo do servidor (quem não está em VALORES não recebe o custo).
   Teste: `navegador/painel-gasto.mjs` (8, inclui RH sem nenhum R$).
+- **PR #30 em produção (Fly v35, 27/11/2026).**
+- **Zerar os dados de teste da DNM&LTDA OBRAS (Diego, 27/11/2026):** `pb_hooks/limpeza-dnm-obras.pb.js`. Roda uma
+  vez na primeira subida depois do deploy (marca `limpeza-dnm-obras-2026-11` em `sistema_execucoes`); só a empresa
+  `n5n4xt3qq5bn1ld`; a "Construtora Teste DNM (não apagar)" não é tocada. Backup em `pb_data/backups` antes (se
+  falhar, não apaga nada) e tudo numa transação, direto no banco (não passa pela API, então as travas da API, como a
+  do saldo, continuam sem exceção). Fica só a conta `dnmltda@hotmail.com` (e o funcionário ligado a ela). Sai o
+  histórico de operação (lista SAI no arquivo) e os avisos do sino da empresa. Ficam os cadastros (lista FICA), com
+  o estoque dos materiais/EPIs em 0, o andamento dos serviços em "Não iniciado", equipamento "em uso" em
+  "disponível" e o que apontava para quem saiu em branco. O que ela fez sai no log (`[limpeza-dnm-obras]`).
+  Testada localmente na Empresa A depois da bateria do servidor: outras empresas idênticas, não roda de novo, e
+  depois dela MOV-2026-0001, o estoque e o ID 02 do próximo funcionário funcionam.
 
 **Identidade visual DNM&LTDA, logo do APP OBRA e app instalável (23/10/2026, Claude Code)**
 - **Publicado na Hostinger em 23/10/2026:** PR #14 (merge 464f41e). Conferido no navegador: instalável sem erros,
