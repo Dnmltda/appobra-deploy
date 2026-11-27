@@ -1338,6 +1338,24 @@ check("nada", "\"Excluir\" fornecedor continua arquivando (some da lista, fica g
 s, _nt = call("POST", "/api/collections/notificacoes/records", tA, {"usuarioId": uA["id"], "tipo": "estoque", "mensagem": "Aviso que vai ser arquivado"})
 s, r = call("DELETE", f"/api/collections/notificacoes/records/{_nt.get('id')}", tA)
 check("nada", "Limpar uma notificação arquiva (não apaga)", s == 204 and (call("GET", f"/api/collections/notificacoes/records/{_nt.get('id')}", tSU)[0] == 200 if tSU else True), f"status {s}")
+
+# Cadastro excluído (arquivado) não volta a mudar (27/11/2026)
+s, _fa = call("POST", "/api/collections/funcionarios/records", tA, {"matricula": "M-ARQ", "nome": "Arquivado", "nome_completo": "Funcionário Arquivado",
+              "cargoId": cargoU, "status": "Ativo", "company_id": cA})
+s, r = call("DELETE", f"/api/collections/funcionarios/records/{_fa.get('id')}", tA)
+_fav = call("GET", f"/api/collections/funcionarios/records/{_fa.get('id')}", tSU)[1] if tSU else {}
+check("arquivado", "Excluir funcionário arquiva e põe Inativo", s == 204 and _fav.get("deleted_at") and _fav.get("status") == "Inativo", f"status {s} {_fav.get('status')}")
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{_fa.get('id')}", tA, {"status": "Ativo", "nome": "Voltou"})
+_fav = call("GET", f"/api/collections/funcionarios/records/{_fa.get('id')}", tSU)[1] if tSU else {}
+check("arquivado", "Ninguém altera o funcionário excluído (nem volta para Ativo)", s >= 400 and _fav.get("status") == "Inativo" and _fav.get("nome") == "Arquivado",
+      f"status {s} {_fav.get('status')} {_fav.get('nome')}")
+check("arquivado", "A tentativa de alterar o excluído fica registrada", any(t.get("acao") == "alterar" for t in _tentativas(_fa.get("id"))), str(len(_tentativas(_fa.get("id")))))
+s, _ma = call("POST", "/api/collections/materiais/records", tA, {"code": "ARQ-" + os.urandom(3).hex(), "name": "Material arquivado", "unit": "un", "company_id": cA})
+s, r = call("DELETE", f"/api/collections/materiais/records/{_ma.get('id')}", tA)
+s, r = call("PATCH", f"/api/collections/materiais/records/{_ma.get('id')}", tA, {"status": "active"})
+check("arquivado", "Material excluído também não volta para ativo", s >= 400, f"status {s}")
+s, r = call("PATCH", f"/api/collections/funcionarios/records/{funU.get('id')}", tA, {"telefone": "11999990000"})
+check("arquivado", "Funcionário que não foi excluído continua editável", s == 200, err(r) if s >= 400 else "")
 s, _ms = call("POST", "/api/collections/materiais/records", tA, {"name": "Disco de corte 7pol", "code": "NADA-1", "unit": "un", "quantity_in_stock": 10, "status": "active", "company_id": cA})
 # (preparo pelo suporte: desde 03/11/2026 ninguém lança saldo direto pela API)
 s2, r2 = call("POST", "/api/collections/saldo_funcionario/records", tSU or tAlm, {"company_id": cA, "funcionario_id": funU.get("id"), "material_id": _ms.get("id"),
